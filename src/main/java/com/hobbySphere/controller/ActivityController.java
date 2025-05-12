@@ -10,6 +10,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.multipart.MultipartFile;
+import java.time.LocalDateTime;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
 
 @RestController
 @RequestMapping("/api/activities")
@@ -50,15 +55,55 @@ public class ActivityController {
         return activityService.findAllActivities();
     }
 
-    @Operation(summary = "Create a new activity")
+    @Operation(summary = "Create a new activity with image upload")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Activity created successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid input")
     })
-    @PostMapping
-    public ResponseEntity<Activities> createActivity(@RequestBody Activities activity) {
-        Activities savedActivity = activityService.save(activity);
-        return new ResponseEntity<>(savedActivity, HttpStatus.CREATED);
+    @PostMapping(value = "/create", consumes = "multipart/form-data")
+    public ResponseEntity<?> createActivityWithImage(
+            @RequestParam("activityName") String activityName,
+            @RequestParam("activityType") String activityType,
+            @RequestParam("description") String description,
+            @RequestParam("location") String location,
+            @RequestParam("maxParticipants") int maxParticipants,
+            @RequestParam("price") BigDecimal price,
+            @RequestParam("startDatetime") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDatetime,
+            @RequestParam("endDatetime") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDatetime,
+            @RequestParam("status") String status,
+            @RequestParam("businessId") Long businessId,
+            @RequestParam(value = "image", required = false) MultipartFile image
+    ) {
+        try {
+            Activities activity = activityService.createActivityWithImage(
+                    activityName,
+                    activityType,
+                    description,
+                    location,
+                    maxParticipants,
+                    price,
+                    startDatetime,
+                    endDatetime,
+                    status,
+                    businessId,
+                    image
+            );
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                    "message", "Activity created successfully",
+                    "activity", activity
+            ));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "message", e.getMessage()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "message", "Failed to create activity",
+                    "error", e.getMessage()
+            ));
+        }
     }
 
     @Operation(summary = "Update an existing activity by ID")
@@ -136,8 +181,9 @@ public class ActivityController {
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
-        // Fetch the user making the booking
+     // Fetch the user making the booking
         Users user = userService.findByEmail(principal.getName());
+        
 
         // Calculate the total price based on the participants
         BigDecimal totalPrice = activity.getPrice().multiply(BigDecimal.valueOf(participants));
@@ -152,4 +198,7 @@ public class ActivityController {
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+    
+   
+    
 }

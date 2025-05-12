@@ -212,7 +212,8 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Incorrect password"));
         }
 
-        String token = jwtUtil.generateToken(adminUser.getEmail());
+        String token = jwtUtil.generateToken(adminUser);
+
         return ResponseEntity.ok(Map.of(
                 "message", "Admin login successful",
                 "token", token,
@@ -232,8 +233,14 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Incorrect password"));
         }
 
-        String token = jwtUtil.generateToken(existingUser.getEmail());
-        return ResponseEntity.ok(Map.of("message", "User login successful", "token", token));
+        String token = jwtUtil.generateToken(user);
+       // String token = jwtUtil.generateToken(existingUser);
+        return ResponseEntity.ok(Map.of(
+            "message", "User login successful",
+            "token", token,
+            "user", existingUser
+        ));
+
     }
 
     // Business Login
@@ -250,7 +257,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Incorrect password"));
         }
 
-        String token = jwtUtil.generateToken(business.getEmail());
+        String token = jwtUtil.generateToken(business);
         return ResponseEntity.ok(Map.of("message", "Business login successful", "token", token));
     }
     
@@ -284,7 +291,7 @@ public class AuthController {
                     return businessService.save(newBusiness);
                 });
 
-                String token = jwtUtil.generateToken(business.getEmail());
+                String token = jwtUtil.generateToken(business);
                 return ResponseEntity.ok(Map.of(
                         "message", "Google business login successful",
                         "token", token
@@ -299,7 +306,7 @@ public class AuthController {
                     userService.save(user);
                 }
 
-                String token = jwtUtil.generateToken(user.getEmail());
+                String token = jwtUtil.generateToken(user);
                 return ResponseEntity.ok(Map.of(
                         "message", "Google login successful",
                         "token", token

@@ -7,8 +7,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
+
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.nio.file.Paths;
+
 @Configuration
-public class SecurityConfig {
+public class SecurityConfig implements WebMvcConfigurer{
 
     // Define the PasswordEncoder bean
     @Bean
@@ -25,5 +31,15 @@ public class SecurityConfig {
                         .anyRequest().authenticated() // All other routes require authentication
                 );
         return http.build();
+    }
+    
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // This maps: http://localhost:8080/uploads/** ⟶ actual file system path: /your-project/uploads/
+        String uploadPath = Paths.get("uploads").toAbsolutePath().toUri().toString();
+
+        registry
+            .addResourceHandler("/uploads/**")
+            .addResourceLocations(uploadPath); // Must end with "/"
     }
 }

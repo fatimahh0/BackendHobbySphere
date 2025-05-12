@@ -20,7 +20,7 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    private final String uploadDir = "uploads/";
+   
 
     public Users registerUser(
             String username,
