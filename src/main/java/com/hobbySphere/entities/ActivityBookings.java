@@ -1,5 +1,6 @@
 package com.hobbySphere.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -15,10 +16,12 @@ public class ActivityBookings {
 
     @ManyToOne
     @JoinColumn(name = "activity_id", nullable = false)
+    @JsonIgnoreProperties({"bookings", "createdBy", "category"}) // adapte selon tes relations dans Activities
     private Activities activity;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties({"bookings", "roles", "password"}) // adapte selon Users
     private Users user;
 
     @Column(name = "number_of_participants")
@@ -36,7 +39,6 @@ public class ActivityBookings {
     @Column(name = "booking_datetime", updatable = false)
     private LocalDateTime bookingDatetime;
 
-    // Constructors
     public ActivityBookings() {}
 
     public ActivityBookings(Activities activity, Users user, int numberOfParticipants,

@@ -4,6 +4,7 @@ import com.hobbySphere.entities.*;
 import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.*;
 import com.hobbySphere.repositories.RoleRepository;
+import com.hobbySphere.repositories.UsersRepository;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -13,7 +14,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -28,6 +32,8 @@ public class AuthController {
 
     @Autowired
     private BusinessService businessService;
+    
+    
 
     @Autowired
     private AdminUserService adminUserService;
@@ -43,6 +49,9 @@ public class AuthController {
 
     @Autowired
     private GoogleAuthService googleAuthService;
+    
+    @Autowired
+    private UsersRepository UserRepository;
 
     // Default User Registration
     @PostMapping("/user/register")
@@ -242,25 +251,82 @@ public class AuthController {
         ));
 
     }
+    
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateUser(
+            @PathVariable Long id,
+            @RequestPart("firstName") String firstName,
+            @RequestPart("lastName") String lastName,
+            @RequestPart("username") String username,
+            @RequestPart(value = "password", required = false) String password,
+            @RequestPart(value = "profilePicture", required = false) MultipartFile profilePicture) throws IOException {
+
+        Optional<Users> optionalUser = UserRepository.findById(id);
+        if (optionalUser.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+
+        Users user = optionalUser.get();
+
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setUsername(username);
+
+        if (profilePicture != null && !profilePicture.isEmpty()) {
+            // TODO: Save the file and get its URL
+            String imageUrl = userService.saveProfileImage(profilePicture); // You must implement this
+            user.setProfilePictureUrl(imageUrl);
+        }
+
+        if (password != null && !password.isEmpty()) {
+            // Optional: hash password before saving
+            user.setPasswordHash(password);
+        }
+
+        UserRepository.save(user);
+
+        return ResponseEntity.ok("Profile updated successfully");
+    }
 
     // Business Login
     // Business Login
     @PostMapping("/business/login")
     public ResponseEntity<?> businessLogin(@RequestBody @Valid Users user) {
         Optional<Businesses> optionalBusiness = businessService.findByEmail(user.getEmail());
+
         if (optionalBusiness.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Business not found"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                 .body(Map.of("message", "Business not found"));
         }
 
         Businesses business = optionalBusiness.get();
+
         if (!passwordEncoder.matches(user.getPasswordHash(), business.getPasswordHash())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Incorrect password"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                 .body(Map.of("message", "Incorrect password"));
         }
 
         String token = jwtUtil.generateToken(business);
-        return ResponseEntity.ok(Map.of("message", "Business login successful", "token", token));
+
+        // Manually extract safe fields
+        Map<String, Object> businessData = new HashMap<>();
+        businessData.put("id", business.getId());
+        businessData.put("businessName", business.getBusinessName());
+        businessData.put("email", business.getEmail());
+        businessData.put("businessLogo", business.getBusinessLogoUrl());
+        businessData.put("businessBanner", business.getBusinessBannerUrl());
+        businessData.put("businessName",business.getBusinessName());
+        businessData.put("phoneNumber",business.getPhoneNumber());
+
+        // Full response map
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Business login successful");
+        response.put("token", token);
+        response.put("business", businessData);
+
+        return ResponseEntity.ok(response);
     }
-    
+
  // Google Login
     @PostMapping("/google-login")
     public ResponseEntity<?> googleLogin(@RequestBody GoogleLoginRequest request, @RequestParam String userType) {

@@ -56,6 +56,9 @@ public class UserService {
 
         return userRepository.save(user);
     }
+    
+   
+
 
     public Users findByUsername(String username) {
         return userRepository.findByUsername(username);
@@ -68,5 +71,19 @@ public class UserService {
     public Users save(Users user) {
         return userRepository.save(user);
     }
+
+	public String saveProfileImage(MultipartFile file) throws IOException {
+		String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        Path path = Paths.get("uploads");
+
+        if (!Files.exists(path)) {
+            Files.createDirectories(path);
+        }
+
+        Path fullPath = path.resolve(filename);
+        Files.copy(file.getInputStream(), fullPath, StandardCopyOption.REPLACE_EXISTING);
+
+        return "/uploads/" + filename; // adjust based on your static file serving
+	}
 
 }

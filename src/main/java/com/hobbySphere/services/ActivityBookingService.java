@@ -4,7 +4,9 @@ import com.hobbySphere.repositories.UsersRepository;
 import com.hobbySphere.entities.ActivityBookings;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.entities.Activities;
+import java.util.stream.Collectors;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +61,49 @@ public class ActivityBookingService {
 	    }
 	    return activityBookingsRepository.findByUserId(user.getId());
 	}
+
+	
+	
+	
+public List<ActivityBookings> getBookingsByEmailAndStatuses(String userEmail, List<String> statuses) {
+    List<ActivityBookings> bookings = activityBookingsRepository.findByUserEmailAndBookingStatusIn(userEmail, statuses);
+
+    LocalDateTime now = LocalDateTime.now();
+
+    for (ActivityBookings booking : bookings) {
+        if ("pending".equals(booking.getBookingStatus()) &&
+            booking.getActivity().getEndDatetime().isBefore(now)) {
+            booking.setBookingStatus("completed");
+            activityBookingsRepository.save(booking); // update status in DB
+        }
+    }
+
+    // Fetch all updated bookings with the given statuses (including Completed ones now)
+    return activityBookingsRepository.findByUserEmailAndBookingStatusIn(userEmail, statuses);
+}
+
+public void cancelBooking(Long bookingId, String userEmail) {
+    ActivityBookings booking = activityBookingsRepository.findById(bookingId)
+        .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+    if (!booking.getUser().getEmail().equals(userEmail)) {
+        throw new RuntimeException("Unauthorized to cancel this booking");
+    }
+
+    if ("Canceled".equals(booking.getBookingStatus())) {
+        throw new RuntimeException("Booking is already canceled");
+    }
+
+    booking.setBookingStatus("Canceled");
+    activityBookingsRepository.save(booking);
+}
+
+
+
+	
+
+	
+
 
     
 
