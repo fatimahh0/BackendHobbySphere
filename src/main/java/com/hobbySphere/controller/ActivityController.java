@@ -9,18 +9,16 @@ import com.hobbySphere.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import com.hobbySphere.dto.BookingRequest;
-
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.math.BigDecimal;
 import java.security.Principal;
 import java.util.HashMap;
@@ -43,21 +41,22 @@ public class ActivityController {
     @Autowired
     private UserService userService;
 
-    @Operation(summary = "Get activities by business ID")
+    @Operation(summary = "Get activities by business ID", description = "Retrieve a list of activities associated with a specific business")
     @ApiResponse(responseCode = "200", description = "List of activities for a given business")
     @GetMapping("/business/{businessId}")
-    public List<Activities> getActivitiesByBusiness(@PathVariable Long businessId) {
+    public List<Activities> getActivitiesByBusiness(
+            @Parameter(description = "ID of the business to fetch activities for") @PathVariable Long businessId) {
         return activityService.findByBusinessId(businessId);
     }
 
-    @Operation(summary = "Get all activities")
+    @Operation(summary = "Get all activities", description = "Retrieve a list of all activities in the system")
     @ApiResponse(responseCode = "200", description = "Returns all activities")
     @GetMapping
     public List<Activities> getAllActivities() {
         return activityService.findAllActivities();
     }
 
-    @Operation(summary = "Create a new activity with image upload")
+    @Operation(summary = "Create a new activity with image upload", description = "Create a new activity and optionally upload an image")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Activity created successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid input")
@@ -108,30 +107,56 @@ public class ActivityController {
         }
     }
 
-    @Operation(summary = "Update an existing activity by ID")
+    @Operation(summary = "Update an existing activity with an image", description = "This API updates an existing activity with new details and an optional image.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Activity updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid input"),
         @ApiResponse(responseCode = "404", description = "Activity not found")
     })
-    @PutMapping("/{id}")
-    public ResponseEntity<Activities> updateActivity(@PathVariable Long id, @RequestBody Activities activity) {
-        Optional<Activities> existingActivity = Optional.ofNullable(activityService.findById(id));
-        if (existingActivity.isPresent()) {
-            activity.setId(id);
-            Activities updatedActivity = activityService.save(activity);
-            return new ResponseEntity<>(updatedActivity, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    @PutMapping("/{id}/update-with-image")
+    public ResponseEntity<?> updateActivityWithImage(
+            @Parameter(description = "ID of the activity to update") @PathVariable Long id,
+            @RequestParam("activityName") String activityName,
+            @RequestParam("activityType") String activityType,
+            @RequestParam("description") String description,
+            @RequestParam("location") String location,
+            @RequestParam("maxParticipants") int maxParticipants,
+            @RequestParam("price") BigDecimal price,
+            @RequestParam("startDatetime") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDatetime,
+            @RequestParam("endDatetime") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDatetime,
+            @RequestParam("status") String status,
+            @RequestParam("businessId") Long businessId,
+            @RequestParam(value = "image", required = false) MultipartFile image
+    ) {
+        try {
+            Activities updatedActivity = activityService.updateActivityWithImage(
+                    id, activityName, activityType, description, location, maxParticipants, price,
+                    startDatetime, endDatetime, status, businessId, image
+            );
+            return ResponseEntity.status(HttpStatus.OK).body(Map.of(
+                    "message", "Activity updated successfully",
+                    "activity", updatedActivity
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "message", e.getMessage()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "message", "Failed to update activity",
+                    "error", e.getMessage()
+            ));
         }
     }
 
-    @Operation(summary = "Delete an activity by ID")
+
+    @Operation(summary = "Delete an activity by ID", description = "Delete an activity by providing its ID")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "Activity deleted successfully"),
         @ApiResponse(responseCode = "404", description = "Activity not found")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteActivity(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteActivity(@Parameter(description = "ID of the activity to delete") @PathVariable Long id) {
         Optional<Activities> existingActivity = Optional.ofNullable(activityService.findById(id));
         if (existingActivity.isPresent()) {
             activityService.deleteActivity(id);
@@ -141,13 +166,13 @@ public class ActivityController {
         }
     }
 
-    @Operation(summary = "Get a single activity by ID")
+    @Operation(summary = "Get a single activity by ID", description = "Retrieve details of a specific activity by its ID")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Activity retrieved successfully"),
         @ApiResponse(responseCode = "404", description = "Activity not found")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Activities> getActivityById(@PathVariable Long id) {
+    public ResponseEntity<Activities> getActivityById(@Parameter(description = "ID of the activity to retrieve") @PathVariable Long id) {
         Optional<Activities> activity = Optional.ofNullable(activityService.findById(id));
         if (activity.isPresent()) {
             return new ResponseEntity<>(activity.get(), HttpStatus.OK);
@@ -156,11 +181,16 @@ public class ActivityController {
         }
     }
 
-
-    // Book an activity
+    @Operation(summary = "Book an activity", description = "Allows a user to book an activity and receive booking details")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Booking successful"),
+        @ApiResponse(responseCode = "400", description = "Invalid booking request"),
+        @ApiResponse(responseCode = "404", description = "Activity not found"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
     @PostMapping("/{activityId}/book")
     public ResponseEntity<?> bookActivity(
-        @PathVariable long activityId,
+        @Parameter(description = "ID of the activity to book") @PathVariable long activityId,
         @RequestBody BookingRequest request,
         Principal principal
     ) {
@@ -203,7 +233,4 @@ public class ActivityController {
             "bookingId", booking.getId()
         ));
     }
-
-   
-    
 }

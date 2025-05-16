@@ -1,5 +1,7 @@
 package com.hobbySphere.controller;
 
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 import com.hobbySphere.entities.Businesses;
 import com.hobbySphere.services.BusinessService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
@@ -21,18 +22,7 @@ public class BusinessController {
     @Autowired
     private BusinessService businessService;
 
-    @Operation(summary = "Create a new business")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Business created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid input")
-    })
-    @PostMapping
-    public ResponseEntity<Businesses> createBusiness(@RequestBody Businesses business) {
-        Businesses savedBusiness = businessService.save(business);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedBusiness);
-    }
-
-    @Operation(summary = "Get a business by ID")
+    @Operation(summary = "Get a business by ID", description = "This API retrieves a business by its ID.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Business retrieved successfully"),
         @ApiResponse(responseCode = "404", description = "Business not found")
@@ -47,7 +37,7 @@ public class BusinessController {
         }
     }
 
-    @Operation(summary = "Get all businesses")
+    @Operation(summary = "Get all businesses", description = "This API retrieves all businesses.")
     @ApiResponse(responseCode = "200", description = "List of all businesses")
     @GetMapping
     public ResponseEntity<List<Businesses>> getAllBusinesses() {
@@ -55,7 +45,7 @@ public class BusinessController {
         return ResponseEntity.ok(businesses);
     }
 
-    @Operation(summary = "Update an existing business")
+    @Operation(summary = "Update an existing business", description = "This API allows the update of an existing business.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Business updated successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid request data")
@@ -71,7 +61,7 @@ public class BusinessController {
         }
     }
 
-    @Operation(summary = "Delete a business by ID")
+    @Operation(summary = "Delete a business by ID", description = "This API deletes a business by its ID.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "Business deleted successfully"),
         @ApiResponse(responseCode = "404", description = "Business not found")
@@ -83,6 +73,63 @@ public class BusinessController {
             return ResponseEntity.noContent().build();
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    @Operation(summary = "Register a business with images", description = "This API registers a new business along with a logo and banner image.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Business registered successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid input"),
+        @ApiResponse(responseCode = "500", description = "Error uploading files")
+    })
+    @PostMapping("/register")
+    public ResponseEntity<Businesses> registerBusinessWithImages(
+            @RequestParam String name,
+            @RequestParam String email,
+            @RequestParam String password,
+            @RequestParam String description,
+            @RequestParam(required = false) String phoneNumber,
+            @RequestParam(required = false) String websiteUrl,
+            @RequestParam(required = false) MultipartFile logo,
+            @RequestParam(required = false) MultipartFile banner
+    ) {
+        try {
+            Businesses business = businessService.registerBusiness(
+                name, email, password, description, phoneNumber, websiteUrl, logo, banner
+            );
+            return ResponseEntity.status(HttpStatus.CREATED).body(business);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @Operation(summary = "Update an existing business with images", description = "This API updates an existing business along with its logo and banner image.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Business updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid input"),
+        @ApiResponse(responseCode = "500", description = "Error uploading files")
+    })
+    @PutMapping("/update-with-images/{id}")
+    public ResponseEntity<?> updateBusinessWithImages(
+            @PathVariable Long id,
+            @RequestParam String name,
+            @RequestParam String email,
+            @RequestParam String password,
+            @RequestParam String description,
+            @RequestParam(required = false) String phoneNumber,
+            @RequestParam(required = false) String websiteUrl,
+            @RequestParam(required = false) MultipartFile logo,
+            @RequestParam(required = false) MultipartFile banner
+    ) {
+        try {
+            Businesses updated = businessService.updateBusinessWithImages(
+                    id, name, email, password, description, phoneNumber, websiteUrl, logo, banner
+            );
+            return ResponseEntity.ok(updated);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error uploading files.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 }

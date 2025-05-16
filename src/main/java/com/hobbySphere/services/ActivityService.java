@@ -6,6 +6,7 @@ import com.hobbySphere.repositories.ActivitiesRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -42,9 +43,9 @@ public class ActivityService {
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {
             String filename = UUID.randomUUID() + "_" + image.getOriginalFilename();
-            Path uploadPath = Paths.get("uploads/");
+            Path uploadPath = Paths.get("uploads/");  // Ensure this path is valid and exists
             if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
+                Files.createDirectories(uploadPath);  // Create directories if not exist
             }
             Path filePath = uploadPath.resolve(filename);
             Files.copy(image.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
@@ -69,7 +70,7 @@ public class ActivityService {
         activity.setEndDatetime(endDatetime);
         activity.setStatus(status);
         activity.setImageUrl(imageUrl);
-        activity.setBusiness(business);
+        activity.setBusiness(business);  // Correctly set the business object
 
         return activityRepository.save(activity);
     }
@@ -97,5 +98,59 @@ public class ActivityService {
     // ✅ Delete activity by ID
     public void deleteActivity(Long id) {
         activityRepository.deleteById(id);
+    }
+
+    // ✅ Update an activity with image
+    public Activities updateActivityWithImage(
+            Long id, 
+            String activityName, 
+            String activityType, 
+            String description, 
+            String location,
+            int maxParticipants, 
+            BigDecimal price, 
+            LocalDateTime startDatetime, 
+            LocalDateTime endDatetime, 
+            String status,
+            Long businessId, 
+            MultipartFile image) throws IOException {
+        
+        // Find the existing activity by ID
+        Activities activity = activityRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
+
+        // Update the activity details
+        activity.setActivityName(activityName);
+        activity.setActivityType(activityType);
+        activity.setDescription(description);
+        activity.setLocation(location);
+        activity.setMaxParticipants(maxParticipants);
+        activity.setPrice(price);
+        activity.setStartDatetime(startDatetime);
+        activity.setEndDatetime(endDatetime);
+        activity.setStatus(status);
+
+        // Fetch the business and associate with the activity
+        Businesses business = businessService.findById(businessId);
+        if (business != null) {
+            activity.setBusiness(business);  // Correctly set the business object
+        } else {
+            throw new IllegalArgumentException("Business with ID " + businessId + " not found.");
+        }
+
+        // Handle the image upload (if provided)
+        if (image != null && !image.isEmpty()) {
+            String imageFileName = UUID.randomUUID() + "_" + StringUtils.cleanPath(image.getOriginalFilename());
+            Path imagePath = Paths.get("uploads/", imageFileName);  // Ensure this path is valid and exists
+            
+            // Save the image to the directory
+            Files.copy(image.getInputStream(), imagePath, StandardCopyOption.REPLACE_EXISTING);
+
+            // Set the image URL for the activity
+            activity.setImageUrl("/uploads/" + imageFileName);  // The image URL would be saved in the database
+        }
+
+        // Save the updated activity in the database
+        return activityRepository.save(activity);
     }
 }
