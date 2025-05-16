@@ -100,6 +100,11 @@ public void cancelBooking(Long bookingId, String userEmail) {
 
 
 
+public boolean existsByUserAndActivity(Long id, long activityId) {
+	return activityBookingsRepository.existsByUserIdAndActivityId(id, activityId);
+}
+
+
 	
 
 	

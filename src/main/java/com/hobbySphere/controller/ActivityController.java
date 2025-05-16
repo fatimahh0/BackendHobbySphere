@@ -13,6 +13,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
+import com.hobbySphere.dto.BookingRequest;
+
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -154,51 +156,54 @@ public class ActivityController {
         }
     }
 
+
     // Book an activity
     @PostMapping("/{activityId}/book")
-    public ResponseEntity<Map<String, Object>> bookActivity(
-            @PathVariable long activityId,
-            @RequestParam int participants,
-            @RequestParam String paymentMethod,
-            Principal principal) {
-
-        Map<String, Object> response = new HashMap<>();
-
-        // Fetch the activity
-        Activities activity = activityService.findById(activityId);
-        if (activity == null) {
-            response.put("message", "Activity not found");
-            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    public ResponseEntity<?> bookActivity(
+        @PathVariable long activityId,
+        @RequestBody BookingRequest request,
+        Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
         }
 
-        // Get current number of booked participants
-        int currentBooked = bookingService.countParticipantsByActivityId(activityId);
-        int maxCapacity = activity.getMaxParticipants();  // Use maxParticipants from activity entity
-
-        // Check if booking exceeds max participants
-        if (currentBooked + participants > maxCapacity) {
-            response.put("message", "Booking exceeds maximum allowed participants");
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-        }
-
-     // Fetch the user making the booking
         Users user = userService.findByEmail(principal.getName());
-        
+        Activities activity = activityService.findById(activityId);
 
-        // Calculate the total price based on the participants
-        BigDecimal totalPrice = activity.getPrice().multiply(BigDecimal.valueOf(participants));
+        if (activity == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Activity not found"));
+        }
 
-        // Create the booking
-        ActivityBookings booking = new ActivityBookings(activity, user, participants, totalPrice, paymentMethod);
+        // ✅ Prevent duplicate bookings
+        boolean alreadyBooked = bookingService.existsByUserAndActivity(user.getId(), activityId);
+        if (alreadyBooked) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "message", "You have already booked this activity"
+            ));
+        }
+
+        int currentBooked = bookingService.countParticipantsByActivityId(activityId);
+        if (currentBooked + request.getParticipants() > activity.getMaxParticipants()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "message", "Exceeds max participants"
+            ));
+        }
+
+        BigDecimal totalPrice = activity.getPrice().multiply(BigDecimal.valueOf(request.getParticipants()));
+
+        ActivityBookings booking = new ActivityBookings(
+            activity, user, request.getParticipants(), totalPrice, request.getPaymentMethod()
+        );
+
         bookingService.save(booking);
 
-        // Response message with booking ID
-        response.put("message", "Booking successful");
-        response.put("bookingId", booking.getId());
-
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return ResponseEntity.ok(Map.of(
+            "message", "Booking successful",
+            "bookingId", booking.getId()
+        ));
     }
-    
+
    
     
 }

@@ -25,6 +25,10 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
 	
 	List<ActivityBookings> findByUserEmailAndBookingStatusIn(String userEmail, List<String> of);
 
+	
+
+	boolean existsByUserIdAndActivityId(Long id, long activityId);
+
     
     
 }

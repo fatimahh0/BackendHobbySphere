@@ -235,22 +235,31 @@ public class AuthController {
     public ResponseEntity<?> userLogin(@RequestBody @Valid Users user) {
         Users existingUser = userService.findByEmail(user.getEmail());
         if (existingUser == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "User not found"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                 .body(Map.of("message", "User not found"));
         }
 
         if (!passwordEncoder.matches(user.getPasswordHash(), existingUser.getPasswordHash())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Incorrect password"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                 .body(Map.of("message", "Incorrect password"));
         }
 
-        String token = jwtUtil.generateToken(user);
-       // String token = jwtUtil.generateToken(existingUser);
+        String token = jwtUtil.generateToken(existingUser); // ✅ Use existingUser
+
         return ResponseEntity.ok(Map.of(
             "message", "User login successful",
             "token", token,
-            "user", existingUser
+            "user", Map.of( // Optional: exclude sensitive info
+                "id", existingUser.getId(),
+                "username", existingUser.getUsername(),
+                "firstName", existingUser.getFirstName(),
+                "lastName", existingUser.getLastName(),
+                "email", existingUser.getEmail(),
+                "profilePictureUrl", existingUser.getProfilePictureUrl()
+            )
         ));
-
     }
+
     
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateUser(

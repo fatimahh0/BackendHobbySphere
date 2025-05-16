@@ -35,7 +35,7 @@ public class SecurityConfig implements WebMvcConfigurer{
     
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // This maps: http://localhost:8080/uploads/** ⟶ actual file system path: /your-project/uploads/
+        // This maps: http://localhost:9090/uploads/** 
         String uploadPath = Paths.get("uploads").toAbsolutePath().toUri().toString();
 
         registry
