@@ -10,36 +10,37 @@ import java.util.List;
 @Repository
 public interface ActivityBookingsRepository extends JpaRepository<ActivityBookings, Long> {
 
-	 
-	 
+    // Check if user already booked the activity
+    boolean existsByActivityIdAndUserId(Long activityId, Long userId);
+
     @Query("SELECT COALESCE(SUM(ab.numberOfParticipants), 0) FROM ActivityBookings ab WHERE ab.activity.id = :activityId")
     int sumParticipantsByActivityId(@Param("activityId") Long activityId);
 
     int countByActivityId(Long activityId);
 
-	List<ActivityBookings> findByUserId(Long userId);
-	
-	
-	List<ActivityBookings> findByUser_Id(Long userId);
+    List<ActivityBookings> findByBookingStatusIn(List<String> statuses);
+    List<ActivityBookings> findByUserId(Long userId);
 
-	
-	List<ActivityBookings> findByUserEmailAndBookingStatusIn(String userEmail, List<String> of);
+    List<ActivityBookings> findByUser_Id(Long userId);
 
-	
+    // Method to find bookings by user email
+    @Query("SELECT ab FROM ActivityBookings ab WHERE ab.user.email = :userEmail")
+    List<ActivityBookings> findByUserEmail(@Param("userEmail") String userEmail);
 
-	boolean existsByUserIdAndActivityId(Long id, long activityId);
+    // Method to find bookings by user email and booking statuses (e.g., Pending, Completed, Canceled)
+    @Query("SELECT ab FROM ActivityBookings ab WHERE ab.user.email = :userEmail AND ab.bookingStatus IN :statuses")
+    List<ActivityBookings> findByUserEmailAndBookingStatusIn(@Param("userEmail") String userEmail, @Param("statuses") List<String> statuses);
 
-	boolean existsByActivityIdAndUserId(Long activityId, Long userId);
+    @Query("SELECT ab FROM ActivityBookings ab WHERE ab.id = :bookingId AND ab.bookingStatus = :status")
+    ActivityBookings findByIdAndBookingStatus(@Param("bookingId") Long bookingId, @Param("status") String status);
 
-	
+    @Query("SELECT ab FROM ActivityBookings ab WHERE ab.bookingStatus = 'Pending'")
+    List<ActivityBookings> findActiveBookings();
 
-	boolean existsByActivity_IdAndUser_IdAndBookingStatusNot(Long activityId, Long userId, String string);
+    @Query("SELECT ab FROM ActivityBookings ab WHERE ab.bookingStatus IN ('Completed', 'Canceled')")
+    List<ActivityBookings> findBookingHistory();
 
-	List<ActivityBookings> findByActivityIdAndUserId(Long activityId, Long userId);
-	
-	boolean existsByActivityIdAndUserIdAndBookingStatusNot(Long activityId, Long userId, String excludedStatus);
+    boolean existsByActivityIdAndUserIdAndBookingStatusNot(Long activityId, Long userId, String excludedStatus);
 
-
-    
-    
+    List<ActivityBookings> findByActivityIdAndUserId(Long activityId, Long userId);
 }

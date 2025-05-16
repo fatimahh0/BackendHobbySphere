@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(
     name = "ActivityBookings",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"activity_id", "user_id"})
+    uniqueConstraints = @UniqueConstraint(columnNames = {"activity_id", "user_id"})  // Ensure unique constraint on activity-user pair
 )
 public class ActivityBookings {
 
@@ -19,15 +19,15 @@ public class ActivityBookings {
 
     @ManyToOne
     @JoinColumn(name = "activity_id", nullable = false)
-    @JsonIgnoreProperties({"bookings", "createdBy", "category"})
+    @JsonIgnoreProperties({"bookings", "createdBy", "category"}) // Ignore unnecessary properties during serialization
     private Activities activity;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnoreProperties({"bookings", "roles", "password"})
+    @JsonIgnoreProperties({"bookings", "roles", "password"}) // Ignore unnecessary properties during serialization
     private Users user;
 
-    @Column(name = "number_of_participants")
+    @Column(name = "number_of_participants")  // Corrected to match repository field
     private int numberOfParticipants;
 
     @Column(name = "total_price")
@@ -42,8 +42,10 @@ public class ActivityBookings {
     @Column(name = "booking_datetime", updatable = false)
     private LocalDateTime bookingDatetime;
 
+    // Default constructor
     public ActivityBookings() {}
 
+    // Constructor to initialize the fields
     public ActivityBookings(Activities activity, Users user, int numberOfParticipants,
                            BigDecimal totalPrice, String paymentMethod) {
         this.activity = activity;
@@ -51,9 +53,10 @@ public class ActivityBookings {
         this.numberOfParticipants = numberOfParticipants;
         this.totalPrice = totalPrice;
         this.paymentMethod = paymentMethod;
-        this.bookingStatus = "Pending";
+        this.bookingStatus = "Pending";  // Default status as "Pending"
     }
 
+    // Automatically set the booking date before persisting the entity
     @PrePersist
     protected void onCreate() {
         this.bookingDatetime = LocalDateTime.now();

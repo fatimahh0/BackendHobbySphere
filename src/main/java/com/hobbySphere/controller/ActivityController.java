@@ -15,12 +15,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import com.hobbySphere.dto.BookingRequest;
-
-import org.springframework.transaction.annotation.Transactional;
-
-
-
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,13 +26,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-
 @RestController
 @RequestMapping("/api/activities")
 @Tag(name = "Activities API", description = "Endpoints for managing activities")
 public class ActivityController {
-	
-	
 
     @Autowired
     private ActivityService activityService;
@@ -50,7 +41,10 @@ public class ActivityController {
     private UserService userService;
 
     @Operation(summary = "Get activities by business ID", description = "Retrieve a list of activities associated with a specific business")
-    @ApiResponse(responseCode = "200", description = "List of activities for a given business")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "List of activities for a given business"),
+        @ApiResponse(responseCode = "404", description = "Business not found")
+    })
     @GetMapping("/business/{businessId}")
     public List<Activities> getActivitiesByBusiness(
             @Parameter(description = "ID of the business to fetch activities for") @PathVariable Long businessId) {
@@ -58,7 +52,9 @@ public class ActivityController {
     }
 
     @Operation(summary = "Get all activities", description = "Retrieve a list of all activities in the system")
-    @ApiResponse(responseCode = "200", description = "Returns all activities")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Returns all activities")
+    })
     @GetMapping
     public List<Activities> getAllActivities() {
         return activityService.findAllActivities();
@@ -157,14 +153,14 @@ public class ActivityController {
         }
     }
 
-
     @Operation(summary = "Delete an activity by ID", description = "Delete an activity by providing its ID")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "Activity deleted successfully"),
         @ApiResponse(responseCode = "404", description = "Activity not found")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteActivity(@Parameter(description = "ID of the activity to delete") @PathVariable Long id) {
+    public ResponseEntity<Void> deleteActivity(
+            @Parameter(description = "ID of the activity to delete") @PathVariable Long id) {
         Optional<Activities> existingActivity = Optional.ofNullable(activityService.findById(id));
         if (existingActivity.isPresent()) {
             activityService.deleteActivity(id);
@@ -180,7 +176,8 @@ public class ActivityController {
         @ApiResponse(responseCode = "404", description = "Activity not found")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Activities> getActivityById(@Parameter(description = "ID of the activity to retrieve") @PathVariable Long id) {
+    public ResponseEntity<Activities> getActivityById(
+            @Parameter(description = "ID of the activity to retrieve") @PathVariable Long id) {
         Optional<Activities> activity = Optional.ofNullable(activityService.findById(id));
         if (activity.isPresent()) {
             return new ResponseEntity<>(activity.get(), HttpStatus.OK);
@@ -189,19 +186,10 @@ public class ActivityController {
         }
     }
 
-
-
-
-    @PostMapping("/{activityId}/book")
-    public ResponseEntity<Map<String, Object>> bookActivity(
-            @PathVariable long activityId,
-            @RequestBody BookingRequest request,
-            Principal principal) {
-
-    @Operation(summary = "Book an activity", description = "Allows a user to book an activity and receive booking details")
+    @Operation(summary = "Book an activity", description = "Book an activity for a user with a specified number of participants")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Booking successful"),
-        @ApiResponse(responseCode = "400", description = "Invalid booking request"),
+        @ApiResponse(responseCode = "400", description = "Invalid input"),
         @ApiResponse(responseCode = "404", description = "Activity not found"),
         @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
@@ -215,48 +203,40 @@ public class ActivityController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
         }
 
-
         Map<String, Object> response = new HashMap<>();
-
-        // 
         Activities activity = activityService.findById(activityId);
         if (activity == null) {
             response.put("message", "Activity not found");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
 
-        // 
         Users user = userService.findByEmail(principal.getName());
-        
-        
 
-        // 
+        // Check booking status (this might be a custom logic to update status, make sure it's defined in your service)
         activityService.updateStatusIfCanceled(activity);
 
-        // 
-        if (bookingService.hasUserAlreadyBookedd(activity.getId(), user.getId())) {
+        // Check if the user has already booked the activity
+        if (bookingService.hasUserAlreadyBooked(activity.getId(), user.getId())) {
             response.put("message", "You already booked this activity");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
-        // 
+        // Check if booking exceeds max participants
         int currentBooked = bookingService.countParticipantsByActivityId(activity.getId());
         if (currentBooked + request.getParticipants() > activity.getMaxParticipants()) {
             response.put("message", "Booking exceeds maximum allowed participants");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
-        // 
+        // Calculate total price and create booking
         BigDecimal totalPrice = activity.getPrice().multiply(BigDecimal.valueOf(request.getParticipants()));
         ActivityBookings booking = new ActivityBookings(activity, user, request.getParticipants(), totalPrice, request.getPaymentMethod());
-        bookingService.save(booking);
 
-        // response
+        // Save the booking
+        bookingService.saveBooking(booking);  // This should save the booking successfully
+
         response.put("message", "Booking successful");
         response.put("bookingId", booking.getId());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
-
-
-
 }

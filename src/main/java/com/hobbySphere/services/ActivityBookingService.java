@@ -1,141 +1,69 @@
 package com.hobbySphere.services;
+
 import com.hobbySphere.repositories.ActivityBookingsRepository;
 import com.hobbySphere.repositories.UsersRepository;
-
-import jakarta.transaction.Transactional;
-
 import com.hobbySphere.entities.ActivityBookings;
-import com.hobbySphere.entities.Users;
-import com.hobbySphere.entities.Activities;
-import java.util.stream.Collectors;
-
-import java.time.LocalDateTime;
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class ActivityBookingService {
 
     @Autowired
     private ActivityBookingsRepository activityBookingsRepository;
-    
 
     @Autowired
-    private UsersRepository userRepository; 
-    
-    public int countParticipantsByActivityId(Long activityId) {
-        return activityBookingsRepository.countByActivityId(activityId);
+    private UsersRepository userRepository;
+
+    // Method to get bookings by user email
+    public List<ActivityBookings> getBookingsByEmail(String userEmail) {
+        return activityBookingsRepository.findByUserEmail(userEmail);
     }
 
-    public void validateBooking(Activities activity, int numberOfParticipants) {
-        // Get the current number of participants already booked for the activity
-        int totalParticipants = activityBookingsRepository.sumParticipantsByActivityId(activity.getId());
+    public boolean hasUserAlreadyBooked(Long activityId, Long userId) {
+        return activityBookingsRepository.existsByActivityIdAndUserId(activityId, userId);
+    }
 
-        // Check if the new booking exceeds the maximum participants
-        if (totalParticipants + numberOfParticipants > activity.getMaxParticipants()) {
-            throw new IllegalArgumentException("Cannot book more participants than the maximum allowed for this activity.");
+    // Method to get bookings by user email and statuses (e.g., Pending, Completed, Canceled)
+    public List<ActivityBookings> getBookingsByEmailAndStatuses(String userEmail, List<String> statuses) {
+        return activityBookingsRepository.findByUserEmailAndBookingStatusIn(userEmail, statuses);
+    }
+
+    // Method to cancel a booking by ID (only for the current user)
+    public void cancelBooking(Long bookingId, String userEmail) {
+        ActivityBookings booking = activityBookingsRepository.findById(bookingId)
+            .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        
+        if (!booking.getUser().getEmail().equals(userEmail)) {
+            throw new IllegalArgumentException("You can only cancel your own bookings");
         }
-    }
-
-    public void save(ActivityBookings booking) {
+        
+        booking.setBookingStatus("Canceled");
         activityBookingsRepository.save(booking);
     }
-    
-   
 
-  
-    
-    public ActivityBookings saveBooking(ActivityBookings booking) {
-        return activityBookingsRepository.save(booking);
-    }
-
-	
-	public List<ActivityBookings> getBookingsByUserId(Long userId) {
-		return activityBookingsRepository.findByUser_Id(userId);
-		}
-
-	
-	public List<ActivityBookings> getBookingsByEmail(String email) {
-	    Users user = userRepository.findByEmail(email);
-	    if (user == null) {
-	        throw new RuntimeException("User not found");
-	    }
-	    return activityBookingsRepository.findByUserId(user.getId());
-	}
-
-	
-	
-	
-public List<ActivityBookings> getBookingsByEmailAndStatuses(String userEmail, List<String> statuses) {
-    List<ActivityBookings> bookings = activityBookingsRepository.findByUserEmailAndBookingStatusIn(userEmail, statuses);
-
-    LocalDateTime now = LocalDateTime.now();
-
-    for (ActivityBookings booking : bookings) {
-        if ("pending".equals(booking.getBookingStatus()) &&
-            booking.getActivity().getEndDatetime().isBefore(now)) {
-            booking.setBookingStatus("completed");
-            activityBookingsRepository.save(booking); // update status in DB
+    // Method to set a booking to Pending (only for the current user)
+    public void pendingBooking(Long bookingId, String userEmail) {
+        ActivityBookings booking = activityBookingsRepository.findById(bookingId)
+            .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        
+        if (!booking.getUser().getEmail().equals(userEmail)) {
+            throw new IllegalArgumentException("You can only set your own bookings to pending");
         }
+        
+        booking.setBookingStatus("Pending");
+        activityBookingsRepository.save(booking);
     }
 
-    // Fetch all updated bookings with the given statuses (including Completed ones now)
-    return activityBookingsRepository.findByUserEmailAndBookingStatusIn(userEmail, statuses);
-}
-
-public void cancelBooking(Long bookingId, String userEmail) {
-    ActivityBookings booking = activityBookingsRepository.findById(bookingId)
-        .orElseThrow(() -> new RuntimeException("Booking not found"));
-
-    if (!booking.getUser().getEmail().equals(userEmail)) {
-        throw new RuntimeException("Unauthorized to cancel this booking");
+    // Method to save a new booking
+    public ActivityBookings saveBooking(ActivityBookings booking) {
+        return activityBookingsRepository.save(booking);  // Persist the booking to the database
     }
 
-    if ("Canceled".equals(booking.getBookingStatus())) {
-        throw new RuntimeException("Booking is already canceled");
+    // Count the number of participants for a specific activity
+    public int countParticipantsByActivityId(Long activityId) {
+        return activityBookingsRepository.sumParticipantsByActivityId(activityId);
     }
-
-    booking.setBookingStatus("Canceled");
-    activityBookingsRepository.save(booking);
-}
-
-
-
-public boolean existsByUserAndActivity(Long id, long activityId) {
-	return activityBookingsRepository.existsByUserIdAndActivityId(id, activityId);
-}
-public boolean hasUserAlreadyBooked(Long activityId, Long userId) {
-    return activityBookingsRepository.existsByActivityIdAndUserId(activityId, userId);
-}
-
-public boolean hasUserAlreadyBookedd(long activityId, long userId) {
-    return activityBookingsRepository.existsByActivityIdAndUserId(activityId, userId);
-}
-
-@Transactional
-public void pendingBooking(Long bookingId, String userEmail) {
-    ActivityBookings booking = activityBookingsRepository.findById(bookingId)
-            .orElseThrow(() -> new RuntimeException("Booking not found"));
-
-    if (!booking.getUser().getEmail().equals(userEmail)) {
-        throw new RuntimeException("You can only modify your own bookings");
-    }
-
-    booking.setBookingStatus("Pending"); // Assure-toi que ce champ existe
-    activityBookingsRepository.save(booking);
-}
-
-
-
-
-	
-
-	
-
-
-    
-
-    
 }

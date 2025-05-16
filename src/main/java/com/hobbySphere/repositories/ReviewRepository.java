@@ -1,0 +1,11 @@
+package com.hobbySphere.repositories;
+
+import com.hobbySphere.entities.Review;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface ReviewRepository extends JpaRepository<Review, Long> {
+    List<Review> findByActivityIdOrderByDateDesc(Long activityId);  // Get reviews for an activity sorted by date
+    List<Review> findAllByOrderByDateDesc();  // Get all reviews sorted by date
+}

@@ -2,6 +2,7 @@ package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "Businesses")
@@ -42,7 +43,9 @@ public class Businesses {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Set timestamps on creation and update
+    @OneToMany(mappedBy = "business", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Activities> activities;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = this.updatedAt = LocalDateTime.now();
@@ -54,10 +57,11 @@ public class Businesses {
     }
 
     // Constructors
-    public Businesses() {}
+    public Businesses() {
+    }
 
     public Businesses(String businessName, String email, String phoneNumber, String passwordHash,
-                    String businessLogoUrl, String businessBannerUrl, String description, String websiteUrl) {
+            String businessLogoUrl, String businessBannerUrl, String description, String websiteUrl) {
         this.businessName = businessName;
         this.email = email;
         this.phoneNumber = phoneNumber;

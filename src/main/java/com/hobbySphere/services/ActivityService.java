@@ -1,6 +1,7 @@
 package com.hobbySphere.services;
 
 import com.hobbySphere.entities.Activities;
+
 import com.hobbySphere.entities.Businesses;
 import com.hobbySphere.repositories.ActivitiesRepository;
 
@@ -15,7 +16,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.*;
 import java.time.LocalDateTime;
-import java.util.List;s
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -110,7 +111,7 @@ public class ActivityService {
             activity.setStatus("Pending");
             activityRepository.save(activity); 
         }
-
+    }
 
     // ✅ Update an activity with image
     public Activities updateActivityWithImage(

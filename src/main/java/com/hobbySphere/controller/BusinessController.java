@@ -132,4 +132,35 @@ public class BusinessController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @Operation(summary = "Update business logo and banner", description = "This API updates only the business logo and banner images.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Logo and banner updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid input"),
+        @ApiResponse(responseCode = "404", description = "Business not found"),
+        @ApiResponse(responseCode = "500", description = "Error uploading files")
+    })
+    @PutMapping("/update-logo-banner/{id}")
+    public ResponseEntity<?> updateBusinessLogoAndBanner(
+            @PathVariable Long id,
+            @RequestParam(required = false) MultipartFile logo,
+            @RequestParam(required = false) MultipartFile banner
+    ) {
+        Businesses existingBusiness = businessService.findById(id);
+        if (existingBusiness == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Business not found");
+        }
+
+        if (logo != null && !logo.isEmpty()) {
+            existingBusiness.setBusinessLogoUrl(logo.getOriginalFilename());
+        }
+
+        if (banner != null && !banner.isEmpty()) {
+            existingBusiness.setBusinessBannerUrl(banner.getOriginalFilename());
+        }
+
+        Businesses updated = businessService.save(existingBusiness);
+        return ResponseEntity.ok(updated);
+    }
+
 }
