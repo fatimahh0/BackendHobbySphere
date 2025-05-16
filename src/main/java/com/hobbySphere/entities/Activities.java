@@ -2,6 +2,7 @@ package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -195,4 +196,11 @@ public class Activities {
 
     @Version
     private Long version;
+
+	public LocalDateTime getDate() {
+		
+		return endDatetime;
+	}
+
+   
 }

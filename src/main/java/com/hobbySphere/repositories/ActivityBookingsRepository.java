@@ -29,6 +29,17 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
 
 	boolean existsByUserIdAndActivityId(Long id, long activityId);
 
+	boolean existsByActivityIdAndUserId(Long activityId, Long userId);
+
+	
+
+	boolean existsByActivity_IdAndUser_IdAndBookingStatusNot(Long activityId, Long userId, String string);
+
+	List<ActivityBookings> findByActivityIdAndUserId(Long activityId, Long userId);
+	
+	boolean existsByActivityIdAndUserIdAndBookingStatusNot(Long activityId, Long userId, String excludedStatus);
+
+
     
     
 }

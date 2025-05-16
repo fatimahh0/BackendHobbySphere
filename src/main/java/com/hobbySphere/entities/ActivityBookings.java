@@ -6,7 +6,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "ActivityBookings")
+@Table(
+    name = "ActivityBookings",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"activity_id", "user_id"})
+)
 public class ActivityBookings {
 
     @Id
@@ -16,12 +19,12 @@ public class ActivityBookings {
 
     @ManyToOne
     @JoinColumn(name = "activity_id", nullable = false)
-    @JsonIgnoreProperties({"bookings", "createdBy", "category"}) // adapte selon tes relations dans Activities
+    @JsonIgnoreProperties({"bookings", "createdBy", "category"})
     private Activities activity;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnoreProperties({"bookings", "roles", "password"}) // adapte selon Users
+    @JsonIgnoreProperties({"bookings", "roles", "password"})
     private Users user;
 
     @Column(name = "number_of_participants")

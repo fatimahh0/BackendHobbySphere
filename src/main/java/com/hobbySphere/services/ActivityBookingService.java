@@ -1,6 +1,9 @@
 package com.hobbySphere.services;
 import com.hobbySphere.repositories.ActivityBookingsRepository;
 import com.hobbySphere.repositories.UsersRepository;
+
+import jakarta.transaction.Transactional;
+
 import com.hobbySphere.entities.ActivityBookings;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.entities.Activities;
@@ -103,6 +106,28 @@ public void cancelBooking(Long bookingId, String userEmail) {
 public boolean existsByUserAndActivity(Long id, long activityId) {
 	return activityBookingsRepository.existsByUserIdAndActivityId(id, activityId);
 }
+public boolean hasUserAlreadyBooked(Long activityId, Long userId) {
+    return activityBookingsRepository.existsByActivityIdAndUserId(activityId, userId);
+}
+
+public boolean hasUserAlreadyBookedd(long activityId, long userId) {
+    return activityBookingsRepository.existsByActivityIdAndUserId(activityId, userId);
+}
+
+@Transactional
+public void pendingBooking(Long bookingId, String userEmail) {
+    ActivityBookings booking = activityBookingsRepository.findById(bookingId)
+            .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+    if (!booking.getUser().getEmail().equals(userEmail)) {
+        throw new RuntimeException("You can only modify your own bookings");
+    }
+
+    booking.setBookingStatus("Pending"); // Assure-toi que ce champ existe
+    activityBookingsRepository.save(booking);
+}
+
+
 
 
 	

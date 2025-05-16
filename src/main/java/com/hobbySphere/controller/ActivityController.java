@@ -14,6 +14,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import com.hobbySphere.dto.BookingRequest;
+import org.springframework.transaction.annotation.Transactional;
+
 
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +35,8 @@ import java.util.Optional;
 @RequestMapping("/api/activities")
 @Tag(name = "Activities API", description = "Endpoints for managing activities")
 public class ActivityController {
+	
+	
 
     @Autowired
     private ActivityService activityService;
@@ -157,53 +161,52 @@ public class ActivityController {
     }
 
 
-    // Book an activity
+
     @PostMapping("/{activityId}/book")
-    public ResponseEntity<?> bookActivity(
-        @PathVariable long activityId,
-        @RequestBody BookingRequest request,
-        Principal principal
-    ) {
-        if (principal == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
-        }
+    public ResponseEntity<Map<String, Object>> bookActivity(
+            @PathVariable long activityId,
+            @RequestBody BookingRequest request,
+            Principal principal) {
 
-        Users user = userService.findByEmail(principal.getName());
+        Map<String, Object> response = new HashMap<>();
+
+        // 
         Activities activity = activityService.findById(activityId);
-
         if (activity == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Activity not found"));
+            response.put("message", "Activity not found");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
 
-        // ✅ Prevent duplicate bookings
-        boolean alreadyBooked = bookingService.existsByUserAndActivity(user.getId(), activityId);
-        if (alreadyBooked) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-                "message", "You have already booked this activity"
-            ));
+        // 
+        Users user = userService.findByEmail(principal.getName());
+        
+        
+
+        // 
+        activityService.updateStatusIfCanceled(activity);
+
+        // 
+        if (bookingService.hasUserAlreadyBookedd(activity.getId(), user.getId())) {
+            response.put("message", "You already booked this activity");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
-        int currentBooked = bookingService.countParticipantsByActivityId(activityId);
+        // 
+        int currentBooked = bookingService.countParticipantsByActivityId(activity.getId());
         if (currentBooked + request.getParticipants() > activity.getMaxParticipants()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-                "message", "Exceeds max participants"
-            ));
+            response.put("message", "Booking exceeds maximum allowed participants");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
+        // 
         BigDecimal totalPrice = activity.getPrice().multiply(BigDecimal.valueOf(request.getParticipants()));
-
-        ActivityBookings booking = new ActivityBookings(
-            activity, user, request.getParticipants(), totalPrice, request.getPaymentMethod()
-        );
-
+        ActivityBookings booking = new ActivityBookings(activity, user, request.getParticipants(), totalPrice, request.getPaymentMethod());
         bookingService.save(booking);
 
-        return ResponseEntity.ok(Map.of(
-            "message", "Booking successful",
-            "bookingId", booking.getId()
-        ));
+        // response
+        response.put("message", "Booking successful");
+        response.put("bookingId", booking.getId());
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-   
-    
 }

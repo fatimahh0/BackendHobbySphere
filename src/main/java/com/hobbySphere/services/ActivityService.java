@@ -3,6 +3,9 @@ package com.hobbySphere.services;
 import com.hobbySphere.entities.Activities;
 import com.hobbySphere.entities.Businesses;
 import com.hobbySphere.repositories.ActivitiesRepository;
+
+import jakarta.transaction.Transactional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -97,5 +100,13 @@ public class ActivityService {
     // ✅ Delete activity by ID
     public void deleteActivity(Long id) {
         activityRepository.deleteById(id);
+    }
+    
+    @Transactional
+    public void updateStatusIfCanceled(Activities activity) {
+        if ("Canceled".equalsIgnoreCase(activity.getStatus())) {
+            activity.setStatus("Pending");
+            activityRepository.save(activity); 
+        }
     }
 }

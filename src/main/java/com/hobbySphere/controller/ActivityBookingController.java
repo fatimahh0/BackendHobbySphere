@@ -7,9 +7,10 @@ import com.hobbySphere.security.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -20,6 +21,8 @@ public class ActivityBookingController {
 
     @Autowired
     private ActivityBookingService bookingService;
+    
+   
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -74,7 +77,15 @@ public class ActivityBookingController {
         return "Booking canceled successfully.";
     }
 
-    
+    @Operation(summary = "Set a booking to PENDING by ID (only for current user)")
+    @PutMapping("/pending/{bookingId}")
+    public String pendingBooking(@PathVariable Long bookingId,
+                                 @RequestHeader("Authorization") String token) {
+        String userEmail = extractUserEmail(token);
+        bookingService.pendingBooking(bookingId, userEmail);
+        return "Booking set to pending successfully.";
+    }
+
    
 
 
