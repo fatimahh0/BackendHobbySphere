@@ -5,6 +5,7 @@ import com.hobbySphere.repositories.UsersRepository;
 import com.hobbySphere.entities.ActivityBookings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import java.time.LocalDateTime;
 
 import java.util.List;
 
@@ -18,9 +19,22 @@ public class ActivityBookingService {
     private UsersRepository userRepository;
 
     // Method to get bookings by user email
+    
     public List<ActivityBookings> getBookingsByEmail(String userEmail) {
-        return activityBookingsRepository.findByUserEmail(userEmail);
+        List<ActivityBookings> bookings = activityBookingsRepository.findByUserEmail(userEmail);
+        LocalDateTime now = LocalDateTime.now();
+
+        for (ActivityBookings booking : bookings) {
+            if ("Pending".equalsIgnoreCase(booking.getBookingStatus())
+                    && booking.getActivity().getEndDatetime().isBefore(now)) {
+                booking.setBookingStatus("Completed");
+                activityBookingsRepository.save(booking);
+            }
+        }
+
+        return bookings;
     }
+
 
     public boolean hasUserAlreadyBooked(Long activityId, Long userId) {
         return activityBookingsRepository.existsByActivityIdAndUserId(activityId, userId);
@@ -28,8 +42,20 @@ public class ActivityBookingService {
 
     // Method to get bookings by user email and statuses (e.g., Pending, Completed, Canceled)
     public List<ActivityBookings> getBookingsByEmailAndStatuses(String userEmail, List<String> statuses) {
-        return activityBookingsRepository.findByUserEmailAndBookingStatusIn(userEmail, statuses);
+        List<ActivityBookings> bookings = activityBookingsRepository.findByUserEmailAndBookingStatusIn(userEmail, statuses);
+        LocalDateTime now = LocalDateTime.now();
+
+        for (ActivityBookings booking : bookings) {
+            if ("Pending".equalsIgnoreCase(booking.getBookingStatus())
+                    && booking.getActivity().getEndDatetime().isBefore(now)) {
+                booking.setBookingStatus("Completed");
+                activityBookingsRepository.save(booking);
+            }
+        }
+
+        return bookings;
     }
+
 
     // Method to cancel a booking by ID (only for the current user)
     public void cancelBooking(Long bookingId, String userEmail) {
@@ -66,4 +92,23 @@ public class ActivityBookingService {
     public int countParticipantsByActivityId(Long activityId) {
         return activityBookingsRepository.sumParticipantsByActivityId(activityId);
     }
+
+    public boolean deleteCanceledBookingByIdAndEmail(Long bookingId, String userEmail) {
+        ActivityBookings booking = activityBookingsRepository.findById(bookingId)
+            .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (!booking.getUser().getEmail().equals(userEmail)) {
+            throw new RuntimeException("Unauthorized: booking does not belong to user");
+        }
+
+        if (!"Canceled".equalsIgnoreCase(booking.getBookingStatus())) {
+            return false; // Only allow deletion if status is Canceled
+        }
+
+        activityBookingsRepository.delete(booking);
+        return true;
+    }
+    
+    
+
 }

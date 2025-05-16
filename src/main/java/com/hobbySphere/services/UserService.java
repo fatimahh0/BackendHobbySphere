@@ -85,6 +85,28 @@ public class UserService {
 
         return "/uploads/" + filename; // adjust based on your static file serving
 	}
+
+
+
+
+	public Users getUserByEmaill(String email) {
+	    Users user = userRepository.findByEmail(email);  
+	    if (user == null) {
+	        throw new RuntimeException("Utilisateur non trouvé avec l'email : " + email);
+	    }
+	    return user;
+	}
+
+
+
+
+	public Users getUserById(Long userId) {
+	    return userRepository.findById(userId)
+	            .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé avec l'ID : " + userId));
+	}
+
+
+	
 	
 	
 

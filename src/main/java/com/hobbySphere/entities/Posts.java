@@ -13,8 +13,8 @@ public class Posts {
     private Long id;
 
     // Many-to-One relationship: Many posts can belong to one user
-    @ManyToOne(cascade = CascadeType.REMOVE)  // Cascade delete on User deletion
-    @JoinColumn(name = "user_id", nullable = false) // Foreign key column
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
     private Users user;
 
     @Column(columnDefinition = "TEXT", nullable = false)

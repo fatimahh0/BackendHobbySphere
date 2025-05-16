@@ -118,4 +118,23 @@ public class ActivityBookingController {
     public ActivityBookings createBooking(@RequestBody ActivityBookings booking) {
         return bookingService.saveBooking(booking);
     }
+    
+    @Operation(summary = "Delete a canceled booking by ID (only if status = Canceled)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Canceled booking deleted successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid or missing token, or booking not canceled"),
+        @ApiResponse(responseCode = "404", description = "Booking not found")
+    })
+    @DeleteMapping("/delete/{bookingId}")
+    public String deleteCanceledBooking(@PathVariable Long bookingId,
+                                        @RequestHeader("Authorization") String token) {
+        String userEmail = extractUserEmail(token);
+        boolean deleted = bookingService.deleteCanceledBookingByIdAndEmail(bookingId, userEmail);
+        if (deleted) {
+            return "Canceled booking deleted successfully.";
+        } else {
+            throw new IllegalStateException("Booking must be CANCELED and belong to you.");
+        }
+    }
+
 }

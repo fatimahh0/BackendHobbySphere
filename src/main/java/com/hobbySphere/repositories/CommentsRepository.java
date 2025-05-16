@@ -1,10 +1,13 @@
 package com.hobbySphere.repositories;
 
 import com.hobbySphere.entities.Comments;
+import com.hobbySphere.entities.Posts;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
-@Repository
+import java.util.List;
+
 public interface CommentsRepository extends JpaRepository<Comments, Long> {
-   
+    
+    
+    List<Comments> findByPost(Posts post);
 }
