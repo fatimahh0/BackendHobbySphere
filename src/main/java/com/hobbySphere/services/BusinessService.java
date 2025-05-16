@@ -100,5 +100,67 @@ public class BusinessService {
 
         return businessRepository.save(business);
     }
+    
+    public Businesses updateBusinessWithImages(
+            Long id,
+            String name,
+            String email,
+            String password,
+            String description,
+            String phoneNumber,
+            String websiteUrl,
+            MultipartFile logo,
+            MultipartFile banner
+    ) throws IOException {
+        // Fetch the existing business using the provided ID
+        Businesses existing = businessRepository.findById(id).orElse(null);
+
+        if (existing == null) {
+            throw new IllegalArgumentException("Business with ID " + id + " not found.");
+        }
+
+        // Optional email validation
+        Optional<Businesses> byEmail = businessRepository.findByEmail(email);
+        if (byEmail.isPresent() && !byEmail.get().getId().equals(id)) {
+            throw new IllegalArgumentException("Email already exists for another business!");
+        }
+
+        // Set the new values, updating only if provided
+        existing.setBusinessName(name);
+        existing.setEmail(email);
+        
+        if (password != null && !password.isEmpty()) {
+            existing.setPasswordHash(passwordEncoder.encode(password)); // Encode password if provided
+        }
+        
+        existing.setDescription(description);
+        existing.setPhoneNumber(phoneNumber);
+        existing.setWebsiteUrl(websiteUrl);
+
+        // Handle logo file upload if provided
+        Path uploadDir = Paths.get("uploads/");
+        if (!Files.exists(uploadDir)) {
+            Files.createDirectories(uploadDir);
+        }
+
+        if (logo != null && !logo.isEmpty()) {
+            String logoFileName = UUID.randomUUID() + "_" + logo.getOriginalFilename();
+            Path logoPath = uploadDir.resolve(logoFileName);
+            Files.copy(logo.getInputStream(), logoPath, StandardCopyOption.REPLACE_EXISTING);
+            existing.setBusinessLogoUrl("/uploads/" + logoFileName); // Update logo URL
+        }
+
+        // Handle banner file upload if provided
+        if (banner != null && !banner.isEmpty()) {
+            String bannerFileName = UUID.randomUUID() + "_" + banner.getOriginalFilename();
+            Path bannerPath = uploadDir.resolve(bannerFileName);
+            Files.copy(banner.getInputStream(), bannerPath, StandardCopyOption.REPLACE_EXISTING);
+            existing.setBusinessBannerUrl("/uploads/" + bannerFileName); // Update banner URL
+        }
+
+        // Save and return the updated business
+        return businessRepository.save(existing);
+    }
+
 
 }
