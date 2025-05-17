@@ -40,6 +40,7 @@ public class ActivityController {
     @Autowired
     private UserService userService;
 
+    //get activities by business id
     @Operation(summary = "Get activities by business ID", description = "Retrieve a list of activities associated with a specific business")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "List of activities for a given business"),
@@ -50,6 +51,9 @@ public class ActivityController {
             @Parameter(description = "ID of the business to fetch activities for") @PathVariable Long businessId) {
         return activityService.findByBusinessId(businessId);
     }
+    
+    
+    
 
     @Operation(summary = "Get all activities", description = "Retrieve a list of all activities in the system")
     @ApiResponses(value = {

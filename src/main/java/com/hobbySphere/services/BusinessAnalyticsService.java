@@ -25,16 +25,23 @@ public class BusinessAnalyticsService {
     public BusinessAnalytics getAnalyticsForBusiness(Long businessId) {
         double totalRevenue = bookingRepo.sumRevenueByBusinessId(businessId);
 
-        String topActivity = activityRepo.findTopActivityByBusinessId(businessId);
+        String topActivity = activityRepo.findTopActivityNameByBusinessId(businessId);
         if (topActivity == null) {
             topActivity = "No bookings yet";
         }
 
-        double bookingGrowth = calculateBookingGrowth(businessId); 
-        String peakHours = findPeakHours(businessId);             
-        double retention = calculateCustomerRetention(businessId); 
+        double bookingGrowth = calculateBookingGrowth(businessId);
+        String peakHours = findPeakHours(businessId);
+        double retention = calculateCustomerRetention(businessId);
 
-        return new BusinessAnalytics(totalRevenue, topActivity, bookingGrowth, peakHours, retention, LocalDate.now());
+        return new BusinessAnalytics(
+                totalRevenue,
+                topActivity,
+                bookingGrowth,
+                peakHours,
+                retention,
+                LocalDate.now()
+        );
     }
 
     private double calculateBookingGrowth(Long businessId) {
@@ -56,7 +63,10 @@ public class BusinessAnalyticsService {
         List<Object[]> result = bookingRepo.findPeakBookingHours(businessId);
         if (result == null || result.isEmpty()) return "No data";
 
-        Integer peakHour = (Integer) result.get(0)[0];
+        // ✅ FIX: avoid ClassCastException from BigDecimal to Integer
+        Number hourValue = (Number) result.get(0)[0]; // could be BigDecimal
+        int peakHour = hourValue.intValue();
+
         return String.format("%d:00 - %d:00", peakHour, peakHour + 1);
     }
 

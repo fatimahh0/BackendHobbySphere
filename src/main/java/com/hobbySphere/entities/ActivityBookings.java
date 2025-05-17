@@ -2,6 +2,8 @@ package com.hobbySphere.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.transaction.Transactional;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -126,4 +128,6 @@ public class ActivityBookings {
     public void setBookingDatetime(LocalDateTime bookingDatetime) {
         this.bookingDatetime = bookingDatetime;
     }
+    
+    
 }

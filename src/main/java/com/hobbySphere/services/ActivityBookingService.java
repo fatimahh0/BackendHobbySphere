@@ -2,6 +2,9 @@ package com.hobbySphere.services;
 
 import com.hobbySphere.repositories.ActivityBookingsRepository;
 import com.hobbySphere.repositories.UsersRepository;
+
+import jakarta.transaction.Transactional;
+
 import com.hobbySphere.entities.ActivityBookings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -109,6 +112,19 @@ public class ActivityBookingService {
         return true;
     }
     
+    
+    
+
+
+	public void rejectBooking(Long bookingId) {
+		ActivityBookings booking = activityBookingsRepository.findById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found with ID: " + bookingId));
+
+        booking.setBookingStatus("Rejected");
+        activityBookingsRepository.save(booking);
+		
+	}
+
     
 
 }

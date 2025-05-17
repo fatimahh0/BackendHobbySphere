@@ -4,13 +4,17 @@ import com.hobbySphere.entities.ActivityBookings;
 import com.hobbySphere.services.ActivityBookingService;
 import com.hobbySphere.security.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -94,6 +98,26 @@ public class ActivityBookingController {
         bookingService.cancelBooking(bookingId, userEmail);
         return "Booking canceled successfully.";
     }
+    
+    ///
+    @PutMapping("/booking/reject/{bookingId}")
+    @Operation(summary = "Reject a booking", description = "Mark a specific booking as 'Rejected'")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Booking rejected successfully"),
+        @ApiResponse(responseCode = "404", description = "Booking not found")
+    })
+    public ResponseEntity<Map<String, String>> rejectBooking(
+            @Parameter(description = "ID of the booking to reject") @PathVariable Long bookingId) {
+        try {
+            bookingService.rejectBooking(bookingId);
+            return ResponseEntity.ok(Map.of("message", "Booking rejected successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Unexpected error occurred"));
+        }
+    }
+
 
     @Operation(summary = "Set a booking to PENDING by ID (only for current user)")
     @ApiResponses(value = {

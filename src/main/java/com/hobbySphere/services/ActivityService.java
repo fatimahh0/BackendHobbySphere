@@ -1,9 +1,10 @@
 package com.hobbySphere.services;
 
 import com.hobbySphere.entities.Activities;
-
 import com.hobbySphere.entities.Businesses;
+
 import com.hobbySphere.repositories.ActivitiesRepository;
+import com.hobbySphere.repositories.ActivityBookingsRepository;
 
 import jakarta.transaction.Transactional;
 
@@ -28,6 +29,9 @@ public class ActivityService {
     @Autowired
     private BusinessService businessService;
 
+    @Autowired
+    private ActivityBookingsRepository activityBookingsRepository;
+
     // ✅ Create a new activity with image upload
     public Activities createActivityWithImage(
             String activityName,
@@ -47,9 +51,9 @@ public class ActivityService {
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {
             String filename = UUID.randomUUID() + "_" + image.getOriginalFilename();
-            Path uploadPath = Paths.get("uploads/");  // Ensure this path is valid and exists
+            Path uploadPath = Paths.get("uploads/");
             if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);  // Create directories if not exist
+                Files.createDirectories(uploadPath);
             }
             Path filePath = uploadPath.resolve(filename);
             Files.copy(image.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
@@ -74,7 +78,7 @@ public class ActivityService {
         activity.setEndDatetime(endDatetime);
         activity.setStatus(status);
         activity.setImageUrl(imageUrl);
-        activity.setBusiness(business);  // Correctly set the business object
+        activity.setBusiness(business);
 
         return activityRepository.save(activity);
     }
@@ -104,35 +108,32 @@ public class ActivityService {
         activityRepository.deleteById(id);
     }
 
-    
     @Transactional
     public void updateStatusIfCanceled(Activities activity) {
         if ("Canceled".equalsIgnoreCase(activity.getStatus())) {
             activity.setStatus("Pending");
-            activityRepository.save(activity); 
+            activityRepository.save(activity);
         }
     }
 
     // ✅ Update an activity with image
     public Activities updateActivityWithImage(
-            Long id, 
-            String activityName, 
-            String activityType, 
-            String description, 
+            Long id,
+            String activityName,
+            String activityType,
+            String description,
             String location,
-            int maxParticipants, 
-            BigDecimal price, 
-            LocalDateTime startDatetime, 
-            LocalDateTime endDatetime, 
+            int maxParticipants,
+            BigDecimal price,
+            LocalDateTime startDatetime,
+            LocalDateTime endDatetime,
             String status,
-            Long businessId, 
+            Long businessId,
             MultipartFile image) throws IOException {
-        
-        // Find the existing activity by ID
+
         Activities activity = activityRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
 
-        // Update the activity details
         activity.setActivityName(activityName);
         activity.setActivityType(activityType);
         activity.setDescription(description);
@@ -143,28 +144,33 @@ public class ActivityService {
         activity.setEndDatetime(endDatetime);
         activity.setStatus(status);
 
-        // Fetch the business and associate with the activity
         Businesses business = businessService.findById(businessId);
         if (business != null) {
-            activity.setBusiness(business);  // Correctly set the business object
+            activity.setBusiness(business);
         } else {
             throw new IllegalArgumentException("Business with ID " + businessId + " not found.");
         }
 
-        // Handle the image upload (if provided)
         if (image != null && !image.isEmpty()) {
             String imageFileName = UUID.randomUUID() + "_" + StringUtils.cleanPath(image.getOriginalFilename());
-            Path imagePath = Paths.get("uploads/", imageFileName);  // Ensure this path is valid and exists
-            
-            // Save the image to the directory
+            Path imagePath = Paths.get("uploads/", imageFileName);
             Files.copy(image.getInputStream(), imagePath, StandardCopyOption.REPLACE_EXISTING);
-
-            // Set the image URL for the activity
-            activity.setImageUrl("/uploads/" + imageFileName);  // The image URL would be saved in the database
+            activity.setImageUrl("/uploads/" + imageFileName);
         }
 
-        // Save the updated activity in the database
         return activityRepository.save(activity);
-
     }
+
+    // ✅ Reject an activity and delete its bookings
+    @Transactional
+    public void rejectActivity(Long activityId) {
+        Activities activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new IllegalArgumentException("Activity not found with ID: " + activityId));
+
+        activity.setStatus("Rejected");
+        activityRepository.save(activity);
+
+        activityBookingsRepository.deleteByActivity_Id(activityId);
+    }
+
 }

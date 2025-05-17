@@ -37,28 +37,36 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
     @Query("SELECT ab FROM ActivityBookings ab WHERE ab.bookingStatus IN ('Completed', 'Canceled')")
     List<ActivityBookings> findBookingHistory();
 
-    // ✅ Corrected field: b.activity.business.id and b.totalPrice
+    // ✅ Total revenue (JPQL)
     @Query("SELECT SUM(b.totalPrice) FROM ActivityBookings b WHERE b.activity.business.id = :businessId")
     Double sumRevenueByBusinessId(@Param("businessId") Long businessId);
 
-    // ✅ Corrected field: b.bookingDatetime
-    @Query("SELECT COUNT(b) FROM ActivityBookings b WHERE b.activity.business.id = :businessId AND FUNCTION('MONTH', b.bookingDatetime) = :month AND FUNCTION('YEAR', b.bookingDatetime) = :year")
-    int countBookingsByMonthAndYear(@Param("businessId") Long businessId, @Param("month") int month, @Param("year") int year);
+    // ✅ Monthly booking count (PostgreSQL-native)
+    @Query(value = "SELECT COUNT(*) FROM activity_bookings ab " +
+                   "JOIN activities a ON ab.activity_id = a.activity_id " +
+                   "WHERE a.business_id = :businessId " +
+                   "AND EXTRACT(MONTH FROM ab.booking_datetime) = :month " +
+                   "AND EXTRACT(YEAR FROM ab.booking_datetime) = :year",
+           nativeQuery = true)
+    int countBookingsByMonthAndYear(@Param("businessId") Long businessId,
+                                     @Param("month") int month,
+                                     @Param("year") int year);
 
-    // ✅ Corrected field: b.bookingDatetime
-    @Query("SELECT FUNCTION('HOUR', b.bookingDatetime) AS hour, COUNT(b) AS count " +
-           "FROM ActivityBookings b WHERE b.activity.business.id = :businessId " +
-           "GROUP BY FUNCTION('HOUR', b.bookingDatetime) ORDER BY count DESC")
+    // ✅ Peak booking hours (PostgreSQL-native)
+    @Query(value = "SELECT EXTRACT(HOUR FROM ab.booking_datetime) AS hour, COUNT(*) AS count " +
+                   "FROM activity_bookings ab " +
+                   "JOIN activities a ON ab.activity_id = a.activity_id " +
+                   "WHERE a.business_id = :businessId " +
+                   "GROUP BY hour ORDER BY count DESC",
+           nativeQuery = true)
     List<Object[]> findPeakBookingHours(@Param("businessId") Long businessId);
 
-    // ✅ Corrected field: b.activity.business.id
     @Query("SELECT COUNT(DISTINCT b.user.id) FROM ActivityBookings b WHERE b.activity.business.id = :businessId")
     int countDistinctCustomers(@Param("businessId") Long businessId);
 
-    // ✅ Native query for returning customers using correct table/columns
     @Query(value = "SELECT COUNT(*) FROM (" +
                    "SELECT user_id FROM activity_bookings ab " +
-                   "JOIN activities a ON ab.activity_id = a.id " +
+                   "JOIN activities a ON ab.activity_id = a.activity_id " +
                    "WHERE a.business_id = :businessId " +
                    "GROUP BY user_id HAVING COUNT(*) > 1) AS returning_customers",
            nativeQuery = true)
@@ -67,4 +75,6 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
     boolean existsByActivityIdAndUserIdAndBookingStatusNot(Long activityId, Long userId, String excludedStatus);
 
     List<ActivityBookings> findByActivityIdAndUserId(Long activityId, Long userId);
+
+    void deleteByActivity_Id(Long activityId);
 }
