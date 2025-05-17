@@ -1,37 +1,70 @@
 package com.hobbySphere.services;
 
-import com.hobbySphere.entities.BusinessAnalytics;
-import com.hobbySphere.repositories.BusinessAnalyticsRepository;
+import com.hobbySphere.dto.BusinessAnalytics;
+import com.hobbySphere.repositories.ActivityBookingsRepository;
+import com.hobbySphere.repositories.ActivitiesRepository;
+import com.hobbySphere.repositories.UsersRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class BusinessAnalyticsService {
 
     @Autowired
-    private BusinessAnalyticsRepository analyticsRepository;
+    private ActivityBookingsRepository bookingRepo;
 
-    // Get all analytics
-    public List<BusinessAnalytics> getAllAnalytics() {
-        return analyticsRepository.findAll();
+    @Autowired
+    private ActivitiesRepository activityRepo;
+
+    @Autowired
+    private UsersRepository customerRepo;
+
+    public BusinessAnalytics getAnalyticsForBusiness(Long businessId) {
+        double totalRevenue = bookingRepo.sumRevenueByBusinessId(businessId);
+
+        String topActivity = activityRepo.findTopActivityByBusinessId(businessId);
+        if (topActivity == null) {
+            topActivity = "No bookings yet";
+        }
+
+        double bookingGrowth = calculateBookingGrowth(businessId); 
+        String peakHours = findPeakHours(businessId);             
+        double retention = calculateCustomerRetention(businessId); 
+
+        return new BusinessAnalytics(totalRevenue, topActivity, bookingGrowth, peakHours, retention, LocalDate.now());
     }
 
-    // Get analytics by business ID
-    public List<BusinessAnalytics> getAnalyticsByBusinessId(Long businessId) {
-        return analyticsRepository.findByBusinessId(businessId);
+    private double calculateBookingGrowth(Long businessId) {
+        LocalDate now = LocalDate.now();
+        int currentMonth = now.getMonthValue();
+        int previousMonth = currentMonth == 1 ? 12 : currentMonth - 1;
+        int year = now.getYear();
+        int previousYear = currentMonth == 1 ? year - 1 : year;
+
+        int currentBookings = bookingRepo.countBookingsByMonthAndYear(businessId, currentMonth, year);
+        int previousBookings = bookingRepo.countBookingsByMonthAndYear(businessId, previousMonth, previousYear);
+
+        if (previousBookings == 0) return currentBookings > 0 ? 100.0 : 0.0;
+
+        return ((double)(currentBookings - previousBookings) / previousBookings) * 100.0;
     }
 
-    // Get the latest analytics entry for a business
-    public BusinessAnalytics getLatestAnalytics(Long businessId) {
-        Optional<BusinessAnalytics> latestAnalytics = analyticsRepository.findTopByBusinessIdOrderByAnalyticsDateDesc(businessId);
-        return latestAnalytics.orElse(null); // Return null if not found
+    private String findPeakHours(Long businessId) {
+        List<Object[]> result = bookingRepo.findPeakBookingHours(businessId);
+        if (result == null || result.isEmpty()) return "No data";
+
+        Integer peakHour = (Integer) result.get(0)[0];
+        return String.format("%d:00 - %d:00", peakHour, peakHour + 1);
     }
 
-    // Save a new analytics entry
-    public BusinessAnalytics saveAnalytics(BusinessAnalytics analytics) {
-        return analyticsRepository.save(analytics);
+    private double calculateCustomerRetention(Long businessId) {
+        int total = bookingRepo.countDistinctCustomers(businessId);
+        if (total == 0) return 0.0;
+
+        int returning = bookingRepo.countReturningCustomers(businessId);
+        return (returning / (double) total) * 100.0;
     }
 }
