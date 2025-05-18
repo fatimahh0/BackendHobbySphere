@@ -36,7 +36,7 @@ public class PostLikesService {
                 .orElseGet(() -> {
                     likesRepository.save(new PostLikes(user, post));
 
-                    // 🔔 Ajouter une notification au propriétaire du post
+                   
                     if (!user.getId().equals(post.getUser().getId())) {
                         notificationsService.createNotification(
                                 post.getUser(),

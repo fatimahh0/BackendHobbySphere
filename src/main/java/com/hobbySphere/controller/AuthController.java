@@ -1,5 +1,6 @@
 package com.hobbySphere.controller;
 import com.hobbySphere.dto.GoogleLoginRequest;
+import com.hobbySphere.repositories.*;
 import com.hobbySphere.entities.*;
 import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.*;
@@ -33,7 +34,8 @@ public class AuthController {
     @Autowired
     private BusinessService businessService;
     
-    
+    @Autowired
+    private BusinessAdminsRepository businessAdminsRepository;
 
     @Autowired
     private AdminUserService adminUserService;
@@ -193,10 +195,10 @@ public class AuthController {
                     .body("Email is already in use.");
         }
 
-        Role role = roleRepository.findByName("ALL_REFERENCES")
+        Role role = roleRepository.findByName("SUPER_ADMIN")
                 .orElseGet(() -> {
                     Role newRole = new Role();
-                    newRole.setName("ALL_REFERENCES");
+                    newRole.setName("SUPER_ADMIN");
                     return roleRepository.save(newRole);
                 });
 
@@ -393,5 +395,4 @@ public class AuthController {
                     .body("Invalid Google ID token: " + e.getMessage());
         }
     }
-
 }

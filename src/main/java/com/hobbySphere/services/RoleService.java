@@ -22,7 +22,7 @@ public class RoleService {
     }
 
     private void createRoleIfNotExists(String roleName) {
-        if (roleRepository.findByName(roleName).isEmpty()) {
+        if (!roleRepository.findByName(roleName).isPresent()) {  // Use isPresent() instead of isEmpty()
             Role newRole = new Role();
             newRole.setName(roleName);
             roleRepository.save(newRole);
