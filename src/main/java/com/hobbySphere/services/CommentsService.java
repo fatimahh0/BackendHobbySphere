@@ -49,6 +49,19 @@ public class CommentsService {
                 .orElseThrow(() -> new RuntimeException("Post not found"));
         return commentsRepo.findByPost(post);
     }
+
+    public void deleteComment(Long commentId, Users user) {
+        Comments comment = commentsRepo.findById(commentId)
+            .orElseThrow(() -> new RuntimeException("Comment not found"));
+
+        // Optional: autoriser seulement l'auteur du commentaire à le supprimer
+        if (!comment.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("You are not authorized to delete this comment");
+        }
+
+        commentsRepo.delete(comment);
+    }
+
     
     
 }

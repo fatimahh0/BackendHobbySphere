@@ -1,7 +1,12 @@
 package com.hobbySphere.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "Posts")
@@ -12,7 +17,6 @@ public class Posts {
     @Column(name = "post_id")
     private Long id;
 
-    // Many-to-One relationship: Many posts can belong to one user
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private Users user;
@@ -29,7 +33,19 @@ public class Posts {
     @Column(name = "post_datetime", updatable = false)
     private LocalDateTime postDatetime;
 
-   
+    @ManyToMany
+    @JoinTable(
+        name = "post_likes",
+        joinColumns = @JoinColumn(name = "post_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    @JsonIgnore
+    private Set<Users> likedUsers = new HashSet<>();
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<Comments> comments = new ArrayList<>();
+
     public Posts() {}
 
     public Posts(Users user, String content, String imageUrl, String hashtags) {
@@ -39,13 +55,12 @@ public class Posts {
         this.hashtags = hashtags;
     }
 
-   
     @PrePersist
     protected void onCreate() {
         this.postDatetime = LocalDateTime.now();
     }
 
-  
+    // === Getters & Setters ===
 
     public Long getId() {
         return id;
@@ -93,5 +108,29 @@ public class Posts {
 
     public void setPostDatetime(LocalDateTime postDatetime) {
         this.postDatetime = postDatetime;
+    }
+
+    public Set<Users> getLikedUsers() {
+        return likedUsers;
+    }
+
+    public void setLikedUsers(Set<Users> likedUsers) {
+        this.likedUsers = likedUsers;
+    }
+
+    public List<Comments> getComments() {
+        return comments;
+    }
+
+    public void setComments(List<Comments> comments) {
+        this.comments = comments;
+    }
+
+    public int getLikeCount() {
+        return likedUsers != null ? likedUsers.size() : 0;
+    }
+
+    public int getCommentCount() {
+        return comments != null ? comments.size() : 0;
     }
 }

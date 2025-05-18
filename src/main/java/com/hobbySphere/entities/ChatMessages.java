@@ -2,6 +2,7 @@ package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "ChatMessages")
@@ -10,21 +11,27 @@ public class ChatMessages {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "message_id")
-    private Long messageId;
+    private Long id;
 
     @ManyToOne
     @JoinColumn(name = "sender_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Users sender;
 
     @ManyToOne
     @JoinColumn(name = "receiver_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Users receiver;
 
     @Column(name = "message", nullable = false, columnDefinition = "TEXT")
     private String message;
 
+    @Column(name = "sent_at", updatable = false)
+    private LocalDateTime sentAt;
+    
     @Column(name = "message_datetime", updatable = false)
     private LocalDateTime messageDatetime;
+
 
     // Constructors
     public ChatMessages() {}
@@ -37,16 +44,16 @@ public class ChatMessages {
 
     @PrePersist
     protected void onCreate() {
-        this.messageDatetime = LocalDateTime.now();
+        this.sentAt = LocalDateTime.now();
     }
 
     // Getters and Setters
-    public Long getMessageId() {
-        return messageId;
+    public Long getId() {
+        return id;
     }
 
-    public void setMessageId(Long messageId) {
-        this.messageId = messageId;
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public Users getSender() {
@@ -73,11 +80,13 @@ public class ChatMessages {
         this.message = message;
     }
 
-    public LocalDateTime getMessageDatetime() {
-        return messageDatetime;
+    public LocalDateTime getSentAt() {
+        return sentAt;
     }
 
-    public void setMessageDatetime(LocalDateTime messageDatetime) {
-        this.messageDatetime = messageDatetime;
+    public void setSentAt(LocalDateTime sentAt) {
+        this.sentAt = sentAt;
     }
+
+	
 }

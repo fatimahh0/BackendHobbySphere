@@ -6,10 +6,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.hobbySphere.dto.UserDto;
+
 
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -104,6 +108,19 @@ public class UserService {
 	    return userRepository.findById(userId)
 	            .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé avec l'ID : " + userId));
 	}
+	
+
+
+
+
+	public List<UserDto> getAllUserDtos() {
+		 return userRepository.findAll()
+                 .stream()
+                 .map(UserDto::new)
+                 .collect(Collectors.toList());
+	}
+
+
 
 
 	

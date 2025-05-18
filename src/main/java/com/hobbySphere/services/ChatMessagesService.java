@@ -24,11 +24,10 @@ public class ChatMessagesService {
         ChatMessages chat = new ChatMessages(sender, receiver, message);
         ChatMessages saved = chatRepo.save(chat);
 
-        // 🔔 Notification à l'utilisateur receveur
         if (!sender.getId().equals(receiver.getId())) {
             notificationsService.createNotification(
                     receiver,
-                    sender.getUsername() + " Send a message",
+                    sender.getUsername() + " sent you a message.",
                     NotificationType.MESSAGE
             );
         }
@@ -40,5 +39,9 @@ public class ChatMessagesService {
         return chatRepo.findBySenderAndReceiverOrReceiverAndSenderOrderByMessageDatetimeAsc(
                 user1, user2, user2, user1
         );
+    }
+
+    public List<ChatMessages> getMessagesByUser(Users user) {
+        return chatRepo.findBySenderOrReceiverOrderByMessageDatetimeDesc(user, user);
     }
 }

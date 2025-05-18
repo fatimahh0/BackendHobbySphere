@@ -83,4 +83,8 @@ public class Comments {
     public void setCommentDatetime(LocalDateTime commentDatetime) {
         this.commentDatetime = commentDatetime;
     }
+
+	public Object getCreatedAt() {
+		return commentDatetime;
+	}
 }
