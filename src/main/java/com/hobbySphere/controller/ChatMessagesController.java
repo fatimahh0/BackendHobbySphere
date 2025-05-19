@@ -6,6 +6,9 @@ import com.hobbySphere.entities.Users;
 import com.hobbySphere.services.ChatMessagesService;
 import com.hobbySphere.services.UserService;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.security.Principal;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -34,21 +37,34 @@ public class ChatMessagesController {
     }
 
     // ✅ Get conversation with another user
+  
     @GetMapping("/conversation/{userId}")
     public List<ChatMessageDto> getConversation(@PathVariable Long userId, Principal principal) {
-        Users user1 = usersService.getUserByEmaill(principal.getName());
-        Users user2 = usersService.getUserById(userId);
-        List<ChatMessages> messages = chatService.getConversation(user1, user2);
-        return messages.stream()
-                .map(msg -> new ChatMessageDto(msg, user1.getId()))
-                .collect(Collectors.toList());
+        try {
+            Users currentUser = usersService.getUserByEmaill(principal.getName());
+            Users otherUser = usersService.getUserById(userId);
+
+            if (currentUser == null || otherUser == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+            }
+
+            List<ChatMessages> messages = chatService.getConversation(currentUser, otherUser);
+            return messages.stream()
+                    .map(msg -> new ChatMessageDto(msg, currentUser.getId()))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to fetch conversation");
+        }
     }
+
+
 
     // ✅ Get all messages involving the logged-in user
     @GetMapping("/my")
     public List<ChatMessageDto> getMyMessages(Principal principal) {
         Users user = usersService.getUserByEmaill(principal.getName());
-        List<ChatMessages> messages = chatService.getMessagesByUserr(user);
+        List<ChatMessages> messages = chatService.getMessagesByUser(user);
         return messages.stream()
                 .map(msg -> new ChatMessageDto(msg, user.getId()))
                 .collect(Collectors.toList());

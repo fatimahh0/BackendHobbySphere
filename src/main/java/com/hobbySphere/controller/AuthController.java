@@ -248,18 +248,21 @@ public class AuthController {
 
         String token = jwtUtil.generateToken(existingUser); // ✅ Use existingUser
 
-        return ResponseEntity.ok(Map.of(
-            "message", "User login successful",
-            "token", token,
-            "user", Map.of( // Optional: exclude sensitive info
-                "id", existingUser.getId(),
-                "username", existingUser.getUsername(),
-                "firstName", existingUser.getFirstName(),
-                "lastName", existingUser.getLastName(),
-                "email", existingUser.getEmail(),
-                "profilePictureUrl", existingUser.getProfilePictureUrl()
-            )
-        ));
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("id", existingUser.getId());
+        userData.put("username", existingUser.getUsername());
+        userData.put("firstName", existingUser.getFirstName());
+        userData.put("lastName", existingUser.getLastName());
+        userData.put("email", existingUser.getEmail());
+        userData.put("profilePictureUrl", existingUser.getProfilePictureUrl()); 
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "User login successful");
+        response.put("token", token);
+        response.put("user", userData);
+
+        return ResponseEntity.ok(response);
+
     }
 
     

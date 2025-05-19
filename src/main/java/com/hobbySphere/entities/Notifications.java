@@ -21,8 +21,9 @@ public class Notifications {
 
     @Column(name = "notification_type", nullable = false)
     @Enumerated(EnumType.STRING)
-    private NotificationType notificationType; // Removed the @Column(length = 50) annotation here
+    private NotificationType notificationType; 
 
+    
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
 
@@ -74,7 +75,7 @@ public class Notifications {
         this.notificationType = notificationType;
     }
 
-    public Boolean getIsRead() {
+    public Boolean getRead() {
         return isRead;
     }
 

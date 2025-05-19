@@ -5,6 +5,8 @@ import com.hobbySphere.entities.Users;
 import com.hobbySphere.entities.NotificationType;
 import com.hobbySphere.repositories.ChatMessagesRepository;
 import org.springframework.stereotype.Service;
+import java.time.LocalDateTime;
+
 
 import java.util.List;
 
@@ -20,25 +22,28 @@ public class ChatMessagesService {
         this.notificationsService = notificationsService;
     }
 
+    
+
     public ChatMessages sendMessage(Users sender, Users receiver, String message) {
         ChatMessages chat = new ChatMessages(sender, receiver, message);
+        chat.setSentAt(LocalDateTime.now()); // ✅ Bien défini ici
+
         ChatMessages saved = chatRepo.save(chat);
 
         if (!sender.getId().equals(receiver.getId())) {
             notificationsService.createNotification(
-                    receiver,
-                    sender.getUsername() + " sent you a message.",
-                    NotificationType.MESSAGE
+                receiver,
+                sender.getUsername() + " sent you a message.",
+                NotificationType.MESSAGE
             );
         }
 
         return saved;
     }
 
+
     public List<ChatMessages> getConversation(Users user1, Users user2) {
-        return chatRepo.findBySenderAndReceiverOrReceiverAndSenderOrderByMessageDatetimeAsc(
-                user1, user2, user2, user1
-        );
+        return chatRepo.findConversationBetween(user1.getId(), user2.getId());
     }
 
     public List<ChatMessages> getMessagesByUser(Users user) {

@@ -1,5 +1,7 @@
 package com.hobbySphere.dto;
 
+import java.time.format.DateTimeFormatter;
+
 import com.hobbySphere.entities.ChatMessages;
 
 public class ChatMessageDto {
@@ -12,12 +14,20 @@ public class ChatMessageDto {
     private boolean isMine;
 
     public ChatMessageDto(ChatMessages chat, Long currentUserId) {
-        this.id = chat.getId(); // ✅ fixed
+        this.id = chat.getId();
         this.senderId = chat.getSender().getId();
         this.senderName = chat.getSender().getFirstName() + " " + chat.getSender().getLastName();
         this.receiverId = chat.getReceiver().getId();
         this.message = chat.getMessage();
-        this.sentAt = chat.getSentAt().toString();
+
+      
+        if (chat.getSentAt() != null) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            this.sentAt = chat.getSentAt().format(formatter);
+        } else {
+            this.sentAt = null;
+        }
+
         this.isMine = this.senderId.equals(currentUserId);
     }
 

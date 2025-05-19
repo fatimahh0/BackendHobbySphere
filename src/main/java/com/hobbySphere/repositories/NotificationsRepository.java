@@ -14,4 +14,6 @@ public interface NotificationsRepository extends JpaRepository<Notifications, Lo
    
 
 	List<Notifications> findByUserOrderByCreatedAtDesc(Users user);
+
+	List<Notifications> findByUserAndIsReadFalse(Users user);
 }
