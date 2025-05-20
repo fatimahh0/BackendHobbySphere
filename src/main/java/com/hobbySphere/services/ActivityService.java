@@ -1,24 +1,22 @@
 package com.hobbySphere.services;
-
 import com.hobbySphere.entities.Activities;
+import java.util.stream.Collectors;
 import com.hobbySphere.entities.Businesses;
-
+import com.hobbySphere.dto.ActivitySummaryDTO;
 import com.hobbySphere.repositories.ActivitiesRepository;
 import com.hobbySphere.repositories.ActivityBookingsRepository;
-
 import jakarta.transaction.Transactional;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.util.StringUtils;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import com.hobbySphere.entities.AdminUsers; 
 
 @Service
 public class ActivityService {
@@ -172,5 +170,29 @@ public class ActivityService {
 
         activityBookingsRepository.deleteByActivity_Id(activityId);
     }
+    
+    public List<ActivitySummaryDTO> getActivitySummariesByAdmin(AdminUsers admin) {
+        Long businessId = admin.getRole().getName().equalsIgnoreCase("ADMIN") 
+            ? admin.getRole().getId() // Change this if business is linked elsewhere
+            : null;
 
+        if (businessId == null) {
+            throw new RuntimeException("Admin user is not associated with a business.");
+        }
+
+        List<Activities> activities = activityRepository.findByBusinessId(businessId);
+
+        return activities.stream().map(activity -> {
+            String businessName = activity.getBusiness().getBusinessName(); // Assuming getBusinessName() exists
+            int participants = activityBookingsRepository.countByActivityId(activity.getId()); // Custom method
+            return new ActivitySummaryDTO(
+                activity.getId(),
+                activity.getActivityName(),
+                businessName,
+                activity.getStartDatetime(), // Or endDatetime
+                participants
+            );
+        }).toList();
+    }
+    
 }

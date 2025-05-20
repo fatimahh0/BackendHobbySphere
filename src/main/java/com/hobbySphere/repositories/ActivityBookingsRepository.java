@@ -77,4 +77,5 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
     List<ActivityBookings> findByActivityIdAndUserId(Long activityId, Long userId);
 
     void deleteByActivity_Id(Long activityId);
+    
 }

@@ -111,10 +111,6 @@ public class ActivityBookingService {
         activityBookingsRepository.delete(booking);
         return true;
     }
-    
-    
-    
-
 
 	public void rejectBooking(Long bookingId) {
 		ActivityBookings booking = activityBookingsRepository.findById(bookingId)

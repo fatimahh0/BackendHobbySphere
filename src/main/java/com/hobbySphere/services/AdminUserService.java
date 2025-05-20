@@ -31,30 +31,33 @@ public class AdminUserService {
     public Optional<AdminUsers> findByUsername(String username) {
         return adminUserRepository.findByUsername(username);
     }
+    
+    public Optional<AdminUsers> findById(Long id) {
+        return adminUserRepository.findById(id);
+    }
+
 
     public void save(AdminUsers adminUser) {
         adminUserRepository.save(adminUser);
     }
 
-    // ✅ NEW: Create Admin with role and encoded password
     public AdminUsers createAdminUser(String username, String firstName, String lastName,
             String email, String plainPassword, String roleName) {
 
-// Check if role exists
+
 Role role = roleRepository.findByName(roleName.toUpperCase())
 .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
 
-// Check if admin user exists
-AdminUsers existingAdmin = adminUserRepository.findByEmail(email)
-.orElseThrow(() -> new RuntimeException("Admin user with email " + email + " already exists"));
+Optional<AdminUsers> existingAdmin = adminUserRepository.findByEmail(email);
+if (existingAdmin.isPresent()) {
+    throw new RuntimeException("Admin user with email " + email + " already exists");
+}
 
-// Encode password
 String encodedPassword = passwordEncoder.encode(plainPassword);
 
-// Create AdminUsers object
+
 AdminUsers admin = new AdminUsers(username, firstName, lastName, email, encodedPassword, role);
 
-// Save to DB
 return adminUserRepository.save(admin);
 }
 
