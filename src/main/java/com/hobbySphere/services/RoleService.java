@@ -18,6 +18,7 @@ public class RoleService {
         // Check if roles already exist
         createRoleIfNotExists("USER");
         createRoleIfNotExists("SUPER_ADMIN");
+        createRoleIfNotExists("MANAGER");
     }
 
     private void createRoleIfNotExists(String roleName) {

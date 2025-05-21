@@ -1,11 +1,9 @@
 package com.hobbySphere.controller;
 import com.hobbySphere.dto.GoogleLoginRequest;
 import com.hobbySphere.services.BusinessService;
-import com.hobbySphere.repositories.*;
 import com.hobbySphere.entities.*;
 import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.*;
-import com.hobbySphere.repositories.RoleRepository;
 import com.hobbySphere.repositories.UsersRepository;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,6 +15,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.MediaType;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import com.hobbySphere.dto.*;
 import java.io.IOException;
 import java.util.HashMap;
@@ -34,15 +34,9 @@ public class AuthController {
 
     @Autowired
     private BusinessService businessService;
-    
-    @Autowired
-    private BusinessAdminsRepository businessAdminsRepository;
 
     @Autowired
     private AdminUserService adminUserService;
-
-    @Autowired
-    private RoleRepository roleRepository;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -55,6 +49,7 @@ public class AuthController {
     
     @Autowired
     private UsersRepository UserRepository;
+    
 
     // Default User Registration
     @PostMapping("/user/register")
@@ -174,131 +169,7 @@ public class AuthController {
                     .body(Map.of("message", "Registration failed: " + e.getMessage()));
         }
     }
-
-    @PostMapping("/admin/register")
-    public ResponseEntity<?> adminRegister(@RequestBody AdminRegisterRequest req) {
-
-        // Validate required admin fields
-        if (req.getPassword() == null || req.getPassword().trim().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password cannot be null or empty.");
-        }
-
-        if (req.getBusinessId() == null || 
-            req.getBusinessEmail() == null || 
-            req.getBusinessPassword() == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Business ID, email, and password are required to register an admin.");
-        }
-
-        // Validate uniqueness
-        boolean emailExists = adminUserService.findByEmail(req.getEmail()).isPresent();
-        boolean usernameExists = adminUserService.findByUsername(req.getUsername()).isPresent();
-
-        if (emailExists && usernameExists) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Email and Username are already in use.");
-        } else if (usernameExists) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Username is already in use.");
-        } else if (emailExists) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Email is already in use.");
-        }
-
-        // Verify business exists and credentials match
-        Businesses business = businessService.findById(req.getBusinessId());
-        if (business == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Business not found.");
-        }
-
-        if (!business.getEmail().equalsIgnoreCase(req.getBusinessEmail()) ||
-            !passwordEncoder.matches(req.getBusinessPassword(), business.getPasswordHash())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Business email or password is incorrect.");
-        }
-
-        // Create admin user
-        Role role = roleRepository.findByName("SUPER_ADMIN")
-                .orElseGet(() -> roleRepository.save(new Role("SUPER_ADMIN")));
-
-        AdminUsers admin = new AdminUsers();
-        admin.setUsername(req.getUsername());
-        admin.setFirstName(req.getFirstName());
-        admin.setLastName(req.getLastName());
-        admin.setEmail(req.getEmail());
-        admin.setPasswordHash(passwordEncoder.encode(req.getPassword()));
-        admin.setRole(role);
-
-        adminUserService.save(admin);
-
-        // Link admin to business
-        businessAdminsRepository.save(new BusinessAdmins(business, admin));
-
-        return ResponseEntity.ok("Admin registration successful.");
-    }
-
-
-    // Admin Login
-    @PostMapping("/admin/login")
-    public ResponseEntity<?> adminLogin(@RequestBody AdminLoginRequest req) {
-        // Step 1: Validate admin credentials
-        Optional<AdminUsers> optionalAdmin = adminUserService.findByEmail(req.getEmail());
-        if (optionalAdmin.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Admin not found"));
-        }
-
-        AdminUsers admin = optionalAdmin.get();
-
-        if (!passwordEncoder.matches(req.getPassword(), admin.getPasswordHash())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Incorrect admin password"));
-        }
-
-        // Step 2: Validate business existence
-        Businesses business = businessService.findById(req.getBusinessId());
-        if (business == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Business not found"));
-        }
-
-        // Step 3: Verify business email/password match
-        if (!business.getEmail().equalsIgnoreCase(req.getBusinessEmail()) ||
-            !passwordEncoder.matches(req.getBusinessPassword(), business.getPasswordHash())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Invalid business email or password"));
-        }
-
-        // Step 4: Check that admin is linked to this business
-        boolean isLinked = businessAdminsRepository.existsByBusinessAndAdmin(business, admin);
-        if (!isLinked) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Admin not linked to this business"));
-        }
-
-        // Step 5: Generate JWT
-        String token = jwtUtil.generateToken(admin);
-
-        Map<String, Object> adminData = new HashMap<>();
-        adminData.put("id", admin.getAdminId());
-        adminData.put("username", admin.getUsername());
-        adminData.put("email", admin.getEmail());
-        adminData.put("firstName", admin.getFirstName());
-        adminData.put("lastName", admin.getLastName());
-
-        Map<String, Object> businessData = new HashMap<>();
-        businessData.put("id", business.getId());
-        businessData.put("name", business.getBusinessName());
-        businessData.put("email", business.getEmail());
-        businessData.put("logo", business.getBusinessLogoUrl()); // can be null safely here
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Admin login successful");
-        response.put("token", token);
-        response.put("role", admin.getRole() != null ? admin.getRole().getName() : "N/A");
-        response.put("admin", adminData);
-        response.put("business", businessData);
-
-        return ResponseEntity.ok(response);
-
-    }
-
+    
     // User Login
     @PostMapping("/user/login")
     public ResponseEntity<?> userLogin(@RequestBody @Valid Users user) {
@@ -465,4 +336,100 @@ public class AuthController {
                     .body("Invalid Google ID token: " + e.getMessage());
         }
     }
+    
+    @PostMapping("/admin/promote-to-manager/{userId}")
+    public ResponseEntity<?> promoteToManager(@PathVariable Long userId) {
+        Users user = userService.getUserById(userId); 
+
+        AdminUsers manager = adminUserService.promoteUserToManager(user);
+
+        return ResponseEntity.ok(Map.of(
+            "message", "User promoted to Manager successfully",
+            "manager", Map.of(
+                "id", manager.getAdminId(),
+                "email", manager.getEmail(),
+                "role", manager.getRole().getName()
+            )
+        ));
+    }
+
+ @Operation(
+    	    summary = "Login as a Manager",
+    	    description = "Authenticates a Manager from the AdminUsers table based on email/username and password",
+    	    responses = {
+    	        @ApiResponse(responseCode = "200", description = "Login successful, JWT token returned"),
+    	        @ApiResponse(responseCode = "401", description = "Invalid credentials or not a manager")
+    	    }
+    	)
+    	@PostMapping("/manager/login")
+    	public ResponseEntity<?> managerLogin(@RequestBody AdminLoginRequest request) {
+    	    AdminUsers admin = adminUserService.findByUsernameOrEmail(request.getUsernameOrEmail())
+    	        .orElse(null);
+
+    	    if (admin == null || !passwordEncoder.matches(request.getPassword(), admin.getPasswordHash())) {
+    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Invalid credentials"));
+    	    }
+
+    	    if (!"MANAGER".equalsIgnoreCase(admin.getRole().getName())) {
+    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Access denied: Not a Manager"));
+    	    }
+
+    	    String token = jwtUtil.generateToken(admin);
+
+    	    Map<String, Object> managerData = new HashMap<>();
+    	    managerData.put("id", admin.getAdminId());
+    	    managerData.put("username", admin.getUsername());
+    	    managerData.put("firstName", admin.getFirstName());
+    	    managerData.put("lastName", admin.getLastName());
+    	    managerData.put("email", admin.getEmail());
+    	    managerData.put("role", admin.getRole().getName());
+
+    	    return ResponseEntity.ok(Map.of(
+    	        "message", "Manager login successful",
+    	        "token", token,
+    	        "manager", managerData
+    	    ));
+    	}
+ 
+ @Operation(
+		    summary = "Login as Super Admin",
+		    description = "Authenticates a Super Admin from the AdminUsers table using email or username",
+		    responses = {
+		        @ApiResponse(responseCode = "200", description = "Login successful, JWT returned"),
+		        @ApiResponse(responseCode = "401", description = "Invalid credentials or not a Super Admin")
+		    }
+		)
+		@PostMapping("/superadmin/login")
+		public ResponseEntity<?> superAdminLogin(@RequestBody AdminLoginRequest request) {
+		    AdminUsers admin = adminUserService.findByUsernameOrEmail(request.getUsernameOrEmail())
+		        .orElse(null);
+
+		    if (admin == null || !passwordEncoder.matches(request.getPassword(), admin.getPasswordHash())) {
+		        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+		                .body(Map.of("message", "Invalid credentials"));
+		    }
+
+		    if (!"SUPER ADMIN".equalsIgnoreCase(admin.getRole().getName())) {
+		        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+		                .body(Map.of("message", "Access denied: Not a Super Admin"));
+		    }
+
+		    String token = jwtUtil.generateToken(admin);
+
+		    Map<String, Object> adminData = new HashMap<>();
+		    adminData.put("id", admin.getAdminId());
+		    adminData.put("username", admin.getUsername());
+		    adminData.put("firstName", admin.getFirstName());
+		    adminData.put("lastName", admin.getLastName());
+		    adminData.put("email", admin.getEmail());
+		    adminData.put("role", admin.getRole().getName());
+
+		    return ResponseEntity.ok(Map.of(
+		        "message", "Super Admin login successful",
+		        "token", token,
+		        "admin", adminData
+		    ));
+		}
+
+
 }

@@ -1,10 +1,11 @@
 package com.hobbySphere.services;
 
 import com.hobbySphere.entities.AdminUsers;
+
 import com.hobbySphere.entities.Role;
 import com.hobbySphere.repositories.AdminUsersRepository;
 import com.hobbySphere.repositories.RoleRepository;
-
+import com.hobbySphere.entities.Users;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -59,6 +60,33 @@ String encodedPassword = passwordEncoder.encode(plainPassword);
 AdminUsers admin = new AdminUsers(username, firstName, lastName, email, encodedPassword, role);
 
 return adminUserRepository.save(admin);
+
+
 }
+    
+    public Optional<AdminUsers> findByUsernameOrEmail(String input) {
+        return adminUserRepository.findByUsernameOrEmail(input, input);
+    }
+
+    public AdminUsers promoteUserToManager(Users user) {
+        Role managerRole = roleRepository.findByName("MANAGER")
+            .orElseThrow(() -> new RuntimeException("Manager role not found"));
+
+        Optional<AdminUsers> existing = adminUserRepository.findByEmail(user.getEmail());
+        if (existing.isPresent()) {
+            throw new RuntimeException("User already promoted to admin");
+        }
+
+        AdminUsers manager = new AdminUsers(
+            user.getUsername(),
+            user.getFirstName(),
+            user.getLastName(),
+            user.getEmail(),
+            user.getPasswordHash(), // assuming hash is valid
+            managerRole
+        );
+
+        return adminUserRepository.save(manager);
+    }
 
 }
