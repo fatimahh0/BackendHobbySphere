@@ -11,7 +11,7 @@ import java.util.Collections;
 @Service
 public class GoogleAuthService {
 
-    private static final String CLIENT_ID = "215378473059-e7921bmvng934a67vs9budd3gj9q55m7.apps.googleusercontent.com";
+    private static final String CLIENT_ID = "215378473059-c8e47o5vubdfbnm079djjd3mmljgf1om.apps.googleusercontent.com";
 
     public GoogleIdToken.Payload verifyToken(String idTokenString) throws Exception {
         JsonFactory jsonFactory = GsonFactory.getDefaultInstance(); // Using GsonFactory here

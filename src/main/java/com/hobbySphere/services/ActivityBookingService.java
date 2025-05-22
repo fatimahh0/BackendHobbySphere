@@ -121,6 +121,15 @@ public class ActivityBookingService {
 		
 	}
 
+
+	public List<ActivityBookings> getBookingsByBusinessEmail(String email) {
+	    return activityBookingsRepository.findByActivityBusinessEmail(email);
+	}
+
+
+	
+
+
     
 
 }

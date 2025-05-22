@@ -51,6 +51,20 @@ public class ActivityBookingController {
         String userEmail = extractUserEmail(token);
         return bookingService.getBookingsByEmail(userEmail);
     }
+    
+    @Operation(summary = "Get all bookings for the logged-in business")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "List of bookings for business activities"),
+        @ApiResponse(responseCode = "400", description = "Invalid or missing token")
+    })
+    @GetMapping("/mybusinessbookings")
+    public ResponseEntity<List<ActivityBookings>> getBookingsByBusiness(
+            @RequestHeader("Authorization") String token) {
+        String businessEmail = extractUserEmail(token);
+        List<ActivityBookings> bookings = bookingService.getBookingsByBusinessEmail(businessEmail);
+        return ResponseEntity.ok(bookings);
+    }
+
 
     @Operation(summary = "Get bookings with status = Pending")
     @ApiResponses(value = {

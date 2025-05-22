@@ -77,5 +77,10 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
     List<ActivityBookings> findByActivityIdAndUserId(Long activityId, Long userId);
 
     void deleteByActivity_Id(Long activityId);
-    
+
+    @Query("SELECT b FROM ActivityBookings b WHERE b.activity.business.email = :email")
+    List<ActivityBookings> findByActivityBusinessEmail(@Param("email") String email);
+
+
+	
 }
