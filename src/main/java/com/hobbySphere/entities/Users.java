@@ -1,6 +1,7 @@
 package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "Users")
@@ -28,7 +29,20 @@ public class Users {
 
     @Column(name = "profile_picture_url", nullable = true)
     private String profilePictureUrl;
-    
+
+    @Column(nullable = true) // ✅ Allow null temporarily to avoid migration error
+    private String status; // ✅ Status field without hard NOT NULL during migration
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        if (this.status == null) {
+            this.status = "Active"; // ✅ Set default if null
+        }
+    }
 
     // Getters and Setters
 
@@ -84,9 +98,19 @@ public class Users {
         return profilePictureUrl;
     }
 
-    // Corrected setter method
     public void setProfilePictureUrl(String profilePictureUrl) {
-        // Directly setting the profilePictureUrl without checking a non-existent user object.
         this.profilePictureUrl = profilePictureUrl;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 }

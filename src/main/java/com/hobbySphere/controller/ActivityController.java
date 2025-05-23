@@ -52,9 +52,6 @@ public class ActivityController {
         return activityService.findByBusinessId(businessId);
     }
     
-    
-    
-
     @Operation(summary = "Get all activities", description = "Retrieve a list of all activities in the system")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Returns all activities")

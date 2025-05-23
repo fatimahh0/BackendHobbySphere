@@ -1,17 +1,24 @@
 package com.hobbySphere.services;
 
+import com.hobbySphere.dto.UserSummaryDTO;
 import com.hobbySphere.entities.AdminUsers;
-
+import com.hobbySphere.entities.BusinessAdmins;
 import com.hobbySphere.entities.Businesses;
 
 import com.hobbySphere.entities.Role;
 import com.hobbySphere.repositories.AdminUsersRepository;
+import com.hobbySphere.repositories.BusinessAdminsRepository;
 import com.hobbySphere.repositories.RoleRepository;
+import com.hobbySphere.repositories.UsersRepository;
 import com.hobbySphere.entities.Users;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -19,6 +26,9 @@ public class AdminUserService {
 
     @Autowired
     private AdminUsersRepository adminUserRepository;
+    
+    @Autowired
+    private BusinessAdminsRepository businessAdminsRepository;
 
     @Autowired
     private RoleRepository roleRepository;
@@ -26,6 +36,9 @@ public class AdminUserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired 
+    private UsersRepository usersRepository;
+    
     // Existing methods
     public Optional<AdminUsers> findByEmail(String email) {
         return adminUserRepository.findByEmail(email);
@@ -90,7 +103,50 @@ return adminUserRepository.save(admin);
 
         return adminUserRepository.save(manager);
     }
+    
+    public List<UserSummaryDTO> getAllUserSummaries() {
+        List<UserSummaryDTO> result = new ArrayList<>();
 
-	
+        List<UserSummaryDTO> users = usersRepository.findAll().stream()
+            .map(u -> new UserSummaryDTO(
+                u.getFirstName() + " " + u.getLastName(),
+                u.getEmail(),
+                "user"))
+            .collect(Collectors.toList());
+
+        List<UserSummaryDTO> admins = adminUserRepository.findAll().stream()
+            .map(a -> new UserSummaryDTO(
+                a.getFirstName() + " " + a.getLastName(),
+                a.getEmail(),
+                a.getRole().getName()))
+            .collect(Collectors.toList());
+
+        result.addAll(users);
+        result.addAll(admins);
+
+        return result;
+    }
+
+    public AdminUsers promoteUserToManager(Users user, Businesses business) {
+        Role managerRole = roleRepository.findByName("MANAGER")
+                .orElseThrow(() -> new RuntimeException("Role MANAGER not found"));
+
+        // Create AdminUser from User
+        AdminUsers manager = new AdminUsers();
+        manager.setUsername(user.getUsername());
+        manager.setFirstName(user.getFirstName());
+        manager.setLastName(user.getLastName());
+        manager.setEmail(user.getEmail());
+        manager.setPasswordHash(user.getPasswordHash());
+        manager.setRole(managerRole);
+        manager.setBusiness(business); // Save business into AdminUsers entity too
+        AdminUsers savedManager = adminUserRepository.save(manager);
+
+        // 🔁 Create BusinessAdmins link
+        BusinessAdmins businessAdmins = new BusinessAdmins(business, savedManager);
+        businessAdminsRepository.save(businessAdmins); // Save the mapping
+
+        return savedManager;
+    }
 
 }

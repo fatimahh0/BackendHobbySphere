@@ -27,6 +27,19 @@ public class Review {
 
     @Column(nullable = false)
     private LocalDateTime date;
+    
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
 
     // Getters and Setters
 

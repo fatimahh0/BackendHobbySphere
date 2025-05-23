@@ -25,7 +25,7 @@ public class AdminUsers {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @JsonProperty("password") // This tells Jackson to map the 'password' field to 'passwordHash'
+    @JsonProperty("password")
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
@@ -35,6 +35,17 @@ public class AdminUsers {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    // ✅ Changed from primitive boolean to Boolean
+    @Column(name = "notify_activity_updates")
+    private Boolean notifyActivityUpdates = true;
+
+    @Column(name = "notify_user_feedback")
+    private Boolean notifyUserFeedback = true;
+    
+    @ManyToOne
+    @JoinColumn(name = "business_id", nullable = true)
+    private Businesses business;
 
     public AdminUsers() {}
 
@@ -46,7 +57,6 @@ public class AdminUsers {
         this.passwordHash = passwordHash;
         this.role = role;
     }
-
 
     @PrePersist
     protected void onCreate() {
@@ -118,4 +128,29 @@ public class AdminUsers {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+
+    public Boolean getNotifyActivityUpdates() {
+        return notifyActivityUpdates;
+    }
+
+    public void setNotifyActivityUpdates(Boolean notifyActivityUpdates) {
+        this.notifyActivityUpdates = notifyActivityUpdates;
+    }
+
+    public Boolean getNotifyUserFeedback() {
+        return notifyUserFeedback;
+    }
+
+    public void setNotifyUserFeedback(Boolean notifyUserFeedback) {
+        this.notifyUserFeedback = notifyUserFeedback;
+    }
+    
+    public Businesses getBusiness() {
+        return business;
+    }
+
+    public void setBusiness(Businesses business) {
+        this.business = business;
+    }
+
 }

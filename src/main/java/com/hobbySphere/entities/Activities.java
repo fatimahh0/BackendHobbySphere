@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "Activities")
@@ -51,6 +52,21 @@ public class Activities {
 
     @Column(name = "max_participants", nullable = false)
     private int maxParticipants; // Added max participants field
+
+    @OneToMany(mappedBy = "activity")
+    private List<ActivityBookings> bookings;
+    
+    @Column(name = "view_count")
+    private Long viewCount = 0L;
+
+    public Long getViewCount() {
+        return viewCount;
+    }
+
+    public void setViewCount(Long viewCount) {
+        this.viewCount = viewCount;
+    }
+
 
     // Constructors
     public Activities() {}

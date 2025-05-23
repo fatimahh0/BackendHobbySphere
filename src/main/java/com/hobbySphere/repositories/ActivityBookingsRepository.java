@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -77,6 +78,8 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
     List<ActivityBookings> findByActivityIdAndUserId(Long activityId, Long userId);
 
     void deleteByActivity_Id(Long activityId);
+    
+    long countByBookingDatetimeAfter(LocalDateTime date);
 
     @Query("SELECT b FROM ActivityBookings b WHERE b.activity.business.email = :email")
     List<ActivityBookings> findByActivityBusinessEmail(@Param("email") String email);

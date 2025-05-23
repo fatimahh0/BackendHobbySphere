@@ -1,5 +1,6 @@
 package com.hobbySphere.services;
 import com.hobbySphere.entities.Businesses;
+import com.hobbySphere.repositories.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.hobbySphere.repositories.BusinessesRepository; 
@@ -26,7 +27,6 @@ public class BusinessService {
     
     @Autowired
     private PasswordEncoder passwordEncoder;
-
 
     public Optional<Businesses> findByEmail(String email) {
         return businessRepository.findByEmail(email);
@@ -161,6 +161,6 @@ public class BusinessService {
         // Save and return the updated business
         return businessRepository.save(existing);
     }
-
+    
 
 }

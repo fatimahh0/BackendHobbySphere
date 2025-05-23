@@ -1,5 +1,6 @@
 package com.hobbySphere.controller;
 import com.hobbySphere.dto.GoogleLoginRequest;
+import com.hobbySphere.repositories.*;
 import com.hobbySphere.services.BusinessService;
 import com.hobbySphere.entities.*;
 import com.hobbySphere.security.JwtUtil;
@@ -37,6 +38,9 @@ public class AuthController {
 
     @Autowired
     private AdminUserService adminUserService;
+    
+    @Autowired 
+    private RoleRepository roleRepository; 
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -337,21 +341,25 @@ public class AuthController {
         }
     }
     
-    @PostMapping("/admin/promote-to-manager/{userId}")
-    public ResponseEntity<?> promoteToManager(@PathVariable Long userId) {
-        Users user = userService.getUserById(userId); 
+    @PostMapping("/admin/promote-to-manager/{userId}/{businessId}")
+    public ResponseEntity<?> promoteToManager(@PathVariable Long userId, @PathVariable Long businessId) {
+        Users user = userService.getUserById(userId);
+        Businesses business = businessService.findById(businessId); // No Optional
 
-        AdminUsers manager = adminUserService.promoteUserToManager(user);
+        AdminUsers manager = adminUserService.promoteUserToManager(user, business);
 
         return ResponseEntity.ok(Map.of(
             "message", "User promoted to Manager successfully",
             "manager", Map.of(
                 "id", manager.getAdminId(),
                 "email", manager.getEmail(),
-                "role", manager.getRole().getName()
+                "role", manager.getRole().getName(),
+                "businessId", manager.getBusiness().getId()
             )
         ));
     }
+
+
 
  @Operation(
     	    summary = "Login as a Manager",
@@ -393,7 +401,7 @@ public class AuthController {
  
  @Operation(
 		    summary = "Login as Super Admin",
-		    description = "Authenticates a Super Admin from the AdminUsers table using email or username",
+		    description = "Authenticates a Super Admin using email and password",
 		    responses = {
 		        @ApiResponse(responseCode = "200", description = "Login successful, JWT returned"),
 		        @ApiResponse(responseCode = "401", description = "Invalid credentials or not a Super Admin")
@@ -401,15 +409,27 @@ public class AuthController {
 		)
 		@PostMapping("/superadmin/login")
 		public ResponseEntity<?> superAdminLogin(@RequestBody AdminLoginRequest request) {
-		    AdminUsers admin = adminUserService.findByUsernameOrEmail(request.getUsernameOrEmail())
-		        .orElse(null);
-
-		    if (admin == null || !passwordEncoder.matches(request.getPassword(), admin.getPasswordHash())) {
-		        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-		                .body(Map.of("message", "Invalid credentials"));
+		    if (request.getUsernameOrEmail() == null || request.getPassword() == null) {
+		        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+		                .body(Map.of("message", "Email and password are required"));
 		    }
 
-		    if (!"SUPER ADMIN".equalsIgnoreCase(admin.getRole().getName())) {
+		    // Force login by email only
+		    Optional<AdminUsers> adminOpt = adminUserService.findByEmail(request.getUsernameOrEmail());
+
+		    if (adminOpt.isEmpty()) {
+		        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+		                .body(Map.of("message", "No Super Admin found with this email"));
+		    }
+
+		    AdminUsers admin = adminOpt.get();
+
+		    if (!passwordEncoder.matches(request.getPassword(), admin.getPasswordHash())) {
+		        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+		                .body(Map.of("message", "Incorrect password"));
+		    }
+
+		    if (!"SUPER_ADMIN".equalsIgnoreCase(admin.getRole().getName())) {
 		        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
 		                .body(Map.of("message", "Access denied: Not a Super Admin"));
 		    }
@@ -430,6 +450,41 @@ public class AuthController {
 		        "admin", adminData
 		    ));
 		}
+
+ 
+ @Operation(
+		    summary = "Register a new Super Admin",
+		    description = "Registers a new AdminUser with the default role of SUPER_ADMIN"
+		)
+		@PostMapping("/admin/register")
+		public ResponseEntity<?> registerSuperAdmin(@RequestBody AdminRegisterRequest request) {
+		    // Check if email or username already exists
+		    if (adminUserService.findByUsernameOrEmail(request.getEmail()).isPresent()) {
+		        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+		                .body(Map.of("message", "Username or email already in use"));
+		    }
+
+		    // Fetch the SUPER_ADMIN role
+		    Role role = roleRepository.findByName("SUPER_ADMIN")
+		            .orElseThrow(() -> new RuntimeException("Role SUPER_ADMIN not found"));
+
+		    // Create the admin user
+		    AdminUsers newAdmin = new AdminUsers();
+		    newAdmin.setUsername(request.getUsername());
+		    newAdmin.setFirstName(request.getFirstName());
+		    newAdmin.setLastName(request.getLastName());
+		    newAdmin.setEmail(request.getEmail());
+		    newAdmin.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+		    newAdmin.setRole(role);
+
+		    adminUserService.save(newAdmin);
+
+		    return ResponseEntity.ok(Map.of(
+		            "message", "Super Admin registered successfully",
+		            "adminId", newAdmin.getAdminId()
+		    ));
+		}
+
 
 
 }

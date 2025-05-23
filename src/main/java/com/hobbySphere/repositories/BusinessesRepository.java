@@ -1,6 +1,7 @@
 package com.hobbySphere.repositories;
 
 import com.hobbySphere.entities.Businesses;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

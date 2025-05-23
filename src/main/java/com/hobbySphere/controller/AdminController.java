@@ -1,105 +1,159 @@
 package com.hobbySphere.controller;
 
-import com.hobbySphere.dto.ActivityDetailsDTO;
-import com.hobbySphere.dto.ActivitySummaryDTO;
-import com.hobbySphere.entities.Activities;
+import com.hobbySphere.dto.AdminActivityDTO;
+import com.hobbySphere.dto.AdminNotificationPreferencesDTO;
+import com.hobbySphere.dto.AdminPasswordUpdateDTO;
+import com.hobbySphere.dto.AdminProfileUpdateDTO;
+import com.hobbySphere.dto.UserSummaryDTO;
 import com.hobbySphere.entities.AdminUsers;
-import com.hobbySphere.services.ActivityService;
+import com.hobbySphere.entities.Users;
+import com.hobbySphere.services.AdminActivityService;
+import com.hobbySphere.services.AdminStatsService;
 import com.hobbySphere.services.AdminUserService;
+import com.hobbySphere.repositories.*;
+
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import com.hobbySphere.services.BusinessAdminService;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.http.HttpStatus;
 
-
-import java.security.Principal;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/admin")
-@Tag(name = "Admin Controller", description = "Endpoints for managing activities by admin users")
+@RequestMapping("/api/superadmin")
+@Tag(name = "Admin Dashboard", description = "Admin-level statistics and monitoring")
 public class AdminController {
 
     @Autowired
-    private ActivityService activityService;
+    private AdminStatsService statsService;
+
+    @Autowired 
+    private AdminActivityService adminActivityService; 
 
     @Autowired
-    private AdminUserService adminUserService;
+    private UsersRepository usersRepository; 
+
+    @Autowired
+    private AdminUsersRepository adminUsersRepository;
     
     @Autowired 
-    private BusinessAdminService businessAdminService;
+    private ReviewRepository reviewRepository; 
 
-    @Operation(summary = "Get activity summaries for the logged-in admin")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "List of activity summaries retrieved successfully"),
-        @ApiResponse(responseCode = "404", description = "Admin not found")
-    })
-    @GetMapping("/activities/summary")
-    public ResponseEntity<List<ActivitySummaryDTO>> getActivitySummary(Principal principal) {
-        if (principal == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
+    @Operation(summary = "Get system stats", description = "Returns total users, activities, bookings, and feedback for the selected period")
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Long>> getStats(@RequestParam(defaultValue = "today") String period) {
+        return ResponseEntity.ok(statsService.getStats(period));
+    }
+
+    @Operation(summary = "Get monthly user registration counts", description = "Returns user registration counts per month for the last 6 months")
+    @GetMapping("/registrations/monthly")
+    public ResponseEntity<?> getMonthlyUserRegistrations() {
+        Map<String, Long> registrations = statsService.getMonthlyRegistrations();
+        return ResponseEntity.ok(registrations);
+    }
+
+    @Operation(summary = "Get popular activities", description = "Returns most booked or viewed activities and their popularity metrics")
+    @GetMapping("/activities/popular")
+    public ResponseEntity<?> getPopularActivities() {
+        List<Map<String, Object>> activities = statsService.getPopularActivities();
+        return ResponseEntity.ok(activities);
+    }
+
+    @Operation(summary = "Get all activities posted by businesses", description = "Returns title, business name, date, participants, and description for all activities")
+    @GetMapping("/activities")
+    public ResponseEntity<?> getAllActivities() {
+        List<AdminActivityDTO> activities = adminActivityService.getAllActivities();
+        return ResponseEntity.ok(activities);
+    }
+
+    @Operation(summary = "Toggle user status", description = "Toggle a user’s status between Active and Disabled")
+    @PutMapping("/{userId}/toggle-status")
+    public ResponseEntity<String> toggleUserStatus(@PathVariable Long userId) {
+        Optional<Users> optionalUser = usersRepository.findById(userId);
+        if (optionalUser.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+        Users user = optionalUser.get();
+        String currentStatus = user.getStatus();
+        user.setStatus("Active".equalsIgnoreCase(currentStatus) ? "Disabled" : "Active");
+        usersRepository.save(user);
+        return ResponseEntity.ok("User status updated to: " + user.getStatus());
+    }
+
+    @Operation(summary = "Delete user", description = "Permanently delete a user account by ID")
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<String> deleteUser(@PathVariable Long userId) {
+        if (!usersRepository.existsById(userId)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+        usersRepository.deleteById(userId);
+        return ResponseEntity.ok("User deleted successfully");
+    }
+
+    @Operation(summary = "Update admin profile", description = "Update admin profile information (first name, last name, username, email)")
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateAdminProfile(@RequestBody AdminProfileUpdateDTO dto) {
+        Long currentAdminId = 1L; // Replace with dynamic logic
+        AdminUsers admin = adminUsersRepository.findById(currentAdminId).orElse(null);
+        if (admin == null) {
+            return ResponseEntity.status(404).body("Admin user not found.");
+        }
+        admin.setFirstName(dto.getFirstName());
+        admin.setLastName(dto.getLastName());
+        admin.setUsername(dto.getUsername());
+        admin.setEmail(dto.getEmail());
+        adminUsersRepository.save(admin);
+        return ResponseEntity.ok("Admin profile updated successfully.");
+    }
+
+    @PutMapping("/password")
+    public ResponseEntity<String> updateAdminPassword(@RequestBody AdminPasswordUpdateDTO dto) {
+        Optional<AdminUsers> optionalAdmin = adminUsersRepository.findByUsername(dto.getUsername());
+
+        if (optionalAdmin.isEmpty()) {
+            return ResponseEntity.status(404).body("Admin user not found.");
         }
 
-        AdminUsers admin = adminUserService.findByUsername(principal.getName())
-            .orElseThrow(() -> new RuntimeException("Admin not found"));
+        AdminUsers admin = optionalAdmin.get(); // ✅ Extract the actual AdminUsers object
 
-        List<ActivitySummaryDTO> summaries = activityService.getActivitySummariesByAdmin(admin);
-        return ResponseEntity.ok(summaries);
-    }
-
-    @Operation(summary = "Delete an activity by ID")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Activity deleted successfully"),
-        @ApiResponse(responseCode = "404", description = "Activity not found")
-    })
-    @DeleteMapping("/activities/{id}")
-    public ResponseEntity<String> deleteActivity(@PathVariable Long id) {
-        activityService.deleteActivity(id);
-        return ResponseEntity.ok("Activity with ID " + id + " has been deleted successfully.");
-    }
-
-    @Operation(summary = "Get detailed information about an activity by ID")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Activity details retrieved successfully"),
-        @ApiResponse(responseCode = "404", description = "Activity not found")
-    })
-    @GetMapping("/activities/{id}")
-    public ResponseEntity<ActivityDetailsDTO> getActivityDetails(@PathVariable Long id) {
-        Activities activity = activityService.findById(id);
-        if (activity == null) {
-            return ResponseEntity.notFound().build();
+        if (!passwordEncoder.matches(dto.getCurrentPassword(), admin.getPasswordHash())) {
+            return ResponseEntity.status(403).body("Current password is incorrect.");
         }
 
-        ActivityDetailsDTO dto = new ActivityDetailsDTO(
-            activity.getId(),
-            activity.getActivityName(),
-            activity.getDescription(),
-            activity.getActivityType(),
-            activity.getLocation(),
-            activity.getStartDatetime(),
-            activity.getEndDatetime(),
-            activity.getPrice(),
-            activity.getMaxParticipants(),
-            activity.getStatus(),
-            activity.getImageUrl(),
-            activity.getBusiness().getBusinessName()
-        );
-
-        return ResponseEntity.ok(dto);
+        admin.setPasswordHash(passwordEncoder.encode(dto.getNewPassword()));
+        adminUsersRepository.save(admin); // ✅ Save the actual object
+        return ResponseEntity.ok("Password updated successfully.");
     }
+
+
+
+    @PutMapping("/notifications")
+    public ResponseEntity<String> updateNotificationPreferences(@RequestBody AdminNotificationPreferencesDTO dto) {
+        AdminUsers admin = adminUsersRepository.findByUsername(dto.getUsername()).orElse(null);
+        if (admin == null) {
+            return ResponseEntity.status(404).body("Admin user not found.");
+        }
+
+        admin.setNotifyActivityUpdates(dto.isNotifyActivityUpdates());
+        admin.setNotifyUserFeedback(dto.isNotifyUserFeedback());
+        adminUsersRepository.save(admin);
+
+        return ResponseEntity.ok("Notification preferences updated successfully.");
+    }
+
     
-    @PostMapping("/assign-admin")
-    public ResponseEntity<String> assignAdminToBusiness(
-            @RequestParam Long adminId,
-            @RequestParam Long businessId) {
-
-        businessAdminService.assignAdminToBusiness(adminId, businessId);
-        return ResponseEntity.ok("Admin with ID " + adminId + " has been assigned to Business with ID " + businessId);
+    @Operation(summary = "Get all feedback", description = "Returns submitter name, content, rating, and date for all feedback")
+    @GetMapping("/feedback")
+    public ResponseEntity<?> getAllFeedback() {
+        return ResponseEntity.ok(reviewRepository.findAll());
     }
 
 }

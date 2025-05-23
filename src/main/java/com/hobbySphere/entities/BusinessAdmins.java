@@ -1,6 +1,7 @@
 package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
+import com.hobbySphere.entities.*;
 
 @Entity
 @Table(name = "BusinessAdmins")
