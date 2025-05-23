@@ -28,6 +28,11 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/activities")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175"
+})
 @Tag(name = "Activities API", description = "Endpoints for managing activities")
 public class ActivityController {
 

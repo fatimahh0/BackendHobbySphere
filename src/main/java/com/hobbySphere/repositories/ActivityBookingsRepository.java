@@ -20,17 +20,23 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
     int countByActivityId(Long activityId);
 
     List<ActivityBookings> findByBookingStatusIn(List<String> statuses);
+
     List<ActivityBookings> findByUserId(Long userId);
+
     List<ActivityBookings> findByUser_Id(Long userId);
 
     @Query("SELECT ab FROM ActivityBookings ab WHERE ab.user.email = :userEmail")
     List<ActivityBookings> findByUserEmail(@Param("userEmail") String userEmail);
 
     @Query("SELECT ab FROM ActivityBookings ab WHERE ab.user.email = :userEmail AND ab.bookingStatus IN :statuses")
-    List<ActivityBookings> findByUserEmailAndBookingStatusIn(@Param("userEmail") String userEmail, @Param("statuses") List<String> statuses);
+    List<ActivityBookings> findByUserEmailAndBookingStatusIn(
+            @Param("userEmail") String userEmail,
+            @Param("statuses") List<String> statuses);
 
     @Query("SELECT ab FROM ActivityBookings ab WHERE ab.id = :bookingId AND ab.bookingStatus = :status")
-    ActivityBookings findByIdAndBookingStatus(@Param("bookingId") Long bookingId, @Param("status") String status);
+    ActivityBookings findByIdAndBookingStatus(
+            @Param("bookingId") Long bookingId,
+            @Param("status") String status);
 
     @Query("SELECT ab FROM ActivityBookings ab WHERE ab.bookingStatus = 'Pending'")
     List<ActivityBookings> findActiveBookings();
@@ -38,11 +44,11 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
     @Query("SELECT ab FROM ActivityBookings ab WHERE ab.bookingStatus IN ('Completed', 'Canceled')")
     List<ActivityBookings> findBookingHistory();
 
-    // ✅ Total revenue (JPQL)
+    // ✅ Total revenue
     @Query("SELECT SUM(b.totalPrice) FROM ActivityBookings b WHERE b.activity.business.id = :businessId")
     Double sumRevenueByBusinessId(@Param("businessId") Long businessId);
 
-    // ✅ Monthly booking count (PostgreSQL-native)
+    // ✅ Monthly booking count
     @Query(value = "SELECT COUNT(*) FROM activity_bookings ab " +
                    "JOIN activities a ON ab.activity_id = a.activity_id " +
                    "WHERE a.business_id = :businessId " +
@@ -53,7 +59,7 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
                                      @Param("month") int month,
                                      @Param("year") int year);
 
-    // ✅ Peak booking hours (PostgreSQL-native)
+    // ✅ Peak booking hours
     @Query(value = "SELECT EXTRACT(HOUR FROM ab.booking_datetime) AS hour, COUNT(*) AS count " +
                    "FROM activity_bookings ab " +
                    "JOIN activities a ON ab.activity_id = a.activity_id " +
@@ -77,13 +83,11 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
 
     List<ActivityBookings> findByActivityIdAndUserId(Long activityId, Long userId);
 
+    void deleteByUserId(Long userId);               // ✅ from file1
     void deleteByActivity_Id(Long activityId);
-    
+
     long countByBookingDatetimeAfter(LocalDateTime date);
 
     @Query("SELECT b FROM ActivityBookings b WHERE b.activity.business.email = :email")
     List<ActivityBookings> findByActivityBusinessEmail(@Param("email") String email);
-
-
-	
 }

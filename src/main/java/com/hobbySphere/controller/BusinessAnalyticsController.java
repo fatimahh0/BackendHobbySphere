@@ -11,7 +11,11 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/analytics")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175"
+})
 @Tag(name = "Business Analytics API", description = "Endpoints for generating business analytics insights")
 public class BusinessAnalyticsController {
 

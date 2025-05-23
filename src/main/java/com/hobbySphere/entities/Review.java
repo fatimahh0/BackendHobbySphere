@@ -16,7 +16,7 @@ public class Review {
     private Activities activity;
 
     @ManyToOne
-    @JoinColumn(name = "customer_id", nullable = false)
+    @JoinColumn(name = "customer_id", nullable = true)
     private Users customer;
 
     @Column(nullable = false)
@@ -27,7 +27,7 @@ public class Review {
 
     @Column(nullable = false)
     private LocalDateTime date;
-    
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -39,7 +39,6 @@ public class Review {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
-
 
     // Getters and Setters
 

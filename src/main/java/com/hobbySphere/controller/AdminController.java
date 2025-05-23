@@ -1,10 +1,6 @@
 package com.hobbySphere.controller;
 
-import com.hobbySphere.dto.AdminActivityDTO;
-import com.hobbySphere.dto.AdminNotificationPreferencesDTO;
-import com.hobbySphere.dto.AdminPasswordUpdateDTO;
-import com.hobbySphere.dto.AdminProfileUpdateDTO;
-import com.hobbySphere.dto.UserSummaryDTO;
+import com.hobbySphere.dto.*;
 import com.hobbySphere.entities.AdminUsers;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.services.AdminActivityService;
@@ -15,8 +11,8 @@ import com.hobbySphere.repositories.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,23 +22,31 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/superadmin")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175"
+})
 @Tag(name = "Admin Dashboard", description = "Admin-level statistics and monitoring")
 public class AdminController {
 
     @Autowired
     private AdminStatsService statsService;
 
-    @Autowired 
-    private AdminActivityService adminActivityService; 
+    @Autowired
+    private AdminUserService adminUserService; // ✅ from File1
 
     @Autowired
-    private UsersRepository usersRepository; 
+    private AdminActivityService adminActivityService;
+
+    @Autowired
+    private UsersRepository usersRepository;
 
     @Autowired
     private AdminUsersRepository adminUsersRepository;
-    
-    @Autowired 
-    private ReviewRepository reviewRepository; 
+
+    @Autowired
+    private ReviewRepository reviewRepository;
 
     @Autowired
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
@@ -91,11 +95,18 @@ public class AdminController {
     @Operation(summary = "Delete user", description = "Permanently delete a user account by ID")
     @DeleteMapping("/users/{userId}")
     public ResponseEntity<String> deleteUser(@PathVariable Long userId) {
-        if (!usersRepository.existsById(userId)) {
+        Optional<Users> optionalUser = usersRepository.findById(userId);
+        if (optionalUser.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
         }
-        usersRepository.deleteById(userId);
-        return ResponseEntity.ok("User deleted successfully");
+
+        try {
+            adminUserService.deleteUserAndDependencies(userId); // ✅ cascade delete
+            return ResponseEntity.ok("User and all related data deleted successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to delete user: " + e.getMessage());
+        }
     }
 
     @Operation(summary = "Update admin profile", description = "Update admin profile information (first name, last name, username, email)")
@@ -117,23 +128,19 @@ public class AdminController {
     @PutMapping("/password")
     public ResponseEntity<String> updateAdminPassword(@RequestBody AdminPasswordUpdateDTO dto) {
         Optional<AdminUsers> optionalAdmin = adminUsersRepository.findByUsername(dto.getUsername());
-
         if (optionalAdmin.isEmpty()) {
             return ResponseEntity.status(404).body("Admin user not found.");
         }
 
-        AdminUsers admin = optionalAdmin.get(); // ✅ Extract the actual AdminUsers object
-
+        AdminUsers admin = optionalAdmin.get();
         if (!passwordEncoder.matches(dto.getCurrentPassword(), admin.getPasswordHash())) {
             return ResponseEntity.status(403).body("Current password is incorrect.");
         }
 
         admin.setPasswordHash(passwordEncoder.encode(dto.getNewPassword()));
-        adminUsersRepository.save(admin); // ✅ Save the actual object
+        adminUsersRepository.save(admin);
         return ResponseEntity.ok("Password updated successfully.");
     }
-
-
 
     @PutMapping("/notifications")
     public ResponseEntity<String> updateNotificationPreferences(@RequestBody AdminNotificationPreferencesDTO dto) {
@@ -149,11 +156,9 @@ public class AdminController {
         return ResponseEntity.ok("Notification preferences updated successfully.");
     }
 
-    
     @Operation(summary = "Get all feedback", description = "Returns submitter name, content, rating, and date for all feedback")
     @GetMapping("/feedback")
     public ResponseEntity<?> getAllFeedback() {
         return ResponseEntity.ok(reviewRepository.findAll());
     }
-
 }

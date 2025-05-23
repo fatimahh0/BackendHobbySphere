@@ -10,6 +10,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/users")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175"
+})
 public class AdminUserController {
 
     @Autowired

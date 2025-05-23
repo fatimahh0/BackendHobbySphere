@@ -16,6 +16,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/businesses")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175"
+})
 @Tag(name = "Business Management", description = "Operations for creating, reading, updating, and deleting businesses")
 public class BusinessController {
 
@@ -162,5 +167,4 @@ public class BusinessController {
         Businesses updated = businessService.save(existingBusiness);
         return ResponseEntity.ok(updated);
     }
-
 }

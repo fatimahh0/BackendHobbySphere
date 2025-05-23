@@ -22,7 +22,8 @@ public interface ActivitiesRepository extends JpaRepository<Activities, Long> {
             "ORDER BY COUNT(b.booking_id) DESC LIMIT 1", nativeQuery = true)
     String findTopActivityNameByBusinessId(@Param("businessId") Long businessId);
 
-    void deleteById(Long id);
+    void deleteByBusinessId(Long businessId); // ✅ from File1
+    void deleteById(Long id);                 // ✅ from File2
 
     long countByCreatedAtAfter(LocalDateTime date);
 

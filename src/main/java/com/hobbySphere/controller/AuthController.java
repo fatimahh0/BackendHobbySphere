@@ -1,11 +1,8 @@
 package com.hobbySphere.controller;
-import com.hobbySphere.dto.GoogleLoginRequest;
 import com.hobbySphere.repositories.*;
-import com.hobbySphere.services.BusinessService;
 import com.hobbySphere.entities.*;
 import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.*;
-import com.hobbySphere.repositories.UsersRepository;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -26,7 +23,11 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175"
+})
 @Tag(name = "Authentication", description = "Endpoints for user login, registration, and Google login")
 public class AuthController {
 

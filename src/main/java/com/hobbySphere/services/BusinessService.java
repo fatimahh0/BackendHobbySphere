@@ -1,32 +1,42 @@
 package com.hobbySphere.services;
+
 import com.hobbySphere.entities.Businesses;
+import com.hobbySphere.entities.Activities;
 import com.hobbySphere.repositories.*;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import com.hobbySphere.repositories.BusinessesRepository; 
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.UUID;
-
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class BusinessService {
 
     @Autowired
     private BusinessesRepository businessRepository;
-    
+
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    // Only in File1
+    @Autowired
+    private ActivitiesRepository activityRepository;
+
+    @Autowired
+    private ActivityBookingsRepository activityBookingRepository;
+
+    @Autowired
+    private ReviewRepository reviewRepository;
 
     public Optional<Businesses> findByEmail(String email) {
         return businessRepository.findByEmail(email);
@@ -35,7 +45,6 @@ public class BusinessService {
     public Businesses save(Businesses business) {
         if (business.getId() != null) {
             Optional<Businesses> existingBusiness = businessRepository.findByEmail(business.getEmail());
-
             if (existingBusiness.isPresent() && !existingBusiness.get().getId().equals(business.getId())) {
                 throw new IllegalArgumentException("Email already exists for another business!");
             }
@@ -51,10 +60,24 @@ public class BusinessService {
         return businessRepository.findAll();
     }
 
-    public void delete(Long id) {
-        businessRepository.deleteById(id);
+    // From File1: smart delete with cleanup
+    @Transactional
+    public void delete(Long businessId) {
+        Businesses business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new RuntimeException("Business not found"));
+
+        List<Activities> activities = activityRepository.findByBusinessId(businessId);
+
+        for (Activities activity : activities) {
+            Long activityId = activity.getId();
+            activityBookingRepository.deleteByActivity_Id(activityId);
+            reviewRepository.deleteByActivity_Id(activityId);
+            activityRepository.deleteById(activityId);
+        }
+
+        businessRepository.deleteById(businessId);
     }
-    
+
     public Businesses registerBusiness(
             String name,
             String email,
@@ -100,7 +123,7 @@ public class BusinessService {
 
         return businessRepository.save(business);
     }
-    
+
     public Businesses updateBusinessWithImages(
             Long id,
             String name,
@@ -112,32 +135,28 @@ public class BusinessService {
             MultipartFile logo,
             MultipartFile banner
     ) throws IOException {
-        // Fetch the existing business using the provided ID
         Businesses existing = businessRepository.findById(id).orElse(null);
 
         if (existing == null) {
             throw new IllegalArgumentException("Business with ID " + id + " not found.");
         }
 
-        // Optional email validation
         Optional<Businesses> byEmail = businessRepository.findByEmail(email);
         if (byEmail.isPresent() && !byEmail.get().getId().equals(id)) {
             throw new IllegalArgumentException("Email already exists for another business!");
         }
 
-        // Set the new values, updating only if provided
         existing.setBusinessName(name);
         existing.setEmail(email);
-        
+
         if (password != null && !password.isEmpty()) {
-            existing.setPasswordHash(passwordEncoder.encode(password)); // Encode password if provided
+            existing.setPasswordHash(passwordEncoder.encode(password));
         }
-        
+
         existing.setDescription(description);
         existing.setPhoneNumber(phoneNumber);
         existing.setWebsiteUrl(websiteUrl);
 
-        // Handle logo file upload if provided
         Path uploadDir = Paths.get("uploads/");
         if (!Files.exists(uploadDir)) {
             Files.createDirectories(uploadDir);
@@ -147,20 +166,16 @@ public class BusinessService {
             String logoFileName = UUID.randomUUID() + "_" + logo.getOriginalFilename();
             Path logoPath = uploadDir.resolve(logoFileName);
             Files.copy(logo.getInputStream(), logoPath, StandardCopyOption.REPLACE_EXISTING);
-            existing.setBusinessLogoUrl("/uploads/" + logoFileName); // Update logo URL
+            existing.setBusinessLogoUrl("/uploads/" + logoFileName);
         }
 
-        // Handle banner file upload if provided
         if (banner != null && !banner.isEmpty()) {
             String bannerFileName = UUID.randomUUID() + "_" + banner.getOriginalFilename();
             Path bannerPath = uploadDir.resolve(bannerFileName);
             Files.copy(banner.getInputStream(), bannerPath, StandardCopyOption.REPLACE_EXISTING);
-            existing.setBusinessBannerUrl("/uploads/" + bannerFileName); // Update banner URL
+            existing.setBusinessBannerUrl("/uploads/" + bannerFileName);
         }
 
-        // Save and return the updated business
         return businessRepository.save(existing);
     }
-    
-
 }
