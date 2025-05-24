@@ -6,6 +6,8 @@ import com.hobbySphere.repositories.UsersRepository;
 import jakarta.transaction.Transactional;
 
 import com.hobbySphere.entities.ActivityBookings;
+import com.hobbySphere.entities.NotificationType;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -20,6 +22,10 @@ public class ActivityBookingService {
 
     @Autowired
     private UsersRepository userRepository;
+    
+    @Autowired
+    private NotificationsService notificationsService;
+
 
     // Method to get bookings by user email
     
@@ -112,19 +118,51 @@ public class ActivityBookingService {
         return true;
     }
 
-	public void rejectBooking(Long bookingId) {
-		ActivityBookings booking = activityBookingsRepository.findById(bookingId)
+    public void rejectBooking(Long bookingId) {
+        ActivityBookings booking = activityBookingsRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found with ID: " + bookingId));
 
         booking.setBookingStatus("Rejected");
         activityBookingsRepository.save(booking);
-		
-	}
+
+        // ✅ Send notification to user
+        notificationsService.createNotification(
+        	    booking.getUser(),
+        	    "Your booking for activity '" + booking.getActivity().getActivityName() + "' has been rejected.",
+        	    NotificationType.ACTIVITY_UPDATE
+        	);
+
+    }
+
 
 
 	public List<ActivityBookings> getBookingsByBusinessEmail(String email) {
 	    return activityBookingsRepository.findByActivityBusinessEmail(email);
 	}
+
+	public void unrejectBooking(Long bookingId) {
+	    ActivityBookings booking = activityBookingsRepository.findById(bookingId)
+	            .orElseThrow(() -> new IllegalArgumentException("Booking not found with ID: " + bookingId));
+
+	    if (!"Rejected".equalsIgnoreCase(booking.getBookingStatus())) {
+	        throw new IllegalArgumentException("Only bookings with status 'Rejected' can be unrejected.");
+	    }
+
+	    booking.setBookingStatus("Pending");
+	    activityBookingsRepository.save(booking);
+
+	    // ✅ Send notification to user
+	    notificationsService.createNotification(
+	        booking.getUser(),
+	        "Your booking for activity '" + booking.getActivity().getActivityName() + "' is now pending again.",
+	        NotificationType.ACTIVITY_UPDATE
+	    );
+	}
+
+	
+	
+
+
 
 
 	

@@ -28,9 +28,17 @@ public class ChatMessages {
 
     @Column(name = "sent_at", updatable = false)
     private LocalDateTime sentAt;
-    
+
     @Column(name = "message_datetime", updatable = false)
     private LocalDateTime messageDatetime;
+
+    @Column(name = "image_url")
+    private String imageUrl;
+    
+    
+    @Column(name = "is_read", nullable = false)
+    private Boolean isRead = false;
+
 
 
     // Constructors
@@ -47,7 +55,18 @@ public class ChatMessages {
         this.sentAt = LocalDateTime.now();
     }
 
-    // Getters and Setters
+    public Boolean getIsRead() {
+        return isRead;
+    }
+
+    public void setIsRead(Boolean isRead) {
+        this.isRead = isRead;
+    }
+
+
+    
+
+// Getters and Setters
     public Long getId() {
         return id;
     }
@@ -88,5 +107,19 @@ public class ChatMessages {
         this.sentAt = sentAt;
     }
 
-	
+    public LocalDateTime getMessageDatetime() {
+        return messageDatetime;
+    }
+
+    public void setMessageDatetime(LocalDateTime messageDatetime) {
+        this.messageDatetime = messageDatetime;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
 }

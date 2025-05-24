@@ -135,6 +135,24 @@ public class ActivityBookingController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Unexpected error occurred"));
         }
     }
+    
+    @PutMapping("/booking/unreject/{bookingId}")
+    @Operation(summary = "Unreject a booking", description = "Mark a previously rejected booking as 'Pending'")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Booking status set to pending"),
+        @ApiResponse(responseCode = "404", description = "Booking not found or not rejected")
+    })
+    public ResponseEntity<Map<String, String>> unrejectBooking(
+            @PathVariable Long bookingId) {
+        try {
+            bookingService.unrejectBooking(bookingId); // ✅ service method must exist
+            return ResponseEntity.ok(Map.of("message", "Booking status changed to pending"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Unexpected error occurred"));
+        }
+    }
 
 
     @Operation(summary = "Set a booking to PENDING by ID (only for current user)")

@@ -141,6 +141,7 @@ public class BusinessService {
             throw new IllegalArgumentException("Business with ID " + id + " not found.");
         }
 
+        // Validate unique email
         Optional<Businesses> byEmail = businessRepository.findByEmail(email);
         if (byEmail.isPresent() && !byEmail.get().getId().equals(id)) {
             throw new IllegalArgumentException("Email already exists for another business!");
@@ -149,7 +150,11 @@ public class BusinessService {
         existing.setBusinessName(name);
         existing.setEmail(email);
 
-        if (password != null && !password.isEmpty()) {
+        // ✅ Only update password if it's not empty and >= 6 characters
+        if (password != null && !password.trim().isEmpty()) {
+            if (password.length() < 6) {
+                throw new IllegalArgumentException("Password must be at least 6 characters long.");
+            }
             existing.setPasswordHash(passwordEncoder.encode(password));
         }
 
@@ -157,11 +162,13 @@ public class BusinessService {
         existing.setPhoneNumber(phoneNumber);
         existing.setWebsiteUrl(websiteUrl);
 
+        // File upload directory
         Path uploadDir = Paths.get("uploads/");
         if (!Files.exists(uploadDir)) {
             Files.createDirectories(uploadDir);
         }
 
+        // ✅ Logo upload
         if (logo != null && !logo.isEmpty()) {
             String logoFileName = UUID.randomUUID() + "_" + logo.getOriginalFilename();
             Path logoPath = uploadDir.resolve(logoFileName);
@@ -169,6 +176,7 @@ public class BusinessService {
             existing.setBusinessLogoUrl("/uploads/" + logoFileName);
         }
 
+        // ✅ Banner upload
         if (banner != null && !banner.isEmpty()) {
             String bannerFileName = UUID.randomUUID() + "_" + banner.getOriginalFilename();
             Path bannerPath = uploadDir.resolve(bannerFileName);

@@ -1,10 +1,11 @@
 package com.hobbySphere.dto;
 
 import java.time.format.DateTimeFormatter;
-
 import com.hobbySphere.entities.ChatMessages;
 
 public class ChatMessageDto {
+    private boolean isRead;
+
     private Long id;
     private Long senderId;
     private String senderName;
@@ -12,6 +13,7 @@ public class ChatMessageDto {
     private String message;
     private String sentAt;
     private boolean isMine;
+    private String imageUrl;
 
     public ChatMessageDto(ChatMessages chat, Long currentUserId) {
         this.id = chat.getId();
@@ -19,8 +21,11 @@ public class ChatMessageDto {
         this.senderName = chat.getSender().getFirstName() + " " + chat.getSender().getLastName();
         this.receiverId = chat.getReceiver().getId();
         this.message = chat.getMessage();
+        this.imageUrl = chat.getImageUrl();
 
-      
+        // ✅ FIX: null-safe access to isRead
+        this.isRead = Boolean.TRUE.equals(chat.getIsRead());
+
         if (chat.getSentAt() != null) {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
             this.sentAt = chat.getSentAt().format(formatter);
@@ -31,13 +36,20 @@ public class ChatMessageDto {
         this.isMine = this.senderId.equals(currentUserId);
     }
 
-    // Getters and Setters
     public boolean isMine() {
         return isMine;
     }
 
     public void setIsMine(boolean isMine) {
         this.isMine = isMine;
+    }
+
+    public boolean isRead() {
+        return isRead;
+    }
+
+    public void setRead(boolean read) {
+        isRead = read;
     }
 
     public Long getId() {
@@ -86,5 +98,13 @@ public class ChatMessageDto {
 
     public void setSentAt(String sentAt) {
         this.sentAt = sentAt;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 }

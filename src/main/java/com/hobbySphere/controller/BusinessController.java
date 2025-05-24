@@ -119,7 +119,7 @@ public class BusinessController {
             @PathVariable Long id,
             @RequestParam String name,
             @RequestParam String email,
-            @RequestParam String password,
+            @RequestParam(required = false) String password,
             @RequestParam String description,
             @RequestParam(required = false) String phoneNumber,
             @RequestParam(required = false) String websiteUrl,

@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -118,6 +119,19 @@ public class UserService {
                  .stream()
                  .map(UserDto::new)
                  .collect(Collectors.toList());
+	}
+
+
+
+
+	public boolean deleteUserById(Long id) {
+	    Optional<Users> userOptional = userRepository.findById(id);
+	    if (userOptional.isPresent()) {
+	        userRepository.deleteById(id);
+	        return true;
+	    } else {
+	        return false;
+	    }
 	}
 
 
