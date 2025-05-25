@@ -46,25 +46,75 @@ public class ActivityController {
     private UserService userService;
 
     //get activities by business id
-    @Operation(summary = "Get activities by business ID", description = "Retrieve a list of activities associated with a specific business")
+    @Operation(summary = "Get activities by business ID", description = "Retrieve a list of activities associated with a specific business and auto-update expired ones")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "List of activities for a given business"),
         @ApiResponse(responseCode = "404", description = "Business not found")
     })
     @GetMapping("/business/{businessId}")
-    public List<Activities> getActivitiesByBusiness(
+    public ResponseEntity<?> getActivitiesByBusiness(
             @Parameter(description = "ID of the business to fetch activities for") @PathVariable Long businessId) {
-        return activityService.findByBusinessId(businessId);
+
+        List<Activities> activities = activityService.findByBusinessId(businessId);
+
+        if (activities.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "No activities found for this business"));
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        for (Activities activity : activities) {
+            if (activity.getEndDatetime().isBefore(now) && !"Terminated".equalsIgnoreCase(activity.getStatus())) {
+                activity.setStatus("Terminated");
+                activityService.save(activity);
+            }
+        }
+
+        return ResponseEntity.ok(activities);
     }
+
     
-    @Operation(summary = "Get all activities", description = "Retrieve a list of all activities in the system")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Returns all activities")
-    })
     @GetMapping
+    @Operation(summary = "Get all activities", description = "Retrieve a list of all activities in the system and auto-update expired statuses")
     public List<Activities> getAllActivities() {
-        return activityService.findAllActivities();
+        List<Activities> allActivities = activityService.findAllActivities();
+        LocalDateTime now = LocalDateTime.now();
+
+        for (Activities activity : allActivities) {
+            if (activity.getEndDatetime().isBefore(now) && !"Terminated".equalsIgnoreCase(activity.getStatus())) {
+                activity.setStatus("Terminated");
+                activityService.save(activity);
+            }
+        }
+
+        return allActivities;
     }
+
+    
+    @GetMapping("/upcoming")
+    @Operation(summary = "Get upcoming activities", description = "Retrieve all activities that are not yet expired")
+    public List<Activities> getUpcomingActivities() {
+        List<Activities> upcoming = activityService.findAllActivities().stream()
+                .filter(a -> a.getEndDatetime().isAfter(LocalDateTime.now()))
+                .toList();
+        return upcoming;
+    }
+
+    @GetMapping("/terminated")
+    @Operation(summary = "Get terminated activities", description = "Retrieve all activities that have ended")
+    public List<Activities> getTerminatedActivities() {
+        return activityService.findAllActivities().stream()
+                .filter(a -> a.getEndDatetime().isBefore(LocalDateTime.now()))
+                .peek(a -> {
+                    if (!"Terminated".equalsIgnoreCase(a.getStatus())) {
+                        a.setStatus("Terminated");
+                        activityService.save(a);
+                    }
+                })
+                .toList();
+    }
+
+
 
     @Operation(summary = "Create a new activity with image upload", description = "Create a new activity and optionally upload an image")
     @ApiResponses(value = {
@@ -214,6 +264,10 @@ public class ActivityController {
         if (activity == null) {
             response.put("message", "Activity not found");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        }
+        if (activity.getEndDatetime().isBefore(LocalDateTime.now())) {
+            response.put("message", "This activity has already ended. Booking is not allowed.");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
         Users user = userService.findByEmail(principal.getName());

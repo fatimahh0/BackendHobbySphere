@@ -28,10 +28,7 @@ public class ChatMessagesService {
         this.notificationsService = notificationsService;
     }
 
-    /**
-     * Sends a basic text message from sender to receiver.
-     * Also triggers a notification if the sender and receiver are not the same.
-     */
+    @Transactional
     public ChatMessages sendMessage(Users sender, Users receiver, String message) {
         ChatMessages chat = new ChatMessages(sender, receiver, message);
         chat.setSentAt(LocalDateTime.now());
@@ -47,10 +44,7 @@ public class ChatMessagesService {
         return saved;
     }
 
-    /**
-     * Sends a message that may include both text and an optional image.
-     * Also sends a notification if sender and receiver are different.
-     */
+    @Transactional
     public ChatMessages sendMessageWithImage(Users sender, Users receiver, String message, String imageUrl) {
         ChatMessages chat = new ChatMessages();
         chat.setSender(sender);
@@ -71,10 +65,7 @@ public class ChatMessagesService {
         return saved;
     }
 
-    /**
-     * Uploads an image file to the server.
-     * Returns the accessible URL path of the uploaded image.
-     */
+    @Transactional
     public String uploadImage(MultipartFile file) {
         try {
             String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
@@ -87,30 +78,22 @@ public class ChatMessagesService {
         }
     }
 
-    /**
-     * Returns the total number of messages (sent or received) for a given user.
-     */
+    @Transactional
     public Long countAllMessagesForUser(Users user) {
         return chatRepo.countBySenderOrReceiver(user);
     }
 
-    /**
-     * Returns the number of messages grouped by each contact (user involved in chat).
-     */
+    @Transactional
     public List<Object[]> countMessagesGroupedByContact(Users user) {
         return chatRepo.countMessagesGroupedByContact(user.getId());
     }
 
-    /**
-     * Returns the count of unread messages grouped by contact for the given user.
-     */
+    @Transactional
     public List<Object[]> countUnreadMessagesGroupedByContact(Long userId) {
         return chatRepo.countUnreadMessagesGroupedByContact(userId);
     }
 
-    /**
-     * Marks all unread messages as read from a specific sender to a receiver.
-     */
+    @Transactional
     public void markMessagesAsRead(Users receiver, Users sender) {
         List<ChatMessages> unreadMessages = chatRepo.findUnreadMessages(receiver.getId(), sender.getId());
         for (ChatMessages msg : unreadMessages) {
@@ -119,27 +102,28 @@ public class ChatMessagesService {
         chatRepo.saveAll(unreadMessages);
     }
 
-    /**
-     * Retrieves the full conversation (messages) between two users.
-     */
+    @Transactional
     public List<ChatMessages> getConversation(Users user1, Users user2) {
-        return chatRepo.findConversationBetween(user1.getId(), user2.getId());
+        List<ChatMessages> messages = chatRepo.findConversationBetween(user1.getId(), user2.getId());
+        // Avoid LazyInitializationException by initializing needed fields
+        messages.forEach(msg -> {
+            msg.getSender().getUsername();
+            msg.getReceiver().getUsername();
+        });
+        return messages;
     }
 
-    /**
-     * Returns all messages (sent or received) for the given user,
-     * ordered by the most recent first.
-     */
+    @Transactional
     public List<ChatMessages> getMessagesByUser(Users user) {
         return chatRepo.findBySenderOrReceiverOrderByMessageDatetimeDesc(user, user);
     }
 
+    @Transactional
     public boolean deleteMessageByIdAndUser(Long messageId, Users user) {
         ChatMessages message = chatRepo.findById(messageId).orElse(null);
         if (message == null || !message.getSender().getId().equals(user.getId())) {
             return false;
         }
-
         chatRepo.delete(message);
         return true;
     }
@@ -149,7 +133,6 @@ public class ChatMessagesService {
         ChatMessages message = chatRepo.findById(messageId)
             .orElseThrow(() -> new RuntimeException("Message not found"));
 
-        // Only receiver can mark as read
         if (!message.getReceiver().getId().equals(currentUser.getId())) {
             throw new RuntimeException("Unauthorized to mark this message as read");
         }

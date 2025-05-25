@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/businesses")
@@ -66,18 +67,24 @@ public class BusinessController {
         }
     }
 
-    @Operation(summary = "Delete a business by ID", description = "This API deletes a business by its ID.")
+    @Operation(summary = "Delete a business by ID with password", description = "This API deletes a business only if password confirmation is valid.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "Business deleted successfully"),
+        @ApiResponse(responseCode = "403", description = "Incorrect password"),
         @ApiResponse(responseCode = "404", description = "Business not found")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteBusiness(@PathVariable Long id) {
-        if (businessService.findById(id) != null) {
-            businessService.delete(id);
+    public ResponseEntity<String> deleteBusinessWithPassword(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        String password = request.get("password");
+        if (password == null || password.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password is required.");
+        }
+
+        boolean deleted = businessService.deleteBusinessByIdWithPassword(id, password);
+        if (deleted) {
             return ResponseEntity.noContent().build();
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incorrect password or business not found.");
         }
     }
 

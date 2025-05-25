@@ -2,6 +2,8 @@ package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
@@ -13,12 +15,14 @@ public class ChatMessages {
     @Column(name = "message_id")
     private Long id;
 
-    @ManyToOne
+    // User who sent the message
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Users sender;
 
-    @ManyToOne
+    // User who received the message
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "receiver_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Users receiver;
@@ -34,12 +38,9 @@ public class ChatMessages {
 
     @Column(name = "image_url")
     private String imageUrl;
-    
-    
+
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
-
-
 
     // Constructors
     public ChatMessages() {}
@@ -55,18 +56,7 @@ public class ChatMessages {
         this.sentAt = LocalDateTime.now();
     }
 
-    public Boolean getIsRead() {
-        return isRead;
-    }
-
-    public void setIsRead(Boolean isRead) {
-        this.isRead = isRead;
-    }
-
-
-    
-
-// Getters and Setters
+    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -121,5 +111,13 @@ public class ChatMessages {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public Boolean getIsRead() {
+        return isRead;
+    }
+
+    public void setIsRead(Boolean isRead) {
+        this.isRead = isRead;
     }
 }

@@ -186,4 +186,30 @@ public class BusinessService {
 
         return businessRepository.save(existing);
     }
+
+    public boolean deleteBusinessByIdWithPassword(Long id, String password) {
+        Optional<Businesses> optionalBusiness = businessRepository.findById(id);
+        if (optionalBusiness.isPresent()) {
+            Businesses business = optionalBusiness.get();
+
+           
+            if (!passwordEncoder.matches(password, business.getPasswordHash())) {
+                return false; 
+            }
+
+            List<Activities> activities = activityRepository.findByBusinessId(id);
+            for (Activities activity : activities) {
+                Long activityId = activity.getId();
+                activityBookingRepository.deleteByActivity_Id(activityId);
+                reviewRepository.deleteByActivity_Id(activityId);
+                activityRepository.deleteById(activityId);
+            }
+
+            businessRepository.deleteById(id);
+            return true;
+        }
+
+        return false; // Business introuvable
+    }
+
 }

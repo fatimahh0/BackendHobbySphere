@@ -10,11 +10,17 @@ import com.hobbySphere.dto.UserDto;
 
 
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.UUID;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
+import java.util.Random;
 
 @Service
 public class UserService {
@@ -24,6 +30,15 @@ public class UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    
+    private final EmailService emailService;
+
+    //  Inject EmailService using constructor
+    public UserService(EmailService emailService) {
+        this.emailService = emailService;
+    }
+    
+    private final Map<String, String> resetCodes = new ConcurrentHashMap<>();
 
    
 
@@ -137,8 +152,81 @@ public class UserService {
 
 
 
-	
-	
-	
+	public boolean deleteUserByIdWithPassword(Long id, String inputPassword) {
+	    Optional<Users> optionalUser = userRepository.findById(id);
+	    if (optionalUser.isEmpty()) {
+	        return false;
+	    }
 
+	    Users user = optionalUser.get();
+	    if (!passwordEncoder.matches(inputPassword, user.getPasswordHash())) {
+	        return false;
+	    }
+
+	    userRepository.deleteById(id);
+	    return true;
+	}
+
+
+
+	// Step 1: Send reset code by email
+    public boolean resetPassword(String email) {
+        Users user = userRepository.findByEmail(email);
+        if (user == null) return false;
+
+        String code = String.format("%06d", new Random().nextInt(999999)); // 6-digit code
+        resetCodes.put(email, code);
+
+        emailService.sendEmail(
+            email,
+            "Password Reset Code",
+            "Your password reset code is: " + code
+        );
+
+        return true;
+    }
+
+    // Step 2: Verify the reset code
+    public boolean verifyResetCode(String email, String code) {
+        return resetCodes.containsKey(email) && resetCodes.get(email).equals(code);
+    }
+
+    // Step 3: Update the password
+    public boolean updatePassword(String email, String code, String newPassword) {
+        if (verifyResetCode(email, code)) {
+            Users user = userRepository.findByEmail(email);
+            user.setPasswordHash(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+            resetCodes.remove(email); // clear used code
+            return true;
+        }
+        return false;
+    }
+
+
+
+
+    public boolean updatePasswordDirectly(String email, String newPassword) {
+        Users user = userRepository.findByEmail(email);
+        if (user == null) {
+            return false;
+        }
+
+        String hashedPassword = passwordEncoder.encode(newPassword);
+        user.setPasswordHash(hashedPassword);
+        userRepository.save(user);
+        return true;
+    }
+
+    
+    
+    
 }
+
+
+
+
+
+
+
+
