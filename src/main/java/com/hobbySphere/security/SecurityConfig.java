@@ -33,6 +33,7 @@ public class SecurityConfig implements WebMvcConfigurer {
         registry
             .addResourceHandler("/uploads/**")
             .addResourceLocations(uploadPath);
+        
     }
 
    

@@ -24,7 +24,8 @@ public class BusinessAnalyticsService {
     private UsersRepository customerRepo;
 
     public BusinessAnalytics getAnalyticsForBusiness(Long businessId) {
-        double totalRevenue = bookingRepo.sumRevenueByBusinessId(businessId);
+        Double revenue = bookingRepo.sumRevenueByBusinessId(businessId);
+        double totalRevenue = revenue != null ? revenue.doubleValue() : 0.0;
 
         String topActivity = activityRepo.findTopActivityNameByBusinessId(businessId);
         if (topActivity == null) {
@@ -44,6 +45,7 @@ public class BusinessAnalyticsService {
                 LocalDate.now()
         );
     }
+
 
     private double calculateBookingGrowth(Long businessId) {
         LocalDate now = LocalDate.now();

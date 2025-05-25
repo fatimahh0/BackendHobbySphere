@@ -3,6 +3,8 @@ package com.hobbySphere.services;
 import com.hobbySphere.entities.Businesses;
 import com.hobbySphere.entities.Activities;
 import com.hobbySphere.repositories.*;
+import java.util.Random;
+
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,6 +20,8 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 @Service
 public class BusinessService {
@@ -37,6 +41,15 @@ public class BusinessService {
 
     @Autowired
     private ReviewRepository reviewRepository;
+    
+    private final EmailService emailService;
+
+    public BusinessService(EmailService emailService) {
+        this.emailService = emailService;
+    }
+
+    
+    private final Map<String, String> resetCodes = new ConcurrentHashMap<>();
 
     public Optional<Businesses> findByEmail(String email) {
         return businessRepository.findByEmail(email);
@@ -211,5 +224,43 @@ public class BusinessService {
 
         return false; // Business introuvable
     }
+    
+    
+ // ✅ Update password with code sent by email (STEP 1)
+    public boolean resetPassword(String email) {
+        Optional<Businesses> optional = businessRepository.findByEmail(email);
+        if (optional.isEmpty()) return false;
 
+        String code = String.format("%06d", new Random().nextInt(999999));
+        resetCodes.put(email, code);
+
+        emailService.sendEmail(
+            email,
+            "Business Password Reset",
+            "Your password reset code is: " + code
+        );
+
+        return true;
+    }
+
+
+    // ✅ Verify the reset code (STEP 2)
+    public boolean verifyResetCode(String email, String code) {
+        return resetCodes.containsKey(email) && resetCodes.get(email).equals(code);
+    }
+
+    // ✅ Update password (STEP 3)
+    public boolean updatePasswordDirectly(String email, String newPassword) {
+        Optional<Businesses> optional = businessRepository.findByEmail(email);
+        if (optional.isEmpty()) return false;
+
+        Businesses business = optional.get();
+        business.setPasswordHash(passwordEncoder.encode(newPassword));
+        businessRepository.save(business);
+        resetCodes.remove(email);
+        return true;
+    }
+
+
+    
 }

@@ -174,4 +174,49 @@ public class BusinessController {
         Businesses updated = businessService.save(existingBusiness);
         return ResponseEntity.ok(updated);
     }
+    
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> sendBusinessResetCode(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        boolean success = businessService.resetPassword(email);
+
+        if (success) {
+            return ResponseEntity.ok(Map.of("message", "Reset code sent to business email"));
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "No business found with this email"));
+        }
+    }
+
+    @PostMapping("/verify-reset-code")
+    public ResponseEntity<Map<String, String>> verifyBusinessResetCode(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String code = request.get("code");
+
+        if (businessService.verifyResetCode(email, code)) {
+            return ResponseEntity.ok(Map.of("message", "Code verified successfully"));
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Invalid reset code"));
+        }
+    }
+
+    @PostMapping("/update-password")
+    public ResponseEntity<Map<String, String>> updateBusinessPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String newPassword = request.get("newPassword");
+
+        if (email == null || newPassword == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Missing email or password"));
+        }
+
+        boolean updated = businessService.updatePasswordDirectly(email, newPassword);
+        if (updated) {
+            return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Business not found"));
+        }
+    }
+
 }
