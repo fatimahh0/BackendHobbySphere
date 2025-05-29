@@ -1,6 +1,7 @@
 package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Entity
@@ -17,6 +18,23 @@ public class Interests {
 
     @OneToMany(mappedBy = "id.interest", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserInterests> userInterests;
+
+    // ✅ Add created_at and updated_at as the last two columns
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 
     // Constructors
     public Interests() {}
@@ -44,5 +62,21 @@ public class Interests {
 
     public void setUserInterests(Set<UserInterests> userInterests) {
         this.userInterests = userInterests;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

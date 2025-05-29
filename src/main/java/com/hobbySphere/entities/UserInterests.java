@@ -2,6 +2,7 @@ package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
@@ -13,25 +14,21 @@ public class UserInterests {
 
         private static final long serialVersionUID = 1L;
 
-
         @ManyToOne
-        @JoinColumn(name = "user_id", referencedColumnName = "user_id", nullable = false)  // Correct reference
+        @JoinColumn(name = "user_id", referencedColumnName = "user_id", nullable = false)
         private Users user;
 
         @ManyToOne
         @JoinColumn(name = "interest_id", referencedColumnName = "interest_id", nullable = false)
         private Interests interest;
 
-        // Default constructor
         public UserInterestId() {}
 
-        // Parameterized constructor
         public UserInterestId(Users user, Interests interest) {
             this.user = user;
             this.interest = interest;
         }
 
-        // Getters and Setters
         public Users getUser() {
             return user;
         }
@@ -48,7 +45,6 @@ public class UserInterests {
             this.interest = interest;
         }
 
-        // equals() and hashCode() are necessary for composite keys to work correctly
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
@@ -66,7 +62,28 @@ public class UserInterests {
     @EmbeddedId
     private UserInterestId id;
 
-    // Getter and Setter
+    @ManyToOne
+    @MapsId("interest")
+    @JoinColumn(name = "interest_id", referencedColumnName = "interest_id", insertable = false, updatable = false)
+    private Interests interest;
+
+    // ✅ Add created_at and updated_at as the last two columns
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public UserInterestId getId() {
         return id;
     }
@@ -75,9 +92,27 @@ public class UserInterests {
         this.id = id;
     }
 
-    // The interest field should be accessible from the embedded UserInterestId class
-    @ManyToOne
-    @MapsId("interest")  // This maps the interest field from the composite key
-    @JoinColumn(name = "interest_id", referencedColumnName = "interest_id", insertable = false, updatable = false)
-    private Interests interest;
+    public Interests getInterest() {
+        return interest;
+    }
+
+    public void setInterest(Interests interest) {
+        this.interest = interest;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }

@@ -3,6 +3,7 @@ package com.hobbySphere.controller;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import com.hobbySphere.entities.Businesses;
+import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.BusinessService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -27,6 +28,10 @@ public class BusinessController {
 
     @Autowired
     private BusinessService businessService;
+    
+    @Autowired
+    private JwtUtil jwtUtil;
+
 
     @Operation(summary = "Get a business by ID", description = "This API retrieves a business by its ID.")
     @ApiResponses(value = {
@@ -54,14 +59,33 @@ public class BusinessController {
     @Operation(summary = "Update an existing business", description = "This API allows the update of an existing business.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Business updated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request data")
+        @ApiResponse(responseCode = "400", description = "Invalid request data"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized access")
     })
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateBusiness(@PathVariable Long id, @RequestBody Businesses business) {
+    public ResponseEntity<?> updateBusiness(
+            @PathVariable Long id,
+            @RequestBody Businesses business,
+            @RequestHeader("Authorization") String authHeader
+    ) {
         try {
+            // Extract token
+            String token = authHeader.replace("Bearer ", "");
+            String businessEmail = jwtUtil.extractUsername(token);
+
+            // Find logged-in business by email
+            Businesses loggedIn = businessService.findByEmail(businessEmail).orElse(null);
+
+            // Check if the logged-in business matches the ID being updated
+            if (loggedIn == null || !loggedIn.getId().equals(id)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("You are not authorized to update this business.");
+            }
+
             business.setId(id);
             Businesses updatedBusiness = businessService.save(business);
             return ResponseEntity.ok(updatedBusiness);
+
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
@@ -74,10 +98,24 @@ public class BusinessController {
         @ApiResponse(responseCode = "404", description = "Business not found")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteBusinessWithPassword(@PathVariable Long id, @RequestBody Map<String, String> request) {
+    public ResponseEntity<String> deleteBusinessWithPassword(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> request) {
+        
         String password = request.get("password");
         if (password == null || password.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password is required.");
+        }
+
+        String token = authHeader.replace("Bearer ", "");
+        String businessEmail = jwtUtil.extractUsername(token);
+        Businesses loggedIn = businessService.findByEmail(businessEmail)
+                .orElse(null);
+
+        if (loggedIn == null || !loggedIn.getId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("You are not authorized to delete this business.");
         }
 
         boolean deleted = businessService.deleteBusinessByIdWithPassword(id, password);
@@ -85,33 +123,6 @@ public class BusinessController {
             return ResponseEntity.noContent().build();
         } else {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incorrect password or business not found.");
-        }
-    }
-
-    @Operation(summary = "Register a business with images", description = "This API registers a new business along with a logo and banner image.")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Business registered successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid input"),
-        @ApiResponse(responseCode = "500", description = "Error uploading files")
-    })
-    @PostMapping("/register")
-    public ResponseEntity<Businesses> registerBusinessWithImages(
-            @RequestParam String name,
-            @RequestParam String email,
-            @RequestParam String password,
-            @RequestParam String description,
-            @RequestParam(required = false) String phoneNumber,
-            @RequestParam(required = false) String websiteUrl,
-            @RequestParam(required = false) MultipartFile logo,
-            @RequestParam(required = false) MultipartFile banner
-    ) {
-        try {
-            Businesses business = businessService.registerBusiness(
-                name, email, password, description, phoneNumber, websiteUrl, logo, banner
-            );
-            return ResponseEntity.status(HttpStatus.CREATED).body(business);
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -145,19 +156,23 @@ public class BusinessController {
         }
     }
 
-    @Operation(summary = "Update business logo and banner", description = "This API updates only the business logo and banner images.")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Logo and banner updated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid input"),
-        @ApiResponse(responseCode = "404", description = "Business not found"),
-        @ApiResponse(responseCode = "500", description = "Error uploading files")
-    })
     @PutMapping("/update-logo-banner/{id}")
     public ResponseEntity<?> updateBusinessLogoAndBanner(
             @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader,
             @RequestParam(required = false) MultipartFile logo,
             @RequestParam(required = false) MultipartFile banner
     ) {
+        String token = authHeader.replace("Bearer ", "");
+        String businessEmail = jwtUtil.extractUsername(token);
+        Businesses loggedIn = businessService.findByEmail(businessEmail)
+                .orElse(null);
+
+        if (loggedIn == null || !loggedIn.getId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("You cannot update another business's media.");
+        }
+
         Businesses existingBusiness = businessService.findById(id);
         if (existingBusiness == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Business not found");
@@ -174,7 +189,8 @@ public class BusinessController {
         Businesses updated = businessService.save(existingBusiness);
         return ResponseEntity.ok(updated);
     }
-    
+
+
     @PostMapping("/reset-password")
     public ResponseEntity<Map<String, String>> sendBusinessResetCode(@RequestBody Map<String, String> request) {
         String email = request.get("email");

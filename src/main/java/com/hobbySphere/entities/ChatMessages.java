@@ -41,6 +41,13 @@ public class ChatMessages {
 
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
+    
+    // ✅ Add created_at and updated_at at the end
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     // Constructors
     public ChatMessages() {}
@@ -120,4 +127,22 @@ public class ChatMessages {
     public void setIsRead(Boolean isRead) {
         this.isRead = isRead;
     }
-}
+    
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+}  
+
+

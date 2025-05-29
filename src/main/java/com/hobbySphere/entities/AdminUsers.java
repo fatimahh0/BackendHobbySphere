@@ -36,13 +36,15 @@ public class AdminUsers {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    // ✅ Changed from primitive boolean to Boolean
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     @Column(name = "notify_activity_updates")
     private Boolean notifyActivityUpdates = true;
 
     @Column(name = "notify_user_feedback")
     private Boolean notifyUserFeedback = true;
-    
+
     @ManyToOne
     @JoinColumn(name = "business_id", nullable = true)
     private Businesses business;
@@ -61,6 +63,11 @@ public class AdminUsers {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 
     // Getters and Setters
@@ -129,6 +136,14 @@ public class AdminUsers {
         this.createdAt = createdAt;
     }
 
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
     public Boolean getNotifyActivityUpdates() {
         return notifyActivityUpdates;
     }
@@ -144,7 +159,7 @@ public class AdminUsers {
     public void setNotifyUserFeedback(Boolean notifyUserFeedback) {
         this.notifyUserFeedback = notifyUserFeedback;
     }
-    
+
     public Businesses getBusiness() {
         return business;
     }
@@ -152,5 +167,4 @@ public class AdminUsers {
     public void setBusiness(Businesses business) {
         this.business = business;
     }
-
 }

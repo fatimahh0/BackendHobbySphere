@@ -1,18 +1,21 @@
 package com.hobbySphere.entities;
 
+import com.hobbySphere.enums.CurrencyType;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "role") // match your DB table name
-public class Role {
+@Table(name = "Currency")
+public class Currency {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "currency_id")
     private Long id;
 
-    @Column(name = "role_name", nullable = false, unique = true) // ✅ this must match your DB column name
-    private String name;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "currency_type", nullable = false, unique = true)
+    private CurrencyType currencyType;
 
     // ✅ Add created_at and updated_at as the last two columns
     @Column(name = "created_at", updatable = false)
@@ -31,24 +34,34 @@ public class Role {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public Role() {}
+    // Default constructor (required by JPA)
+    public Currency() {}
 
-    public Role(String name) {
-        this.name = name;
+    // Constructor that accepts enum
+    public Currency(CurrencyType currencyType) {
+        this.currencyType = currencyType;
+    }
+
+    // ✅ Constructor that accepts String
+    public Currency(String currencyTypeString) {
+        this.currencyType = CurrencyType.valueOf(currencyTypeString.toUpperCase());
     }
 
     // Getters and Setters
-
     public Long getId() {
         return id;
     }
 
-    public String getName() {
-        return name;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public CurrencyType getCurrencyType() {
+        return currencyType;
+    }
+
+    public void setCurrencyType(CurrencyType currencyType) {
+        this.currencyType = currencyType;
     }
 
     public LocalDateTime getCreatedAt() {

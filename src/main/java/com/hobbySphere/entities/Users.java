@@ -2,10 +2,7 @@ package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "Users")
@@ -34,33 +31,24 @@ public class Users {
     @Column(name = "profile_picture_url", nullable = true)
     private String profilePictureUrl;
 
-    @Column(nullable = true)
-    private String status;
+    @Column(nullable = true) // ✅ Allow null temporarily to avoid migration error
+    private String status; // ✅ Status field without hard NOT NULL during migration
+
+    // ✅ Add updated_at as the last column
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-
-    // 
-    @OneToMany(mappedBy = "sender", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private List<ChatMessages> sentMessages = new ArrayList<>();
-
-    // 
-    @OneToMany(mappedBy = "receiver", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private List<ChatMessages> receivedMessages = new ArrayList<>();
     
-    //
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private List<Notifications> notifications = new ArrayList<>();
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<ActivityBookings> activityBookings;
 
-    
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         if (this.status == null) {
-            this.status = "Active";
+            this.status = "Active"; // ✅ Set default if null
         }
     }
 
@@ -133,20 +121,16 @@ public class Users {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
-
-    public List<ChatMessages> getSentMessages() {
-        return sentMessages;
+    
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+    
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
     }
 
-    public void setSentMessages(List<ChatMessages> sentMessages) {
-        this.sentMessages = sentMessages;
-    }
-
-    public List<ChatMessages> getReceivedMessages() {
-        return receivedMessages;
-    }
-
-    public void setReceivedMessages(List<ChatMessages> receivedMessages) {
-        this.receivedMessages = receivedMessages;
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

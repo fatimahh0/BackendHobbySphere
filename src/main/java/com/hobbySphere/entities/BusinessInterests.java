@@ -2,6 +2,7 @@ package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
@@ -10,12 +11,9 @@ public class BusinessInterests {
 
     @Embeddable
     public static class BusinessInterestsId implements Serializable {
-        /**
-		 * 
-		 */
-		private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1L;
 
-		@Column(name = "business_id")
+        @Column(name = "business_id")
         private Long businessId;
 
         @Column(name = "interest_id")
@@ -72,6 +70,23 @@ public class BusinessInterests {
     @JoinColumn(name = "interest_id", nullable = false)
     private Interests interest;
 
+    // ✅ Add created_at and updated_at as the last two columns
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public BusinessInterests() {}
 
     public BusinessInterests(Businesses business, Interests interest) {
@@ -102,5 +117,21 @@ public class BusinessInterests {
 
     public void setInterest(Interests interest) {
         this.interest = interest;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

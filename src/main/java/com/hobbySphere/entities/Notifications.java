@@ -23,12 +23,15 @@ public class Notifications {
     @Enumerated(EnumType.STRING)
     private NotificationType notificationType; 
 
-    
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    // ✅ Add updated_at as the last column
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     public Notifications() {}
 
@@ -40,7 +43,12 @@ public class Notifications {
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 
     public Long getId() {
@@ -89,5 +97,13 @@ public class Notifications {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

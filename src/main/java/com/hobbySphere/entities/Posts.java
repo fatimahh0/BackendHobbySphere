@@ -33,6 +33,12 @@ public class Posts {
     @Column(name = "post_datetime", updatable = false)
     private LocalDateTime postDatetime;
 
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     @ManyToMany
     @JoinTable(
         name = "post_likes",
@@ -58,6 +64,12 @@ public class Posts {
     @PrePersist
     protected void onCreate() {
         this.postDatetime = LocalDateTime.now();
+        this.createdAt = this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 
     // === Getters & Setters ===
@@ -108,6 +120,22 @@ public class Posts {
 
     public void setPostDatetime(LocalDateTime postDatetime) {
         this.postDatetime = postDatetime;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     public Set<Users> getLikedUsers() {

@@ -1,6 +1,9 @@
 package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
+
+import java.time.LocalDateTime;
+
 import com.hobbySphere.entities.*;
 
 @Entity
@@ -19,6 +22,12 @@ public class BusinessAdmins {
     @MapsId("adminId")  // Maps the adminId field in the composite key
     @JoinColumn(name = "admin_id", nullable = false)
     private AdminUsers admin;
+    
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
     // Constructors
     public BusinessAdmins() {}
@@ -52,5 +61,21 @@ public class BusinessAdmins {
 
     public void setAdmin(AdminUsers admin) {
         this.admin = admin;
+    }
+    
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+    
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

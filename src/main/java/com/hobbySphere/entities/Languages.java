@@ -2,24 +2,32 @@ package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.hobbySphere.enums.*;
 
 @Entity
-@Table(name = "role") // match your DB table name
-public class Role {
+@Table(name = "Languages")
+public class Languages {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "language_id")
     private Long id;
 
-    @Column(name = "role_name", nullable = false, unique = true) // ✅ this must match your DB column name
-    private String name;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "language_name", nullable = false, unique = true)
+    private LanguageType languageName;
 
-    // ✅ Add created_at and updated_at as the last two columns
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public Languages() {}
+
+    public Languages(LanguageType languageName) {
+        this.languageName = languageName;
+    }
 
     @PrePersist
     protected void onCreate() {
@@ -31,24 +39,20 @@ public class Role {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public Role() {}
-
-    public Role(String name) {
-        this.name = name;
-    }
-
-    // Getters and Setters
-
     public Long getId() {
         return id;
     }
 
-    public String getName() {
-        return name;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public LanguageType getLanguageName() {
+        return languageName;
+    }
+
+    public void setLanguageName(LanguageType languageName) {
+        this.languageName = languageName;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -66,4 +70,5 @@ public class Role {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
+
 }

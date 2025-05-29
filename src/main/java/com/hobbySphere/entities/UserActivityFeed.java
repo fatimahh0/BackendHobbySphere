@@ -27,6 +27,13 @@ public class UserActivityFeed {
     @Column(name = "feed_datetime", updatable = false)
     private LocalDateTime feedDatetime;
 
+    // ✅ Add created_at and updated_at as the last two columns
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     // Constructors
     public UserActivityFeed() {}
 
@@ -39,6 +46,12 @@ public class UserActivityFeed {
     @PrePersist
     protected void onCreate() {
         this.feedDatetime = LocalDateTime.now();
+        this.createdAt = this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 
     // Getters and Setters
@@ -80,5 +93,21 @@ public class UserActivityFeed {
 
     public void setFeedDatetime(LocalDateTime feedDatetime) {
         this.feedDatetime = feedDatetime;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

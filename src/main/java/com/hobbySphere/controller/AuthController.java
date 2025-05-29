@@ -120,26 +120,6 @@ public class AuthController {
                     .body("Registration failed: " + e.getMessage());
         }
     }
-
-    // Default Business Registration
-    @PostMapping("/business/register")
-    public ResponseEntity<?> businessRegister(@RequestBody @Valid Businesses business) {
-        Optional<Businesses> existingBusiness = businessService.findByEmail(business.getEmail());
-        if (existingBusiness.isPresent()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Business email is already in use.");
-        }
-
-        if (business.getPasswordHash() == null || business.getPasswordHash().trim().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Password cannot be null or empty.");
-        }
-
-        business.setPasswordHash(passwordEncoder.encode(business.getPasswordHash()));
-        businessService.save(business);
-
-        return ResponseEntity.ok("Business registration successful");
-    }
-
   
     @PostMapping(value = "/business/register", consumes = "multipart/form-data")
     public ResponseEntity<?> registerBusinessMultipart(

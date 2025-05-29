@@ -210,9 +210,6 @@ public class Activities {
         this.maxParticipants = maxParticipants;
     }
 
-    @Version
-    private Long version;
-
 	public LocalDateTime getDate() {
 		
 		return endDatetime;
