@@ -3,6 +3,7 @@ package com.hobbySphere.controller;
 import com.hobbySphere.entities.Activities;
 import com.hobbySphere.entities.ActivityBookings;
 import com.hobbySphere.entities.Users;
+import com.hobbySphere.repositories.CurrencyRepository;
 import com.hobbySphere.services.ActivityService;
 import com.hobbySphere.services.ActivityBookingService;
 import com.hobbySphere.services.UserService;
@@ -35,6 +36,9 @@ import java.util.Optional;
 })
 @Tag(name = "Activities API", description = "Endpoints for managing activities")
 public class ActivityController {
+	
+	@Autowired
+	private CurrencyRepository currencyRepository;
 
     @Autowired
     private ActivityService activityService;
@@ -114,8 +118,6 @@ public class ActivityController {
                 .toList();
     }
 
-
-
     @Operation(summary = "Create a new activity with image upload", description = "Create a new activity and optionally upload an image")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Activity created successfully"),
@@ -149,7 +151,8 @@ public class ActivityController {
                     businessId,
                     image
             );
-
+            
+      
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                     "message", "Activity created successfully",
                     "activity", activity

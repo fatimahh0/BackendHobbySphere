@@ -216,10 +216,7 @@ public class UserService {
         user.setPasswordHash(hashedPassword);
         userRepository.save(user);
         return true;
-    }
-
-    
-    
+    }    
     
 }
 

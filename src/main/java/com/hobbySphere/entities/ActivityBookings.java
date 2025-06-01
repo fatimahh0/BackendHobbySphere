@@ -43,6 +43,11 @@ public class ActivityBookings {
 
     @Column(name = "booking_datetime", updatable = false)
     private LocalDateTime bookingDatetime;
+    
+    @ManyToOne
+    @JoinColumn(name = "currency_id")
+    private Currency currency;
+
 
     // Default constructor
     public ActivityBookings() {}
@@ -128,6 +133,12 @@ public class ActivityBookings {
     public void setBookingDatetime(LocalDateTime bookingDatetime) {
         this.bookingDatetime = bookingDatetime;
     }
-    
+    public Currency getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(Currency currency) {
+        this.currency = currency;
+    }
     
 }

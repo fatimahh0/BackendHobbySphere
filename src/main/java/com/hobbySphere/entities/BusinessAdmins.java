@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 import com.hobbySphere.entities.*;
+import com.hobbySphere.enums.LanguageType;
 
 @Entity
 @Table(name = "BusinessAdmins")

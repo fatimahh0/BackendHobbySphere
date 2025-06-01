@@ -2,9 +2,13 @@ package com.hobbySphere.services;
 import com.hobbySphere.entities.Activities;
 import java.util.stream.Collectors;
 import com.hobbySphere.entities.Businesses;
+import com.hobbySphere.entities.Currency;
+import com.hobbySphere.enums.CurrencyType;
 import com.hobbySphere.dto.ActivitySummaryDTO;
 import com.hobbySphere.repositories.ActivitiesRepository;
 import com.hobbySphere.repositories.ActivityBookingsRepository;
+import com.hobbySphere.repositories.CurrencyRepository;
+
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -77,6 +81,10 @@ public class ActivityService {
         activity.setStatus(status);
         activity.setImageUrl(imageUrl);
         activity.setBusiness(business);
+        
+        Currency defaultCurrency = currencyRepository.findByCurrencyType(CurrencyType.CAD).orElseThrow();
+        activity.setCurrency(defaultCurrency);
+
 
         return activityRepository.save(activity);
     }
@@ -195,4 +203,12 @@ public class ActivityService {
         }).toList();
     }
     
+    @Autowired
+	private CurrencyRepository currencyRepository;
+
+    private Currency getDefaultCurrencyIfNull(Currency currency) {
+	    if (currency != null) return currency;
+	    return currencyRepository.findByCurrencyType(CurrencyType.CAD)
+	            .orElseThrow(() -> new RuntimeException("Default currency not found"));
+	}
 }

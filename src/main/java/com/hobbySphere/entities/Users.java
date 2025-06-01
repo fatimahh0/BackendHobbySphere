@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.hobbySphere.enums.LanguageType;
+
 @Entity
 @Table(name = "Users")
 public class Users {
@@ -40,6 +42,19 @@ public class Users {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "preferred_language")
+    private LanguageType preferredLanguage;
+
+    public LanguageType getPreferredLanguage() {
+        return preferredLanguage;
+    }
+
+    public void setPreferredLanguage(LanguageType preferredLanguage) {
+        this.preferredLanguage = preferredLanguage;
+    }
+
     
     @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<ActivityBookings> activityBookings;

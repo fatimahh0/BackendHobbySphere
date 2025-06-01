@@ -36,12 +36,10 @@ public class ActivityBookingController {
         if (token == null || !token.startsWith("Bearer ")) {
             throw new IllegalArgumentException("Invalid or missing Authorization header");
         }
-
         String jwtToken = token.substring(7);
         if (!jwtToken.contains(".")) {
             throw new IllegalArgumentException("Malformed JWT token");
         }
-
         return jwtUtil.extractUsername(jwtToken);
     }
 
@@ -55,20 +53,18 @@ public class ActivityBookingController {
         String userEmail = extractUserEmail(token);
         return bookingService.getBookingsByEmail(userEmail);
     }
-    
+
     @Operation(summary = "Get all bookings for the logged-in business")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "List of bookings for business activities"),
         @ApiResponse(responseCode = "400", description = "Invalid or missing token")
     })
     @GetMapping("/mybusinessbookings")
-    public ResponseEntity<List<ActivityBookings>> getBookingsByBusiness(
-            @RequestHeader("Authorization") String token) {
+    public ResponseEntity<List<ActivityBookings>> getBookingsByBusiness(@RequestHeader("Authorization") String token) {
         String businessEmail = extractUserEmail(token);
         List<ActivityBookings> bookings = bookingService.getBookingsByBusinessEmail(businessEmail);
         return ResponseEntity.ok(bookings);
     }
-
 
     @Operation(summary = "Get bookings with status = Pending")
     @ApiResponses(value = {
@@ -110,43 +106,77 @@ public class ActivityBookingController {
         @ApiResponse(responseCode = "404", description = "Booking not found")
     })
     @PutMapping("/cancel/{bookingId}")
-    public String cancelBooking(@PathVariable Long bookingId,
-                                @RequestHeader("Authorization") String token) {
+    public String cancelBooking(@PathVariable Long bookingId, @RequestHeader("Authorization") String token) {
         String userEmail = extractUserEmail(token);
         bookingService.cancelBooking(bookingId, userEmail);
         return "Booking canceled successfully.";
     }
-    
-    ///
+
     @PutMapping("/booking/reject/{bookingId}")
-    @Operation(summary = "Reject a booking", description = "Mark a specific booking as 'Rejected'")
+    @Operation(summary = "Reject a booking", description = "Mark a specific booking as 'Rejected'. Only accessible to business accounts.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Booking rejected successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized or invalid token"),
         @ApiResponse(responseCode = "404", description = "Booking not found")
     })
     public ResponseEntity<Map<String, String>> rejectBooking(
-            @Parameter(description = "ID of the booking to reject") @PathVariable Long bookingId) {
+            @Parameter(description = "ID of the booking to reject") @PathVariable Long bookingId,
+            @RequestHeader("Authorization") String tokenHeader) {
+
         try {
+            // ✅ Extract token and validate
+            if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Missing or invalid Authorization header"));
+            }
+
+            String token = tokenHeader.substring(7).trim();
+
+            // ✅ Ensure token is for a business account
+            if (!jwtUtil.isBusinessToken(token)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Only business accounts can perform this action"));
+            }
+
+            // ✅ Proceed with rejection logic
             bookingService.rejectBooking(bookingId);
             return ResponseEntity.ok(Map.of("message", "Booking rejected successfully"));
+
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Unexpected error occurred"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Unexpected error occurred"));
         }
     }
-    
+
     @PutMapping("/booking/unreject/{bookingId}")
     @Operation(summary = "Unreject a booking", description = "Mark a previously rejected booking as 'Pending'")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Booking status set to pending"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized or invalid token"),
         @ApiResponse(responseCode = "404", description = "Booking not found or not rejected")
     })
     public ResponseEntity<Map<String, String>> unrejectBooking(
-            @PathVariable Long bookingId) {
+            @Parameter(description = "ID of the booking to unreject") @PathVariable Long bookingId,
+            @RequestHeader("Authorization") String tokenHeader) {
         try {
-            bookingService.unrejectBooking(bookingId); // ✅ service method must exist
+            // ✅ Extract token
+            if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid Authorization header"));
+            }
+
+            String token = tokenHeader.substring(7).trim();
+
+            // ✅ Optional: Check it's a business token
+            if (!jwtUtil.isBusinessToken(token)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Only business accounts can perform this action"));
+            }
+
+            // ✅ Proceed with logic
+            bookingService.unrejectBooking(bookingId);
             return ResponseEntity.ok(Map.of("message", "Booking status changed to pending"));
+
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
@@ -162,8 +192,7 @@ public class ActivityBookingController {
         @ApiResponse(responseCode = "404", description = "Booking not found")
     })
     @PutMapping("/pending/{bookingId}")
-    public String pendingBooking(@PathVariable Long bookingId,
-                                 @RequestHeader("Authorization") String token) {
+    public String pendingBooking(@PathVariable Long bookingId, @RequestHeader("Authorization") String token) {
         String userEmail = extractUserEmail(token);
         bookingService.pendingBooking(bookingId, userEmail);
         return "Booking set to pending successfully.";
@@ -178,7 +207,7 @@ public class ActivityBookingController {
     public ActivityBookings createBooking(@RequestBody ActivityBookings booking) {
         return bookingService.saveBooking(booking);
     }
-    
+
     @Operation(summary = "Delete a canceled booking by ID (only if status = Canceled)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Canceled booking deleted successfully"),
@@ -186,8 +215,7 @@ public class ActivityBookingController {
         @ApiResponse(responseCode = "404", description = "Booking not found")
     })
     @DeleteMapping("/delete/{bookingId}")
-    public String deleteCanceledBooking(@PathVariable Long bookingId,
-                                        @RequestHeader("Authorization") String token) {
+    public String deleteCanceledBooking(@PathVariable Long bookingId, @RequestHeader("Authorization") String token) {
         String userEmail = extractUserEmail(token);
         boolean deleted = bookingService.deleteCanceledBookingByIdAndEmail(bookingId, userEmail);
         if (deleted) {
@@ -196,5 +224,4 @@ public class ActivityBookingController {
             throw new IllegalStateException("Booking must be CANCELED and belong to you.");
         }
     }
-
-}
+}   

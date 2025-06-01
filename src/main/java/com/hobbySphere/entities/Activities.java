@@ -66,6 +66,11 @@ public class Activities {
     public void setViewCount(Long viewCount) {
         this.viewCount = viewCount;
     }
+    
+    @ManyToOne
+    @JoinColumn(name = "currency_id")
+    private Currency currency;
+
 
 
     // Constructors
@@ -215,5 +220,11 @@ public class Activities {
 		return endDatetime;
 	}
 
-   
+	public Currency getCurrency() {
+	    return currency;
+	}
+
+	public void setCurrency(Currency currency) {
+	    this.currency = currency;
+	}
 }

@@ -73,5 +73,43 @@ public class JwtUtil {
                 .getSubject();
     }
     
+    public boolean isBusinessToken(String token) {
+        try {
+            token = token.trim();
+            String businessName = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody()
+                    .get("businessName", String.class);
+
+            return businessName != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    public String extractRole(String token) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(key) // ✅ use your HMAC secret key
+                    .build()
+                    .parseClaimsJws(token.trim())
+                    .getBody()
+                    .get("role", String.class); // 👈 looks for the claim "role"
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public Long extractId(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("id", Long.class);
+    }
+
    
 }
