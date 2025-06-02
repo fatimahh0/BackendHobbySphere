@@ -1,7 +1,7 @@
 package com.hobbySphere.services;
+import com.hobbySphere.enums.*;
 
 import com.hobbySphere.entities.Notifications;
-import com.hobbySphere.entities.NotificationType;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.repositories.NotificationsRepository;
 import org.springframework.stereotype.Service;

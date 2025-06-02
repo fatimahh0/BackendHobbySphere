@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.hobbySphere.enums.LanguageType;
 import com.hobbySphere.repositories.LanguageRepository;
+import com.hobbySphere.repositories.RoleRepository;
 
 @SpringBootApplication
 public class HobbySphereApplication {

@@ -1,9 +1,9 @@
 package com.hobbySphere.services;
 
 import com.hobbySphere.entities.Comments;
+import com.hobbySphere.enums.*;
 import com.hobbySphere.entities.Posts;
 import com.hobbySphere.entities.Users;
-import com.hobbySphere.entities.NotificationType;
 import com.hobbySphere.repositories.CommentsRepository;
 import com.hobbySphere.repositories.PostsRepository;
 import org.springframework.stereotype.Service;

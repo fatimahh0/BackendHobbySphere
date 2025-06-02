@@ -1,11 +1,10 @@
 package com.hobbySphere.controller;
 
-import org.springframework.web.multipart.MultipartFile;
-import java.io.IOException;
 import com.hobbySphere.entities.Businesses;
 import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.BusinessService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,6 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -28,113 +30,72 @@ public class BusinessController {
 
     @Autowired
     private BusinessService businessService;
-    
+
     @Autowired
     private JwtUtil jwtUtil;
 
+    private boolean isAuthorized(String token, Long targetBusinessId) {
+        if (token == null || !token.startsWith("Bearer ")) return false;
+        String jwt = token.substring(7);
+        String email = jwtUtil.extractUsername(jwt);
+        String role = jwtUtil.extractRole(jwt);
+        if ("SUPER_ADMIN".equals(role)) return true;
+        Businesses business = businessService.findByEmail(email).orElse(null);
+        return business != null && business.getId().equals(targetBusinessId);
+    }
 
-    @Operation(summary = "Get a business by ID", description = "This API retrieves a business by its ID.")
-    @ApiResponses(value = {
+    private boolean isBusinessToken(String token) {
+        if (token == null || !token.startsWith("Bearer ")) return false;
+        String jwt = token.substring(7);
+        String email = jwtUtil.extractUsername(jwt);
+        return businessService.findByEmail(email).isPresent();
+    }
+
+    @Operation(summary = "Get a business by ID")
+    @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Business retrieved successfully"),
         @ApiResponse(responseCode = "404", description = "Business not found")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Businesses> getBusinessById(@PathVariable Long id) {
+    public ResponseEntity<?> getBusinessById(@PathVariable Long id, @RequestHeader("Authorization") String authHeader) {
+        if (!isAuthorized(authHeader, id)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied");
         Businesses business = businessService.findById(id);
-        if (business != null) {
-            return ResponseEntity.ok(business);
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
+        return business != null ? ResponseEntity.ok(business) : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
-    @Operation(summary = "Get all businesses", description = "This API retrieves all businesses.")
+    @Operation(summary = "Get all businesses")
     @ApiResponse(responseCode = "200", description = "List of all businesses")
     @GetMapping
-    public ResponseEntity<List<Businesses>> getAllBusinesses() {
-        List<Businesses> businesses = businessService.findAll();
-        return ResponseEntity.ok(businesses);
+    public ResponseEntity<?> getAllBusinesses(@RequestHeader("Authorization") String authHeader) {
+        String role = jwtUtil.extractRole(authHeader.replace("Bearer ", ""));
+        if (!"SUPER_ADMIN".equals(role)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Only SUPER_ADMIN can access this");
+        return ResponseEntity.ok(businessService.findAll());
     }
 
-    @Operation(summary = "Update an existing business", description = "This API allows the update of an existing business.")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Business updated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request data"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized access")
-    })
+    @Operation(summary = "Update a business")
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateBusiness(
-            @PathVariable Long id,
-            @RequestBody Businesses business,
-            @RequestHeader("Authorization") String authHeader
-    ) {
-        try {
-            // Extract token
-            String token = authHeader.replace("Bearer ", "");
-            String businessEmail = jwtUtil.extractUsername(token);
-
-            // Find logged-in business by email
-            Businesses loggedIn = businessService.findByEmail(businessEmail).orElse(null);
-
-            // Check if the logged-in business matches the ID being updated
-            if (loggedIn == null || !loggedIn.getId().equals(id)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body("You are not authorized to update this business.");
-            }
-
-            business.setId(id);
-            Businesses updatedBusiness = businessService.save(business);
-            return ResponseEntity.ok(updatedBusiness);
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
-        }
+    public ResponseEntity<?> updateBusiness(@PathVariable Long id, @RequestBody Businesses business, @RequestHeader("Authorization") String authHeader) {
+        if (!isAuthorized(authHeader, id)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        business.setId(id);
+        return ResponseEntity.ok(businessService.save(business));
     }
 
-    @Operation(summary = "Delete a business by ID with password", description = "This API deletes a business only if password confirmation is valid.")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "Business deleted successfully"),
-        @ApiResponse(responseCode = "403", description = "Incorrect password"),
-        @ApiResponse(responseCode = "404", description = "Business not found")
-    })
+    @Operation(summary = "Delete a business with password")
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteBusinessWithPassword(
-            @PathVariable Long id,
-            @RequestHeader("Authorization") String authHeader,
-            @RequestBody Map<String, String> request) {
-        
+    public ResponseEntity<?> deleteBusinessWithPassword(@PathVariable Long id, @RequestHeader("Authorization") String authHeader, @RequestBody Map<String, String> request) {
+        if (!isAuthorized(authHeader, id)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
         String password = request.get("password");
-        if (password == null || password.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password is required.");
-        }
-
-        String token = authHeader.replace("Bearer ", "");
-        String businessEmail = jwtUtil.extractUsername(token);
-        Businesses loggedIn = businessService.findByEmail(businessEmail)
-                .orElse(null);
-
-        if (loggedIn == null || !loggedIn.getId().equals(id)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("You are not authorized to delete this business.");
-        }
-
-        boolean deleted = businessService.deleteBusinessByIdWithPassword(id, password);
-        if (deleted) {
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incorrect password or business not found.");
-        }
+        if (password == null || password.isEmpty()) return ResponseEntity.badRequest().body("Password is required");
+        return businessService.deleteBusinessByIdWithPassword(id, password)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incorrect password or business not found");
     }
 
-    @Operation(summary = "Update an existing business with images", description = "This API updates an existing business along with its logo and banner image.")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Business updated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid input"),
-        @ApiResponse(responseCode = "500", description = "Error uploading files")
-    })
+    @Operation(summary = "Update business with images")
     @PutMapping("/update-with-images/{id}")
     public ResponseEntity<?> updateBusinessWithImages(
             @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader,
             @RequestParam String name,
             @RequestParam String email,
             @RequestParam(required = false) String password,
@@ -142,97 +103,66 @@ public class BusinessController {
             @RequestParam(required = false) String phoneNumber,
             @RequestParam(required = false) String websiteUrl,
             @RequestParam(required = false) MultipartFile logo,
-            @RequestParam(required = false) MultipartFile banner
-    ) {
+            @RequestParam(required = false) MultipartFile banner) {
+        if (!isAuthorized(authHeader, id)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
         try {
-            Businesses updated = businessService.updateBusinessWithImages(
-                    id, name, email, password, description, phoneNumber, websiteUrl, logo, banner
-            );
+            Businesses updated = businessService.updateBusinessWithImages(id, name, email, password, description, phoneNumber, websiteUrl, logo, banner);
             return ResponseEntity.ok(updated);
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error uploading files.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("File upload error");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
+    @Operation(summary = "Update logo and banner")
     @PutMapping("/update-logo-banner/{id}")
     public ResponseEntity<?> updateBusinessLogoAndBanner(
             @PathVariable Long id,
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(required = false) MultipartFile logo,
-            @RequestParam(required = false) MultipartFile banner
-    ) {
-        String token = authHeader.replace("Bearer ", "");
-        String businessEmail = jwtUtil.extractUsername(token);
-        Businesses loggedIn = businessService.findByEmail(businessEmail)
-                .orElse(null);
-
-        if (loggedIn == null || !loggedIn.getId().equals(id)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("You cannot update another business's media.");
-        }
-
-        Businesses existingBusiness = businessService.findById(id);
-        if (existingBusiness == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Business not found");
-        }
-
-        if (logo != null && !logo.isEmpty()) {
-            existingBusiness.setBusinessLogoUrl(logo.getOriginalFilename());
-        }
-
-        if (banner != null && !banner.isEmpty()) {
-            existingBusiness.setBusinessBannerUrl(banner.getOriginalFilename());
-        }
-
-        Businesses updated = businessService.save(existingBusiness);
-        return ResponseEntity.ok(updated);
+            @RequestParam(required = false) MultipartFile banner) {
+        if (!isAuthorized(authHeader, id)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        Businesses existing = businessService.findById(id);
+        if (existing == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Business not found");
+        if (logo != null && !logo.isEmpty()) existing.setBusinessLogoUrl(logo.getOriginalFilename());
+        if (banner != null && !banner.isEmpty()) existing.setBusinessBannerUrl(banner.getOriginalFilename());
+        return ResponseEntity.ok(businessService.save(existing));
     }
 
-
+    @Operation(summary = "Request password reset")
     @PostMapping("/reset-password")
-    public ResponseEntity<Map<String, String>> sendBusinessResetCode(@RequestBody Map<String, String> request) {
-        String email = request.get("email");
-        boolean success = businessService.resetPassword(email);
-
-        if (success) {
-            return ResponseEntity.ok(Map.of("message", "Reset code sent to business email"));
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", "No business found with this email"));
-        }
+    public ResponseEntity<Map<String, String>> sendBusinessResetCode(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> request) {
+        if (!isBusinessToken(authHeader)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
+        boolean success = businessService.resetPassword(request.get("email"));
+        return success ? ResponseEntity.ok(Map.of("message", "Reset code sent"))
+                : ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Business not found"));
     }
 
+    @Operation(summary = "Verify reset code")
     @PostMapping("/verify-reset-code")
-    public ResponseEntity<Map<String, String>> verifyBusinessResetCode(@RequestBody Map<String, String> request) {
-        String email = request.get("email");
-        String code = request.get("code");
-
-        if (businessService.verifyResetCode(email, code)) {
-            return ResponseEntity.ok(Map.of("message", "Code verified successfully"));
-        } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", "Invalid reset code"));
-        }
+    public ResponseEntity<Map<String, String>> verifyBusinessResetCode(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> request) {
+        if (!isBusinessToken(authHeader)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
+        boolean verified = businessService.verifyResetCode(request.get("email"), request.get("code"));
+        return verified ? ResponseEntity.ok(Map.of("message", "Code verified"))
+                : ResponseEntity.badRequest().body(Map.of("message", "Invalid code"));
     }
 
+    @Operation(summary  = "Update business password")
     @PostMapping("/update-password")
-    public ResponseEntity<Map<String, String>> updateBusinessPassword(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, String>> updateBusinessPassword(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> request) {
+        if (!isBusinessToken(authHeader)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
         String email = request.get("email");
         String newPassword = request.get("newPassword");
-
-        if (email == null || newPassword == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Missing email or password"));
-        }
-
+        if (email == null || newPassword == null) return ResponseEntity.badRequest().body(Map.of("message", "Missing email or password"));
         boolean updated = businessService.updatePasswordDirectly(email, newPassword);
-        if (updated) {
-            return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
-        } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", "Business not found"));
-        }
+        return updated ? ResponseEntity.ok(Map.of("message", "Password updated"))
+                : ResponseEntity.badRequest().body(Map.of("message", "Business not found"));
     }
-
 }

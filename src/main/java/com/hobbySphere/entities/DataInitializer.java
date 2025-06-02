@@ -8,15 +8,15 @@ import com.hobbySphere.repositories.RoleRepository;
 @Configuration
 public class DataInitializer {
 
-    @Bean
-    public CommandLineRunner initRoles(RoleRepository roleRepository) {
-        return args -> {
-            if (roleRepository.findByName("SUPER_ADMIN").isEmpty()) {
-                roleRepository.save(new Role("SUPER_ADMIN"));
-            }
-            if (roleRepository.findByName("MANAGER").isEmpty()) {
-                roleRepository.save(new Role("MANAGER"));
-            }
-        };
-    }
+	 @Bean
+	    public CommandLineRunner initRoles(RoleRepository roleRepository) {
+	        return args -> {
+	            if (roleRepository.findByName("SUPER_ADMIN").isEmpty()) {
+	                roleRepository.save(new Role("SUPER_ADMIN"));
+	            }
+	            if (roleRepository.findByName("MANAGER").isEmpty()) {
+	                roleRepository.save(new Role("MANAGER"));
+	            }
+	        };
+	    }
 }

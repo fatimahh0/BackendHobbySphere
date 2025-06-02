@@ -44,12 +44,6 @@ public class Activities {
     @Column(name = "image_url")
     private String imageUrl;
 
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     @Column(name = "max_participants", nullable = false)
     private int maxParticipants; // Added max participants field
 
@@ -71,6 +65,11 @@ public class Activities {
     @JoinColumn(name = "currency_id")
     private Currency currency;
 
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
 
     // Constructors

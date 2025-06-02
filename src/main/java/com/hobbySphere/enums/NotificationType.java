@@ -1,4 +1,4 @@
-package com.hobbySphere.entities;
+package com.hobbySphere.enums;
 
 public enum NotificationType {
     ACTIVITY_UPDATE("Activity Update"),

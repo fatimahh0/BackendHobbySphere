@@ -15,8 +15,7 @@ public class RoleService {
 
     @PostConstruct
     public void initRoles() {
-        // Check if roles already exist
-        createRoleIfNotExists("USER");
+    	
         createRoleIfNotExists("SUPER_ADMIN");
         createRoleIfNotExists("MANAGER");
     }

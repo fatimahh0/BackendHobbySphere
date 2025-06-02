@@ -3,6 +3,8 @@ package com.hobbySphere.entities;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+import com.hobbySphere.enums.FeedType;
+
 @Entity
 @Table(name = "UserActivityFeed")
 public class UserActivityFeed {

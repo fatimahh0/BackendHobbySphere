@@ -1,4 +1,5 @@
 package com.hobbySphere.services;
+import com.hobbySphere.enums.*;
 
 import com.hobbySphere.repositories.ActivityBookingsRepository;
 import com.hobbySphere.repositories.CurrencyRepository;
@@ -8,7 +9,6 @@ import jakarta.transaction.Transactional;
 
 import com.hobbySphere.entities.ActivityBookings;
 import com.hobbySphere.entities.Currency;
-import com.hobbySphere.entities.NotificationType;
 import com.hobbySphere.enums.CurrencyType;
 
 import org.springframework.beans.factory.annotation.Autowired;

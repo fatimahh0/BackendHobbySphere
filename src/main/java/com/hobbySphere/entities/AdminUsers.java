@@ -34,12 +34,6 @@ public class AdminUsers {
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     @Column(name = "notify_activity_updates")
     private Boolean notifyActivityUpdates = true;
 
@@ -50,19 +44,16 @@ public class AdminUsers {
     @Column(name = "preferred_language")
     private LanguageType preferredLanguage;
 
-    public LanguageType getPreferredLanguage() {
-        return preferredLanguage;
-    }
-
-    public void setPreferredLanguage(LanguageType preferredLanguage) {
-        this.preferredLanguage = preferredLanguage;
-    }
-
-
     @ManyToOne
     @JoinColumn(name = "business_id", nullable = true)
     private Businesses business;
 
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+    
     public AdminUsers() {}
 
     public AdminUsers(String username, String firstName, String lastName, String email, String passwordHash, Role role) {
@@ -180,5 +171,12 @@ public class AdminUsers {
 
     public void setBusiness(Businesses business) {
         this.business = business;
+    }
+    public LanguageType getPreferredLanguage() {
+        return preferredLanguage;
+    }
+
+    public void setPreferredLanguage(LanguageType preferredLanguage) {
+        this.preferredLanguage = preferredLanguage;
     }
 }

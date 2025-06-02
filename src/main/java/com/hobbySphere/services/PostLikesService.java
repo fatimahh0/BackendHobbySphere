@@ -1,9 +1,8 @@
 package com.hobbySphere.services;
-
+import com.hobbySphere.enums.*;
 import com.hobbySphere.entities.PostLikes;
 import com.hobbySphere.entities.Posts;
 import com.hobbySphere.entities.Users;
-import com.hobbySphere.entities.NotificationType;
 import com.hobbySphere.repositories.PostLikesRepository;
 import com.hobbySphere.repositories.PostsRepository;
 import com.hobbySphere.services.NotificationsService;

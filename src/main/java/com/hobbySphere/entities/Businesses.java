@@ -38,12 +38,6 @@ public class Businesses {
 
     @Column(name = "website_url")
     private String websiteUrl;
-
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "preferred_language")
@@ -59,16 +53,12 @@ public class Businesses {
 
     @OneToMany(mappedBy = "business", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<Activities> activities;
+    
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = this.updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     // Constructors
     public Businesses() {
@@ -174,5 +164,15 @@ public class Businesses {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+    
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

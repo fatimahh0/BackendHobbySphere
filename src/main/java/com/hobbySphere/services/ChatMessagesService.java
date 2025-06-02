@@ -1,8 +1,7 @@
 package com.hobbySphere.services;
-
+import com.hobbySphere.enums.*;
 import com.hobbySphere.entities.ChatMessages;
 import com.hobbySphere.entities.Users;
-import com.hobbySphere.entities.NotificationType;
 import com.hobbySphere.repositories.ChatMessagesRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
