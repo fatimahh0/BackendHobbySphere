@@ -172,4 +172,13 @@ public class ActivityBookingService {
 	}
 
 
+	
+
+	public void deleteByActivityId(Long activityId) {
+		activityBookingsRepository.deleteByActivityId(activityId);
+	}
+
+
+
+
 }

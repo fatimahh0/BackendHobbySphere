@@ -218,16 +218,28 @@ public class ActivityController {
         @ApiResponse(responseCode = "404", description = "Activity not found")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteActivity(
-            @Parameter(description = "ID of the activity to delete") @PathVariable Long id) {
-        Optional<Activities> existingActivity = Optional.ofNullable(activityService.findById(id));
-        if (existingActivity.isPresent()) {
+    public ResponseEntity<?> deleteActivity(@PathVariable Long id) {
+        Activities activity = activityService.findById(id);
+        if (activity == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Activity not found"));
+        }
+
+        try {
+            // ✅ 1. Delete all bookings related to this activity
+            bookingService.deleteByActivityId(id);
+
+            // ✅ 2. Now delete the activity itself
             activityService.deleteActivity(id);
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Failed to delete activity", "error", e.getMessage()));
         }
     }
+
 
     @Operation(summary = "Get a single activity by ID", description = "Retrieve details of a specific activity by its ID")
     @ApiResponses(value = {

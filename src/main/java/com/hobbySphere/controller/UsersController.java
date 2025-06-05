@@ -103,13 +103,12 @@ public class UsersController {
         }
     }
     @PostMapping("/reset-password")
-    public ResponseEntity<Map<String, String>> sendResetCode(@RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+    public ResponseEntity<Map<String, String>> sendResetCode(@RequestBody Map<String, String> body) {
         try {
-            token = token.substring(7).trim(); // Remove "Bearer "
-            String email = jwtUtil.extractUsername(token);
+            String email = body.get("email");
             Users user = usersRepository.findByEmail(email);
             if (user == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "No user found with this token"));
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "No user found with this email"));
             }
 
             boolean success = userService.resetPassword(email);
@@ -120,16 +119,14 @@ public class UsersController {
             }
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Invalid token"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Unexpected error"));
         }
     }
 
     @PostMapping("/verify-reset-code")
-    public ResponseEntity<Map<String, String>> verifyCode(@RequestHeader(HttpHeaders.AUTHORIZATION) String token,
-                                                          @RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, String>> verifyCode(@RequestBody Map<String, String> request) {
         try {
-            token = token.substring(7).trim();
-            String email = jwtUtil.extractUsername(token);
+            String email = request.get("email");
             String code = request.get("code");
 
             if (userService.verifyResetCode(email, code)) {
@@ -139,23 +136,21 @@ public class UsersController {
             }
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Invalid token"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Unexpected error"));
         }
     }
 
     @PostMapping("/update-password")
-    public ResponseEntity<Map<String, String>> updatePassword(@RequestHeader(HttpHeaders.AUTHORIZATION) String token,
-                                                              @RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, String>> updatePassword(@RequestBody Map<String, String> request) {
         try {
-            token = token.substring(7).trim();
-            String emailFromToken = jwtUtil.extractUsername(token);
+            String email = request.get("email");
             String newPassword = request.get("newPassword");
 
             if (newPassword == null || newPassword.isBlank()) {
                 return ResponseEntity.badRequest().body(Map.of("message", "New password is required"));
             }
 
-            boolean updated = userService.updatePasswordDirectly(emailFromToken, newPassword);
+            boolean updated = userService.updatePasswordDirectly(email, newPassword);
             if (updated) {
                 return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
             } else {
@@ -163,7 +158,7 @@ public class UsersController {
             }
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Invalid token"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Unexpected error"));
         }
     }
     }

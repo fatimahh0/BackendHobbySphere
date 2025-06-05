@@ -5,6 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.jpa.repository.Modifying;
+
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -90,4 +93,9 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
 
     @Query("SELECT b FROM ActivityBookings b WHERE b.activity.business.email = :email")
     List<ActivityBookings> findByActivityBusinessEmail(@Param("email") String email);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM ActivityBookings ab WHERE ab.activity.id = :activityId")
+    void deleteByActivityId(@Param("activityId") Long activityId);
 }
