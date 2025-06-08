@@ -34,10 +34,17 @@ public class ReviewController {
     private boolean isAuthorized(String token) {
         if (token == null || !token.startsWith("Bearer ")) return false;
 
-        String jwt = token.substring(7);
-        String role = jwtUtil.extractRole(jwt);  // This method must extract "role" claim from token
-        return "BUSINESS".equals(role) || "SUPER_ADMIN".equals(role);
+        String jwt = token.substring(7).trim();
+
+        // Check for AdminUser roles
+        String adminRole = jwtUtil.extractRole(jwt); // returns SUPER_ADMIN or MANAGER if Admin token
+        if ("SUPER_ADMIN".equals(adminRole) || "MANAGER".equals(adminRole)) return true;
+
+        // Check for valid business or user token
+        String email = jwtUtil.extractUsername(jwt);
+        return jwtUtil.isBusinessToken(jwt) || jwtUtil.isUserToken(jwt);
     }
+
 
     @Operation(
         summary = "Get all reviews",
@@ -83,4 +90,31 @@ public class ReviewController {
         }
         return new ResponseEntity<>(reviews, HttpStatus.OK);
     }
+    
+    @Operation(
+    	    summary = "Get all reviews for a business",
+    	    description = "Retrieve all reviews for activities belonging to a specific business."
+    	)
+    	@ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Reviews retrieved successfully"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized access"),
+    	    @ApiResponse(responseCode = "404", description = "No reviews found for the business")
+    	})
+    	@GetMapping("/business/{businessId}")
+    	public ResponseEntity<?> getReviewsByBusiness(
+    	        @RequestHeader("Authorization") String token,
+    	        @Parameter(description = "ID of the business") @PathVariable Long businessId) {
+
+    	    if (!isAuthorized(token)) {
+    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied.");
+    	    }
+
+    	    List<Review> reviews = reviewService.getReviewsByBusiness(businessId);
+    	    if (reviews.isEmpty()) {
+    	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No reviews found for this business.");
+    	    }
+
+    	    return ResponseEntity.ok(reviews);
+    	}
+
 }

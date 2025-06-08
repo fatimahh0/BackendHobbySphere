@@ -15,6 +15,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.MediaType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+
 import com.hobbySphere.dto.*;
 import java.io.IOException;
 import java.util.HashMap;
@@ -446,6 +448,23 @@ public class AuthController {
 		    ));
 		}
 
+ @Operation(
+		    summary = "Remove a manager",
+		    description = "Deletes a manager from AdminUsers and BusinessAdmins tables"
+		)
+		@ApiResponse(responseCode = "200", description = "Manager removed successfully")
+		@ApiResponse(responseCode = "404", description = "Manager not found")
+		@DeleteMapping("/admin/remove-manager/{adminId}")
+		public ResponseEntity<?> removeManager(@PathVariable Long adminId) {
+		    Optional<AdminUsers> optionalManager = adminUserService.findById(adminId);
 
+		    if (optionalManager.isEmpty()) {
+		        return ResponseEntity.status(404).body(Map.of("message", "Manager not found"));
+		    }
+
+		    adminUserService.deleteManagerById(adminId);
+
+		    return ResponseEntity.ok(Map.of("message", "Manager removed successfully"));
+		}
 
 }

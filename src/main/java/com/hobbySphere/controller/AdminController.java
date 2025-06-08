@@ -215,6 +215,7 @@ public class AdminController {
         admin.setEmail(dto.getEmail());
 
         adminUsersRepository.save(admin);
+        
         return ResponseEntity.ok("Admin profile updated successfully.");
     }
 
@@ -286,4 +287,38 @@ public class AdminController {
         if (!isSuperAdmin(token)) return ResponseEntity.status(401).body("Unauthorized");
         return ResponseEntity.ok(reviewRepository.findAll());
     }
+    
+    @GetMapping("/me")
+    @Operation(summary = "Get current admin profile", description = "Returns profile details of the currently logged-in SUPER_ADMIN")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Admin profile retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "Admin not found")
+    })
+    public ResponseEntity<?> getCurrentAdminProfile(@RequestHeader("Authorization") String token) {
+        if (!isSuperAdmin(token)) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+
+        token = token.substring(7).trim(); // Remove "Bearer "
+        Long currentAdminId = jwtUtil.extractId(token);
+        Optional<AdminUsers> optionalAdmin = adminUsersRepository.findById(currentAdminId);
+
+        if (optionalAdmin.isEmpty()) {
+            return ResponseEntity.status(404).body("Admin not found.");
+        }
+
+        AdminUsers admin = optionalAdmin.get();
+
+        return ResponseEntity.ok(Map.of(
+                "id", admin.getAdminId(),
+                "firstName", admin.getFirstName(),
+                "lastName", admin.getLastName(),
+                "username", admin.getUsername(),
+                "email", admin.getEmail(),
+                "notifyActivityUpdates", admin.getNotifyActivityUpdates(),
+                "notifyUserFeedback", admin.getNotifyUserFeedback()
+        ));
+    }
+
 }

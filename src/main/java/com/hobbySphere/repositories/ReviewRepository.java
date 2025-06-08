@@ -22,5 +22,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     void deleteByActivity_Id(Long activityId); // ✅ for business deletion
 
    void deleteByCustomer_Id(Long customerId);
+   
+   @Query("SELECT r FROM Review r WHERE r.activity.business.id = :businessId ORDER BY r.createdAt DESC")
+   List<Review> findReviewsByBusinessId(@Param("businessId") Long businessId);
+
 
 }

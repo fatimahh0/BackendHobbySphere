@@ -25,4 +25,11 @@ public class AdminUserController {
     public List<UserSummaryDTO> getAllUsersAndAdmins() {
         return adminUserService.getAllUserSummaries();
     }
+    
+    @Operation(summary = "Get users by role", description = "Fetch all users or admins by specified role")
+    @GetMapping("/by-role")
+    public List<UserSummaryDTO> getUsersByRole(@RequestParam String role) {
+        return adminUserService.getUsersByRole(role);
+    }
+
 }

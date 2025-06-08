@@ -110,6 +110,35 @@ public class JwtUtil {
                 .getBody()
                 .get("id", Long.class);
     }
+    public boolean isUserToken(String token) {
+        try {
+            token = token.trim();
+            String role = extractRole(token);
+            // If no role and no businessName, it's a user
+            boolean isBusiness = isBusinessToken(token);
+            return role == null && !isBusiness;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean isAdminToken(String token) {
+        try {
+            String role = extractRole(token);
+            return "SUPER_ADMIN".equals(role) || "MANAGER".equals(role);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean isSuperAdmin(String token) {
+        try {
+            String role = extractRole(token);
+            return "SUPER_ADMIN".equals(role);
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
    
 }

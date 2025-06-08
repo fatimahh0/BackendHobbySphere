@@ -17,7 +17,9 @@ public class Currency {
     @Column(name = "currency_type", nullable = false, unique = true)
     private CurrencyType currencyType;
 
-    // ✅ Add created_at and updated_at as the last two columns
+    @Column(name = "symbol", length = 5)
+    private String symbol;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -37,14 +39,20 @@ public class Currency {
     // Default constructor (required by JPA)
     public Currency() {}
 
-    // Constructor that accepts enum
+    // Constructor with enum
     public Currency(CurrencyType currencyType) {
         this.currencyType = currencyType;
     }
 
-    // ✅ Constructor that accepts String
+    // Constructor with string type
     public Currency(String currencyTypeString) {
         this.currencyType = CurrencyType.valueOf(currencyTypeString.toUpperCase());
+    }
+
+    // Constructor with type and symbol
+    public Currency(CurrencyType currencyType, String symbol) {
+        this.currencyType = currencyType;
+        this.symbol = symbol;
     }
 
     // Getters and Setters
@@ -62,6 +70,14 @@ public class Currency {
 
     public void setCurrencyType(CurrencyType currencyType) {
         this.currencyType = currencyType;
+    }
+
+    public String getSymbol() {
+        return symbol;
+    }
+
+    public void setSymbol(String symbol) {
+        this.symbol = symbol;
     }
 
     public LocalDateTime getCreatedAt() {

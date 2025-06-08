@@ -30,9 +30,17 @@ public class CurrencyController {
     private boolean isAuthorized(String token) {
         if (token == null || !token.startsWith("Bearer ")) return false;
 
-        String jwt = token.substring(7);
-        String role = jwtUtil.extractRole(jwt);  // You must have this method in JwtUtil
-        return "BUSINESS".equals(role) || "SUPER_ADMIN".equals(role);
+        String jwt = token.substring(7).trim();
+
+        // ✅ Business token check
+        if (jwtUtil.isBusinessToken(jwt)) return true;
+
+        // ✅ Admin role check
+        String role = jwtUtil.extractRole(jwt);
+        if ("SUPER_ADMIN".equals(role) || "MANAGER".equals(role)) return true;
+
+        // ✅ User token check
+        return jwtUtil.isUserToken(jwt);
     }
 
     @PostMapping("/chooseCurrency")
