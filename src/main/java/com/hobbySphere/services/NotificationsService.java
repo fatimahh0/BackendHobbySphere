@@ -24,6 +24,8 @@ public class NotificationsService {
         Notifications notification = new Notifications(receiver, message, type);
         notificationsRepo.save(notification);
     }
+    
+    
 
 
     public List<Notifications> getAllByUser(Users user) {

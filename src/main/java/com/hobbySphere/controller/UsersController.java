@@ -55,9 +55,10 @@ public class UsersController {
             if ("SUPER_ADMIN".equalsIgnoreCase(role)) {
                 return ResponseEntity.ok(userService.getAllUserDtos());
             }
+            
 
             // Allow if it's a regular user (i.e. no role means it's a user token)
-            if (role == null) {
+            if (role == null || "USER".equalsIgnoreCase(role)) {
                 return ResponseEntity.ok(userService.getAllUserDtos());
             }
 

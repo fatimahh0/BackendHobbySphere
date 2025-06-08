@@ -6,8 +6,10 @@ import java.time.LocalDateTime;
 public class ActivityDetailsDTO {
 
     private Long id;
-    private String activityName; // ✅ New field
+    private String activityName;
     private String description;
+    private Long activityTypeId;
+    private String activityTypeName; 
     private String location;
     private LocalDateTime startDatetime;
     private LocalDateTime endDatetime;
@@ -17,14 +19,17 @@ public class ActivityDetailsDTO {
     private String imageUrl;
     private String businessName;
 
-    // ✅ Updated constructor
+    // ✅ Updated Constructor
     public ActivityDetailsDTO(Long id, String activityName, String description,
+                              Long activityTypeId, String activityTypeName,
                               String location, LocalDateTime startDatetime, LocalDateTime endDatetime,
                               BigDecimal price, int maxParticipants, String status,
                               String imageUrl, String businessName) {
         this.id = id;
         this.activityName = activityName;
         this.description = description;
+        this.activityTypeId = activityTypeId;
+        this.activityTypeName = activityTypeName;
         this.location = location;
         this.startDatetime = startDatetime;
         this.endDatetime = endDatetime;
@@ -44,6 +49,12 @@ public class ActivityDetailsDTO {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public Long getActivityTypeId() { return activityTypeId; }
+    public void setActivityTypeId(Long activityTypeId) { this.activityTypeId = activityTypeId; }
+
+    public String getActivityTypeName() { return activityTypeName; }
+    public void setActivityTypeName(String activityTypeName) { this.activityTypeName = activityTypeName; }
 
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }

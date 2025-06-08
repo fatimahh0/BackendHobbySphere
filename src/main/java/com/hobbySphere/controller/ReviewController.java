@@ -1,5 +1,6 @@
 package com.hobbySphere.controller;
 
+import com.hobbySphere.dto.ReviewDTO;
 import com.hobbySphere.entities.Review;
 import com.hobbySphere.services.ReviewService;
 import com.hobbySphere.security.JwtUtil;
@@ -34,17 +35,10 @@ public class ReviewController {
     private boolean isAuthorized(String token) {
         if (token == null || !token.startsWith("Bearer ")) return false;
 
-        String jwt = token.substring(7).trim();
-
-        // Check for AdminUser roles
-        String adminRole = jwtUtil.extractRole(jwt); // returns SUPER_ADMIN or MANAGER if Admin token
-        if ("SUPER_ADMIN".equals(adminRole) || "MANAGER".equals(adminRole)) return true;
-
-        // Check for valid business or user token
-        String email = jwtUtil.extractUsername(jwt);
-        return jwtUtil.isBusinessToken(jwt) || jwtUtil.isUserToken(jwt);
+        String jwt = token.substring(7);
+        String role = jwtUtil.extractRole(jwt);  // This method must extract "role" claim from token
+        return "BUSINESS".equals(role) || "SUPER_ADMIN".equals(role);
     }
-
 
     @Operation(
         summary = "Get all reviews",
@@ -80,9 +74,14 @@ public class ReviewController {
             @RequestHeader("Authorization") String token,
             @Parameter(description = "ID of the activity to fetch reviews for") @PathVariable Long activityId) {
 
-        if (!isAuthorized(token)) {
+    	String jwt = token.substring(7);
+	    String role = jwtUtil.extractRole(jwt);
+        
+        
+        if (!isAuthorized(token) && (!"USER".equals(role))) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied.");
         }
+        
 
         List<Review> reviews = reviewService.getReviewsByActivity(activityId);
         if (reviews.isEmpty()) {
@@ -92,29 +91,37 @@ public class ReviewController {
     }
     
     @Operation(
-    	    summary = "Get all reviews for a business",
-    	    description = "Retrieve all reviews for activities belonging to a specific business."
+    	    summary = "Add a review",
+    	    description = "Allows a customer to submit a review for an activity"
     	)
     	@ApiResponses(value = {
-    	    @ApiResponse(responseCode = "200", description = "Reviews retrieved successfully"),
+    	    @ApiResponse(responseCode = "201", description = "Review submitted successfully"),
+    	    @ApiResponse(responseCode = "400", description = "Invalid input data"),
     	    @ApiResponse(responseCode = "401", description = "Unauthorized access"),
-    	    @ApiResponse(responseCode = "404", description = "No reviews found for the business")
+    	    @ApiResponse(responseCode = "404", description = "Activity or user not found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal server error")
     	})
-    	@GetMapping("/business/{businessId}")
-    	public ResponseEntity<?> getReviewsByBusiness(
+    	@PostMapping
+    	public ResponseEntity<?> addReview(
     	        @RequestHeader("Authorization") String token,
-    	        @Parameter(description = "ID of the business") @PathVariable Long businessId) {
-
-    	    if (!isAuthorized(token)) {
-    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied.");
+    	        @RequestBody ReviewDTO dto) {
+    	    
+    	    if (token == null || !token.startsWith("Bearer ")) {
+    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Missing or invalid token.");
     	    }
 
-    	    List<Review> reviews = reviewService.getReviewsByBusiness(businessId);
-    	    if (reviews.isEmpty()) {
-    	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No reviews found for this business.");
+    	    String jwt = token.substring(7);
+    	    String role = jwtUtil.extractRole(jwt);
+    	    if (!"USER".equals(role)) {
+    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Only User can submit reviews.");
     	    }
 
-    	    return ResponseEntity.ok(reviews);
+    	    try {
+    	        Review review = reviewService.createReviewFromDTO(dto, token);
+    	        return new ResponseEntity<>(review, HttpStatus.CREATED);
+    	    } catch (RuntimeException e) {
+    	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+    	    }
     	}
 
 }

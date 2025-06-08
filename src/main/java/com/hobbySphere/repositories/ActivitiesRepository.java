@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ActivitiesRepository extends JpaRepository<Activities, Long> {
@@ -38,4 +39,9 @@ public interface ActivitiesRepository extends JpaRepository<Activities, Long> {
            "a.id, a.activityName, b.businessName, a.startDatetime, a.maxParticipants, a.description) " +
            "FROM Activities a JOIN a.business b")
     List<AdminActivityDTO> findAllActivitiesWithBusinessInfo();
+
+	Activities findByActivityName(String activity);
+
+
+	
 }

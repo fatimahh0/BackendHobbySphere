@@ -16,8 +16,9 @@ public class Review {
     private Activities activity;
 
     @ManyToOne
-   @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false) // 👈 must match DB column name exactly
     private Users customer;
+
 
     @Column(nullable = false)
     private int rating;

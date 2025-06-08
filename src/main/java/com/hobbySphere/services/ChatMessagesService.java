@@ -1,8 +1,10 @@
 package com.hobbySphere.services;
-import com.hobbySphere.enums.*;
+
+import com.hobbySphere.enums.NotificationType;
 import com.hobbySphere.entities.ChatMessages;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.repositories.ChatMessagesRepository;
+import com.hobbySphere.repositories.FriendshipRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,15 +22,26 @@ public class ChatMessagesService {
 
     private final ChatMessagesRepository chatRepo;
     private final NotificationsService notificationsService;
+    private final FriendshipRepository friendshipRepo;
 
     public ChatMessagesService(ChatMessagesRepository chatRepo,
-                               NotificationsService notificationsService) {
+                               NotificationsService notificationsService,
+                               FriendshipRepository friendshipRepo) {
         this.chatRepo = chatRepo;
         this.notificationsService = notificationsService;
+        this.friendshipRepo = friendshipRepo;
     }
 
     @Transactional
     public ChatMessages sendMessage(Users sender, Users receiver, String message) {
+        if (!friendshipRepo.areFriends(sender.getId(), receiver.getId())) {
+            throw new RuntimeException("You are not friends. Cannot send message.");
+        }
+
+        if (friendshipRepo.isBlocked(receiver.getId(), sender.getId())) {
+            throw new RuntimeException("This user has blocked you. Cannot send message.");
+        }
+
         ChatMessages chat = new ChatMessages(sender, receiver, message);
         chat.setSentAt(LocalDateTime.now());
         ChatMessages saved = chatRepo.save(chat);
@@ -43,8 +56,17 @@ public class ChatMessagesService {
         return saved;
     }
 
+
     @Transactional
     public ChatMessages sendMessageWithImage(Users sender, Users receiver, String message, String imageUrl) {
+        if (!friendshipRepo.areFriends(sender.getId(), receiver.getId())) {
+            throw new RuntimeException("You are not friends. Cannot send message.");
+        }
+
+        if (friendshipRepo.isBlocked(receiver.getId(), sender.getId())) {
+            throw new RuntimeException("This user has blocked you. Cannot send message.");
+        }
+
         ChatMessages chat = new ChatMessages();
         chat.setSender(sender);
         chat.setReceiver(receiver);
@@ -63,6 +85,7 @@ public class ChatMessagesService {
         }
         return saved;
     }
+
 
     @Transactional
     public String uploadImage(MultipartFile file) {
@@ -103,8 +126,11 @@ public class ChatMessagesService {
 
     @Transactional
     public List<ChatMessages> getConversation(Users user1, Users user2) {
+        if (!friendshipRepo.areFriends(user1.getId(), user2.getId())) {
+            throw new RuntimeException("You are not friends. Cannot view this conversation.");
+        }
+
         List<ChatMessages> messages = chatRepo.findConversationBetween(user1.getId(), user2.getId());
-        // Avoid LazyInitializationException by initializing needed fields
         messages.forEach(msg -> {
             msg.getSender().getUsername();
             msg.getReceiver().getUsername();
@@ -139,6 +165,4 @@ public class ChatMessagesService {
         message.setIsRead(true);
         chatRepo.save(message);
     }
-    
-
 }

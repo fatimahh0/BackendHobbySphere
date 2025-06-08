@@ -1,12 +1,12 @@
 package com.hobbySphere.entities;
 
+import com.hobbySphere.enums.NotificationType;
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 
-import com.hobbySphere.enums.NotificationType;
-
 @Entity
-@Table(name = "Notifications")
+@Table(name = "notifications")
 public class Notifications {
 
     @Id
@@ -21,9 +21,9 @@ public class Notifications {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String message;
 
+    @Enumerated(EnumType.STRING) // ✅ Store as String in DB (no need for enum constraint)
     @Column(name = "notification_type", nullable = false)
-    @Enumerated(EnumType.STRING)
-    private NotificationType notificationType; 
+    private NotificationType notificationType;
 
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
@@ -31,7 +31,6 @@ public class Notifications {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    // ✅ Add updated_at as the last column
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
@@ -53,59 +52,26 @@ public class Notifications {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public Long getId() {
-        return id;
-    }
+    // Getters & Setters...
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public Users getUser() {
-        return user;
-    }
+    public Users getUser() { return user; }
+    public void setUser(Users user) { this.user = user; }
 
-    public void setUser(Users user) {
-        this.user = user;
-    }
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
 
-    public String getMessage() {
-        return message;
-    }
+    public NotificationType getNotificationType() { return notificationType; }
+    public void setNotificationType(NotificationType notificationType) { this.notificationType = notificationType; }
 
-    public void setMessage(String message) {
-        this.message = message;
-    }
+    public Boolean getRead() { return isRead; }
+    public void setIsRead(Boolean isRead) { this.isRead = isRead; }
 
-    public NotificationType getNotificationType() {
-        return notificationType;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    public void setNotificationType(NotificationType notificationType) {
-        this.notificationType = notificationType;
-    }
-
-    public Boolean getRead() {
-        return isRead;
-    }
-
-    public void setIsRead(Boolean isRead) {
-        this.isRead = isRead;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }
