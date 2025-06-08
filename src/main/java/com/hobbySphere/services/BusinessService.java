@@ -42,6 +42,12 @@ public class BusinessService {
     @Autowired
     private ReviewRepository reviewRepository;
     
+    @Autowired
+    private BusinessAdminsRepository businessAdminsRepository;
+    
+    @Autowired
+    private AdminUsersRepository adminUsersRepository;
+    
     private final EmailService emailService;
 
     public BusinessService(EmailService emailService) {
@@ -200,14 +206,14 @@ public class BusinessService {
         return businessRepository.save(existing);
     }
 
+    @Transactional
     public boolean deleteBusinessByIdWithPassword(Long id, String password) {
         Optional<Businesses> optionalBusiness = businessRepository.findById(id);
         if (optionalBusiness.isPresent()) {
             Businesses business = optionalBusiness.get();
 
-           
             if (!passwordEncoder.matches(password, business.getPasswordHash())) {
-                return false; 
+                return false;
             }
 
             List<Activities> activities = activityRepository.findByBusinessId(id);
@@ -218,12 +224,20 @@ public class BusinessService {
                 activityRepository.deleteById(activityId);
             }
 
+            //  Delete all business_admin links before deleting business
+            businessAdminsRepository.deleteByBusinessId(id);
+           
+            adminUsersRepository.deleteByBusinessId(id);
+
+            //  Now delete the business itself
             businessRepository.deleteById(id);
+
             return true;
         }
 
-        return false; // Business introuvable
+        return false;
     }
+
     
     
  // ✅ Update password with code sent by email (STEP 1)

@@ -14,31 +14,31 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.time.LocalDateTime;
 import com.hobbySphere.dto.BookingRequest;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.math.BigDecimal;
 import java.security.Principal;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/activities")
 @CrossOrigin(origins = {
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175"
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175"
 })
 @Tag(name = "Activities API", description = "Endpoints for managing activities")
 public class ActivityController {
-	
-	@Autowired
-	private CurrencyRepository currencyRepository;
+
+    @Autowired
+    private CurrencyRepository currencyRepository;
 
     @Autowired
     private ActivityService activityService;
@@ -49,11 +49,11 @@ public class ActivityController {
     @Autowired
     private UserService userService;
 
-    //get activities by business id
+    // ✅ Get all activities for a business (with auto status update)
     @Operation(summary = "Get activities by business ID", description = "Retrieve a list of activities associated with a specific business and auto-update expired ones")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "List of activities for a given business"),
-        @ApiResponse(responseCode = "404", description = "Business not found")
+            @ApiResponse(responseCode = "200", description = "List of activities for a given business"),
+            @ApiResponse(responseCode = "404", description = "Business not found")
     })
     @GetMapping("/business/{businessId}")
     public ResponseEntity<?> getActivitiesByBusiness(
@@ -62,11 +62,11 @@ public class ActivityController {
         List<Activities> activities = activityService.findByBusinessId(businessId);
 
         if (activities.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "No activities found for this business"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "No activities found for this business"));
         }
 
         LocalDateTime now = LocalDateTime.now();
-
         for (Activities activity : activities) {
             if (activity.getEndDatetime().isBefore(now) && !"Terminated".equalsIgnoreCase(activity.getStatus())) {
                 activity.setStatus("Terminated");
@@ -77,7 +77,7 @@ public class ActivityController {
         return ResponseEntity.ok(activities);
     }
 
-    
+    // ✅ Get all activities
     @GetMapping
     @Operation(summary = "Get all activities", description = "Retrieve a list of all activities in the system and auto-update expired statuses")
     public List<Activities> getAllActivities() {
@@ -94,16 +94,16 @@ public class ActivityController {
         return allActivities;
     }
 
-    
+    // ✅ Get upcoming activities
     @GetMapping("/upcoming")
     @Operation(summary = "Get upcoming activities", description = "Retrieve all activities that are not yet expired")
     public List<Activities> getUpcomingActivities() {
-        List<Activities> upcoming = activityService.findAllActivities().stream()
+        return activityService.findAllActivities().stream()
                 .filter(a -> a.getEndDatetime().isAfter(LocalDateTime.now()))
                 .toList();
-        return upcoming;
     }
 
+    // ✅ Get terminated activities
     @GetMapping("/terminated")
     @Operation(summary = "Get terminated activities", description = "Retrieve all activities that have ended")
     public List<Activities> getTerminatedActivities() {
@@ -118,15 +118,16 @@ public class ActivityController {
                 .toList();
     }
 
+    // ✅ Create activity with image
+    @PostMapping(value = "/create", consumes = "multipart/form-data")
     @Operation(summary = "Create a new activity with image upload", description = "Create a new activity and optionally upload an image")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Activity created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid input")
+            @ApiResponse(responseCode = "201", description = "Activity created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid input")
     })
-    @PostMapping(value = "/create", consumes = "multipart/form-data")
     public ResponseEntity<?> createActivityWithImage(
             @RequestParam("activityName") String activityName,
-            @RequestParam("activityType") String activityType,
+            @RequestParam("activityTypeId") Long activityTypeId,
             @RequestParam("description") String description,
             @RequestParam("location") String location,
             @RequestParam("maxParticipants") int maxParticipants,
@@ -139,29 +140,15 @@ public class ActivityController {
     ) {
         try {
             Activities activity = activityService.createActivityWithImage(
-                    activityName,
-                    activityType,
-                    description,
-                    location,
-                    maxParticipants,
-                    price,
-                    startDatetime,
-                    endDatetime,
-                    status,
-                    businessId,
-                    image
+                    activityName, activityTypeId, description, location, maxParticipants, price,
+                    startDatetime, endDatetime, status, businessId, image
             );
-            
-      
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                     "message", "Activity created successfully",
                     "activity", activity
             ));
-
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-                    "message", e.getMessage()
-            ));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "message", "Failed to create activity",
@@ -170,17 +157,18 @@ public class ActivityController {
         }
     }
 
+    // ✅ Update activity with image
+    @PutMapping("/{id}/update-with-image")
     @Operation(summary = "Update an existing activity with an image", description = "This API updates an existing activity with new details and an optional image.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Activity updated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid input"),
-        @ApiResponse(responseCode = "404", description = "Activity not found")
+            @ApiResponse(responseCode = "200", description = "Activity updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid input"),
+            @ApiResponse(responseCode = "404", description = "Activity not found")
     })
-    @PutMapping("/{id}/update-with-image")
     public ResponseEntity<?> updateActivityWithImage(
-            @Parameter(description = "ID of the activity to update") @PathVariable Long id,
+            @PathVariable Long id,
             @RequestParam("activityName") String activityName,
-            @RequestParam("activityType") String activityType,
+            @RequestParam("activityTypeId") Long activityTypeId,
             @RequestParam("description") String description,
             @RequestParam("location") String location,
             @RequestParam("maxParticipants") int maxParticipants,
@@ -193,7 +181,7 @@ public class ActivityController {
     ) {
         try {
             Activities updatedActivity = activityService.updateActivityWithImage(
-                    id, activityName, activityType, description, location, maxParticipants, price,
+                    id, activityName, activityTypeId, description, location, maxParticipants, price,
                     startDatetime, endDatetime, status, businessId, image
             );
             return ResponseEntity.status(HttpStatus.OK).body(Map.of(
@@ -201,9 +189,7 @@ public class ActivityController {
                     "activity", updatedActivity
             ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-                    "message", e.getMessage()
-            ));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "message", "Failed to update activity",
@@ -212,63 +198,58 @@ public class ActivityController {
         }
     }
 
+    // ✅ Delete activity
+    @DeleteMapping("/{id}")
     @Operation(summary = "Delete an activity by ID", description = "Delete an activity by providing its ID")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "Activity deleted successfully"),
-        @ApiResponse(responseCode = "404", description = "Activity not found")
+            @ApiResponse(responseCode = "204", description = "Activity deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Activity not found")
     })
-    @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteActivity(@PathVariable Long id) {
         Activities activity = activityService.findById(id);
         if (activity == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", "Activity not found"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Activity not found"));
         }
 
         try {
-            // ✅ 1. Delete all bookings related to this activity
-            bookingService.deleteByActivityId(id);
-
-            // ✅ 2. Now delete the activity itself
-            activityService.deleteActivity(id);
-
+            bookingService.deleteByActivityId(id); // delete bookings
+            activityService.deleteActivity(id);     // then delete activity
             return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Failed to delete activity", "error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "message", "Failed to delete activity",
+                    "error", e.getMessage()
+            ));
         }
     }
 
-
+    // ✅ Get activity by ID
+    @GetMapping("/{id}")
     @Operation(summary = "Get a single activity by ID", description = "Retrieve details of a specific activity by its ID")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Activity retrieved successfully"),
-        @ApiResponse(responseCode = "404", description = "Activity not found")
+            @ApiResponse(responseCode = "200", description = "Activity retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Activity not found")
     })
-    @GetMapping("/{id}")
-    public ResponseEntity<Activities> getActivityById(
-            @Parameter(description = "ID of the activity to retrieve") @PathVariable Long id) {
-        Optional<Activities> activity = Optional.ofNullable(activityService.findById(id));
-        if (activity.isPresent()) {
-            return new ResponseEntity<>(activity.get(), HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+    public ResponseEntity<Activities> getActivityById(@PathVariable Long id) {
+        Activities activity = activityService.findById(id);
+        return activity != null
+                ? ResponseEntity.ok(activity)
+                : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
+    // ✅ Book an activity
+    @PostMapping("/{activityId}/book")
     @Operation(summary = "Book an activity", description = "Book an activity for a user with a specified number of participants")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Booking successful"),
-        @ApiResponse(responseCode = "400", description = "Invalid input"),
-        @ApiResponse(responseCode = "404", description = "Activity not found"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized")
+            @ApiResponse(responseCode = "200", description = "Booking successful"),
+            @ApiResponse(responseCode = "400", description = "Invalid input"),
+            @ApiResponse(responseCode = "404", description = "Activity not found"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PostMapping("/{activityId}/book")
     public ResponseEntity<?> bookActivity(
-        @Parameter(description = "ID of the activity to book") @PathVariable long activityId,
-        @RequestBody BookingRequest request,
-        Principal principal
+            @PathVariable long activityId,
+            @RequestBody BookingRequest request,
+            Principal principal
     ) {
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
@@ -280,35 +261,29 @@ public class ActivityController {
             response.put("message", "Activity not found");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
+
         if (activity.getEndDatetime().isBefore(LocalDateTime.now())) {
             response.put("message", "This activity has already ended. Booking is not allowed.");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
         Users user = userService.findByEmail(principal.getName());
-
-        // Check booking status (this might be a custom logic to update status, make sure it's defined in your service)
         activityService.updateStatusIfCanceled(activity);
 
-        // Check if the user has already booked the activity
         if (bookingService.hasUserAlreadyBooked(activity.getId(), user.getId())) {
             response.put("message", "You already booked this activity");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
-        // Check if booking exceeds max participants
         int currentBooked = bookingService.countParticipantsByActivityId(activity.getId());
         if (currentBooked + request.getParticipants() > activity.getMaxParticipants()) {
             response.put("message", "Booking exceeds maximum allowed participants");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
-        // Calculate total price and create booking
         BigDecimal totalPrice = activity.getPrice().multiply(BigDecimal.valueOf(request.getParticipants()));
         ActivityBookings booking = new ActivityBookings(activity, user, request.getParticipants(), totalPrice, request.getPaymentMethod());
-
-        // Save the booking
-        bookingService.saveBooking(booking);  // This should save the booking successfully
+        bookingService.saveBooking(booking);
 
         response.put("message", "Booking successful");
         response.put("bookingId", booking.getId());

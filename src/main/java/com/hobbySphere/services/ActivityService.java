@@ -1,26 +1,23 @@
 package com.hobbySphere.services;
-import com.hobbySphere.entities.Activities;
-import java.util.stream.Collectors;
-import com.hobbySphere.entities.Businesses;
-import com.hobbySphere.entities.Currency;
+
+import com.hobbySphere.entities.*;
 import com.hobbySphere.enums.CurrencyType;
 import com.hobbySphere.dto.ActivitySummaryDTO;
-import com.hobbySphere.repositories.ActivitiesRepository;
-import com.hobbySphere.repositories.ActivityBookingsRepository;
-import com.hobbySphere.repositories.CurrencyRepository;
+import com.hobbySphere.repositories.*;
 
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.util.StringUtils;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import com.hobbySphere.entities.AdminUsers; 
+import java.util.stream.Collectors;
 
 @Service
 public class ActivityService {
@@ -29,15 +26,21 @@ public class ActivityService {
     private ActivitiesRepository activityRepository;
 
     @Autowired
+    private ActivityTypeRepository activityTypeRepository;
+
+    @Autowired
+    private CurrencyRepository currencyRepository;
+
+    @Autowired
     private BusinessService businessService;
 
     @Autowired
     private ActivityBookingsRepository activityBookingsRepository;
 
-    // ✅ Create a new activity with image upload
+    // Create a new activity with image upload
     public Activities createActivityWithImage(
             String activityName,
-            String activityType,
+            Long activityTypeId,
             String description,
             String location,
             int maxParticipants,
@@ -49,7 +52,6 @@ public class ActivityService {
             MultipartFile image
     ) throws IOException {
 
-        // 🔹 Upload image and store relative URL
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {
             String filename = UUID.randomUUID() + "_" + image.getOriginalFilename();
@@ -62,16 +64,19 @@ public class ActivityService {
             imageUrl = "/uploads/" + filename;
         }
 
-        // 🔹 Fetch related business
         Businesses business = businessService.findById(businessId);
         if (business == null) {
             throw new IllegalArgumentException("Business with ID " + businessId + " not found.");
         }
 
-        // 🔹 Create activity object
+        ActivityType type = activityTypeRepository.findById(activityTypeId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid activity type"));
+
+        Currency defaultCurrency = currencyRepository.findByCurrencyType(CurrencyType.CAD).orElseThrow();
+
         Activities activity = new Activities();
         activity.setActivityName(activityName);
-        activity.setActivityType(activityType);
+        activity.setActivityType(type);
         activity.setDescription(description);
         activity.setLocation(location);
         activity.setMaxParticipants(maxParticipants);
@@ -81,35 +86,27 @@ public class ActivityService {
         activity.setStatus(status);
         activity.setImageUrl(imageUrl);
         activity.setBusiness(business);
-        
-        Currency defaultCurrency = currencyRepository.findByCurrencyType(CurrencyType.CAD).orElseThrow();
         activity.setCurrency(defaultCurrency);
-
 
         return activityRepository.save(activity);
     }
 
-    // ✅ Find all activities for a business
     public List<Activities> findByBusinessId(Long businessId) {
         return activityRepository.findByBusinessId(businessId);
     }
 
-    // ✅ Save or update a single activity
     public Activities save(Activities activity) {
         return activityRepository.save(activity);
     }
 
-    // ✅ Find activity by ID
     public Activities findById(Long id) {
         return activityRepository.findById(id).orElse(null);
     }
 
-    // ✅ Find all activities
     public List<Activities> findAllActivities() {
         return activityRepository.findAll();
     }
 
-    // ✅ Delete activity by ID
     public void deleteActivity(Long id) {
         activityRepository.deleteById(id);
     }
@@ -122,11 +119,10 @@ public class ActivityService {
         }
     }
 
-    // ✅ Update an activity with image
     public Activities updateActivityWithImage(
             Long id,
             String activityName,
-            String activityType,
+            Long activityTypeId,
             String description,
             String location,
             int maxParticipants,
@@ -140,8 +136,11 @@ public class ActivityService {
         Activities activity = activityRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
 
+        ActivityType type = activityTypeRepository.findById(activityTypeId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid activity type"));
+
         activity.setActivityName(activityName);
-        activity.setActivityType(activityType);
+        activity.setActivityType(type);
         activity.setDescription(description);
         activity.setLocation(location);
         activity.setMaxParticipants(maxParticipants);
@@ -151,11 +150,10 @@ public class ActivityService {
         activity.setStatus(status);
 
         Businesses business = businessService.findById(businessId);
-        if (business != null) {
-            activity.setBusiness(business);
-        } else {
+        if (business == null) {
             throw new IllegalArgumentException("Business with ID " + businessId + " not found.");
         }
+        activity.setBusiness(business);
 
         if (image != null && !image.isEmpty()) {
             String imageFileName = UUID.randomUUID() + "_" + StringUtils.cleanPath(image.getOriginalFilename());
@@ -167,7 +165,6 @@ public class ActivityService {
         return activityRepository.save(activity);
     }
 
-    // ✅ Reject an activity and delete its bookings
     @Transactional
     public void rejectActivity(Long activityId) {
         Activities activity = activityRepository.findById(activityId)
@@ -178,11 +175,11 @@ public class ActivityService {
 
         activityBookingsRepository.deleteByActivity_Id(activityId);
     }
-    
+
     public List<ActivitySummaryDTO> getActivitySummariesByAdmin(AdminUsers admin) {
-        Long businessId = admin.getRole().getName().equalsIgnoreCase("ADMIN") 
-            ? admin.getRole().getId() // Change this if business is linked elsewhere
-            : null;
+        Long businessId = admin.getRole().getName().equalsIgnoreCase("ADMIN")
+                ? admin.getRole().getId()
+                : null;
 
         if (businessId == null) {
             throw new RuntimeException("Admin user is not associated with a business.");
@@ -191,24 +188,23 @@ public class ActivityService {
         List<Activities> activities = activityRepository.findByBusinessId(businessId);
 
         return activities.stream().map(activity -> {
-            String businessName = activity.getBusiness().getBusinessName(); // Assuming getBusinessName() exists
-            int participants = activityBookingsRepository.countByActivityId(activity.getId()); // Custom method
+            String businessName = activity.getBusiness().getBusinessName();
+            int participants = activityBookingsRepository.countByActivityId(activity.getId());
             return new ActivitySummaryDTO(
-                activity.getId(),
-                activity.getActivityName(),
-                businessName,
-                activity.getStartDatetime(), // Or endDatetime
-                participants
+                    activity.getId(),
+                    activity.getActivityName(),
+                    businessName,
+                    activity.getStartDatetime(),
+                    participants
             );
-        }).toList();
+        }).collect(Collectors.toList());
     }
-    
-    @Autowired
-	private CurrencyRepository currencyRepository;
 
     private Currency getDefaultCurrencyIfNull(Currency currency) {
-	    if (currency != null) return currency;
-	    return currencyRepository.findByCurrencyType(CurrencyType.CAD)
-	            .orElseThrow(() -> new RuntimeException("Default currency not found"));
-	}
+        if (currency != null) return currency;
+        return currencyRepository.findByCurrencyType(CurrencyType.CAD)
+                .orElseThrow(() -> new RuntimeException("Default currency not found"));
+    }
+
+	
 }

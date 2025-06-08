@@ -6,9 +6,8 @@ import java.time.LocalDateTime;
 public class ActivityDetailsDTO {
 
     private Long id;
-    private String activityName;
+    private String activityName; // ✅ New field
     private String description;
-    private String activityType;
     private String location;
     private LocalDateTime startDatetime;
     private LocalDateTime endDatetime;
@@ -18,15 +17,14 @@ public class ActivityDetailsDTO {
     private String imageUrl;
     private String businessName;
 
-    // Constructor
-    public ActivityDetailsDTO(Long id, String activityName, String description, String activityType,
+    // ✅ Updated constructor
+    public ActivityDetailsDTO(Long id, String activityName, String description,
                               String location, LocalDateTime startDatetime, LocalDateTime endDatetime,
                               BigDecimal price, int maxParticipants, String status,
                               String imageUrl, String businessName) {
         this.id = id;
         this.activityName = activityName;
         this.description = description;
-        this.activityType = activityType;
         this.location = location;
         this.startDatetime = startDatetime;
         this.endDatetime = endDatetime;
@@ -38,99 +36,36 @@ public class ActivityDetailsDTO {
     }
 
     // Getters and Setters
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public String getActivityName() { return activityName; }
+    public void setActivityName(String activityName) { this.activityName = activityName; }
 
-    public String getActivityName() {
-        return activityName;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public void setActivityName(String activityName) {
-        this.activityName = activityName;
-    }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
 
-    public String getDescription() {
-        return description;
-    }
+    public LocalDateTime getStartDatetime() { return startDatetime; }
+    public void setStartDatetime(LocalDateTime startDatetime) { this.startDatetime = startDatetime; }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    public LocalDateTime getEndDatetime() { return endDatetime; }
+    public void setEndDatetime(LocalDateTime endDatetime) { this.endDatetime = endDatetime; }
 
-    public String getActivityType() {
-        return activityType;
-    }
+    public BigDecimal getPrice() { return price; }
+    public void setPrice(BigDecimal price) { this.price = price; }
 
-    public void setActivityType(String activityType) {
-        this.activityType = activityType;
-    }
+    public int getMaxParticipants() { return maxParticipants; }
+    public void setMaxParticipants(int maxParticipants) { this.maxParticipants = maxParticipants; }
 
-    public String getLocation() {
-        return location;
-    }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
-    public void setLocation(String location) {
-        this.location = location;
-    }
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
-    public LocalDateTime getStartDatetime() {
-        return startDatetime;
-    }
-
-    public void setStartDatetime(LocalDateTime startDatetime) {
-        this.startDatetime = startDatetime;
-    }
-
-    public LocalDateTime getEndDatetime() {
-        return endDatetime;
-    }
-
-    public void setEndDatetime(LocalDateTime endDatetime) {
-        this.endDatetime = endDatetime;
-    }
-
-    public BigDecimal getPrice() {
-        return price;
-    }
-
-    public void setPrice(BigDecimal price) {
-        this.price = price;
-    }
-
-    public int getMaxParticipants() {
-        return maxParticipants;
-    }
-
-    public void setMaxParticipants(int maxParticipants) {
-        this.maxParticipants = maxParticipants;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public String getBusinessName() {
-        return businessName;
-    }
-
-    public void setBusinessName(String businessName) {
-        this.businessName = businessName;
-    }
+    public String getBusinessName() { return businessName; }
+    public void setBusinessName(String businessName) { this.businessName = businessName; }
 }

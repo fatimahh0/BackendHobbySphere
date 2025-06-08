@@ -73,17 +73,18 @@ public class UsersController {
             @PathVariable Long id,
             @RequestBody Map<String, String> requestBody,
             @RequestHeader("Authorization") String token) {
-
         try {
             if (token == null || !token.startsWith("Bearer ")) {
                 return ResponseEntity.status(401).body("Missing or invalid token");
             }
 
             token = token.substring(7).trim();
-            String role = jwtUtil.extractRole(token);
+            String email = jwtUtil.extractUsername(token);
+            String role = jwtUtil.extractRole(token); // Optional
 
-            if (!"SUPER_ADMIN".equalsIgnoreCase(role)) {
-                return ResponseEntity.status(403).body("Access denied: Only SUPER_ADMIN can perform this action");
+            Users user = usersRepository.findByEmail(email);
+            if (user == null || (!user.getId().equals(id) && !"SUPER_ADMIN".equalsIgnoreCase(role))) {
+                return ResponseEntity.status(403).body("Access denied");
             }
 
             String password = requestBody.get("password");
@@ -92,16 +93,15 @@ public class UsersController {
             }
 
             boolean deleted = userService.deleteUserByIdWithPassword(id, password);
-            if (deleted) {
-                return ResponseEntity.ok("User deleted successfully");
-            } else {
-                return ResponseEntity.status(403).body("Invalid password or user not found");
-            }
+            return deleted
+                    ? ResponseEntity.ok("User deleted successfully")
+                    : ResponseEntity.status(403).body("Invalid password or user not found");
 
         } catch (Exception e) {
-            return ResponseEntity.status(401).body("Invalid or expired token");
+            return ResponseEntity.status(500).body("Unexpected error");
         }
     }
+
     @PostMapping("/reset-password")
     public ResponseEntity<Map<String, String>> sendResetCode(@RequestBody Map<String, String> body) {
         try {

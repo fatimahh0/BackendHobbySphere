@@ -56,30 +56,7 @@ public class AuthController {
     private UsersRepository UserRepository;
     
 
-    // Default User Registration
-    @PostMapping("/user/register")
-    public ResponseEntity<?> userRegister(@RequestBody @Valid Users user) {
-        boolean emailExists = userService.findByEmail(user.getEmail()) != null;
-        boolean usernameExists = userService.findByUsername(user.getUsername()) != null;
-
-        if (emailExists && usernameExists) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email and Username are already in use.");
-        } else if (usernameExists) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Username is already in use.");
-        } else if (emailExists) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email is already in use.");
-        }
-
-        if (user.getPasswordHash() == null || user.getPasswordHash().trim().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Password cannot be null or empty.");
-        }
-
-        user.setPasswordHash(passwordEncoder.encode(user.getPasswordHash()));
-        userService.save(user);
-
-        return ResponseEntity.ok("User registration successful");
-    }
+  
 
     // Multipart User Registration
     @PostMapping(value = "/user/register", consumes = "multipart/form-data")
@@ -254,6 +231,9 @@ public class AuthController {
         businessData.put("businessBanner", business.getBusinessBannerUrl());
         businessData.put("businessName",business.getBusinessName());
         businessData.put("phoneNumber",business.getPhoneNumber());
+        businessData.put("WebsiteUrl",business.getWebsiteUrl());
+        businessData.put("Description",business.getDescription());
+       
 
         // Full response map
         Map<String, Object> response = new HashMap<>();

@@ -2,7 +2,6 @@ package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,14 +18,15 @@ public class Activities {
     @JoinColumn(name = "business_id", nullable = false)
     private Businesses business;
 
-    @Column(name = "activity_name", nullable = false)
+    @Column(name = "activity_name", nullable = true)
     private String activityName;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "activity_type")
-    private String activityType;
+    @ManyToOne
+    @JoinColumn(name = "activity_type_id", nullable = true)
+    private ActivityType activityType;
 
     private String location;
 
@@ -39,28 +39,20 @@ public class Activities {
     private BigDecimal price;
 
     @Column(nullable = false)
-    private String status = "Upcoming"; // Default value in DB, set here for clarity
+    private String status = "Upcoming";
 
     @Column(name = "image_url")
     private String imageUrl;
 
     @Column(name = "max_participants", nullable = false)
-    private int maxParticipants; // Added max participants field
+    private int maxParticipants;
 
     @OneToMany(mappedBy = "activity")
     private List<ActivityBookings> bookings;
-    
+
     @Column(name = "view_count")
     private Long viewCount = 0L;
 
-    public Long getViewCount() {
-        return viewCount;
-    }
-
-    public void setViewCount(Long viewCount) {
-        this.viewCount = viewCount;
-    }
-    
     @ManyToOne
     @JoinColumn(name = "currency_id")
     private Currency currency;
@@ -71,13 +63,12 @@ public class Activities {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-
     // Constructors
     public Activities() {}
 
-    public Activities(Businesses business, String activityName, String description, String activityType,
-                    String location, LocalDateTime startDatetime, LocalDateTime endDatetime,
-                    BigDecimal price, String status, String imageUrl, int maxParticipants) {
+    public Activities(Businesses business, String activityName, String description, ActivityType activityType,
+                      String location, LocalDateTime startDatetime, LocalDateTime endDatetime,
+                      BigDecimal price, String status, String imageUrl, int maxParticipants) {
         this.business = business;
         this.activityName = activityName;
         this.description = description;
@@ -88,7 +79,7 @@ public class Activities {
         this.price = price;
         this.status = status != null ? status : "Upcoming";
         this.imageUrl = imageUrl;
-        this.maxParticipants = maxParticipants; // Set max participants
+        this.maxParticipants = maxParticipants;
     }
 
     @PrePersist
@@ -102,128 +93,54 @@ public class Activities {
     }
 
     // Getters and Setters
-    public Long getId() {
-        return id;
-    }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public Businesses getBusiness() {
-        return business;
-    }
+    public Businesses getBusiness() { return business; }
+    public void setBusiness(Businesses business) { this.business = business; }
 
-    public void setBusiness(Businesses business) {
-        this.business = business;
-    }
+    public String getActivityName() { return activityName; }
+    public void setActivityName(String activityName) { this.activityName = activityName; }
 
-    public String getActivityName() {
-        return activityName;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public void setActivityName(String activityName) {
-        this.activityName = activityName;
-    }
+    public ActivityType getActivityType() { return activityType; }
+    public void setActivityType(ActivityType activityType) { this.activityType = activityType; }
 
-    public String getDescription() {
-        return description;
-    }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    public LocalDateTime getStartDatetime() { return startDatetime; }
+    public void setStartDatetime(LocalDateTime startDatetime) { this.startDatetime = startDatetime; }
 
-    public String getActivityType() {
-        return activityType;
-    }
+    public LocalDateTime getEndDatetime() { return endDatetime; }
+    public void setEndDatetime(LocalDateTime endDatetime) { this.endDatetime = endDatetime; }
 
-    public void setActivityType(String activityType) {
-        this.activityType = activityType;
-    }
+    public BigDecimal getPrice() { return price; }
+    public void setPrice(BigDecimal price) { this.price = price; }
 
-    public String getLocation() {
-        return location;
-    }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
-    public void setLocation(String location) {
-        this.location = location;
-    }
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
-    public LocalDateTime getStartDatetime() {
-        return startDatetime;
-    }
+    public int getMaxParticipants() { return maxParticipants; }
+    public void setMaxParticipants(int maxParticipants) { this.maxParticipants = maxParticipants; }
 
-    public void setStartDatetime(LocalDateTime startDatetime) {
-        this.startDatetime = startDatetime;
-    }
+    public Long getViewCount() { return viewCount; }
+    public void setViewCount(Long viewCount) { this.viewCount = viewCount; }
 
-    public LocalDateTime getEndDatetime() {
-        return endDatetime;
-    }
+    public Currency getCurrency() { return currency; }
+    public void setCurrency(Currency currency) { this.currency = currency; }
 
-    public void setEndDatetime(LocalDateTime endDatetime) {
-        this.endDatetime = endDatetime;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    public BigDecimal getPrice() {
-        return price;
-    }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
-    public void setPrice(BigDecimal price) {
-        this.price = price;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public int getMaxParticipants() {
-        return maxParticipants;
-    }
-
-    public void setMaxParticipants(int maxParticipants) {
-        this.maxParticipants = maxParticipants;
-    }
-
-	public LocalDateTime getDate() {
-		
-		return endDatetime;
-	}
-
-	public Currency getCurrency() {
-	    return currency;
-	}
-
-	public void setCurrency(Currency currency) {
-	    this.currency = currency;
-	}
+    public LocalDateTime getDate() { return endDatetime; }
 }
