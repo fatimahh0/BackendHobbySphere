@@ -14,7 +14,7 @@ public class AdminUsers {
     @Column(name = "admin_id")
     private Long adminId;
 
-    @Column(name = "username", nullable = false, unique = true)
+    @Column(name = "username", nullable = false) // ✅ unique removed
     private String username;
 
     @Column(name = "first_name", nullable = false)
@@ -23,7 +23,7 @@ public class AdminUsers {
     @Column(name = "last_name", nullable = false)
     private String lastName;
 
-    @Column(name = "email", nullable = false, unique = true)
+    @Column(name = "email", nullable = false) // ✅ unique removed
     private String email;
 
     @JsonProperty("password")
@@ -53,7 +53,7 @@ public class AdminUsers {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
+
     public AdminUsers() {}
 
     public AdminUsers(String username, String firstName, String lastName, String email, String passwordHash, Role role) {
@@ -172,6 +172,7 @@ public class AdminUsers {
     public void setBusiness(Businesses business) {
         this.business = business;
     }
+
     public LanguageType getPreferredLanguage() {
         return preferredLanguage;
     }

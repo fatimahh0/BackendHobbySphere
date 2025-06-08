@@ -147,4 +147,40 @@ public class AdminUserService {
         usersRepository.deleteById(userId);
     }
 
+    @Transactional
+    public void deleteManagerById(Long adminId) {
+        // Step 1: Delete the BusinessAdmins relationship
+        businessAdminsRepository.findByAdmin_AdminId(adminId)
+                .ifPresent(businessAdminsRepository::delete);
+
+        // Step 2: Delete the AdminUsers entry
+        adminUserRepository.findById(adminId)
+                .ifPresent(adminUserRepository::delete);
+    }
+    
+    public List<UserSummaryDTO> getUsersByRole(String role) {
+        List<UserSummaryDTO> result = new ArrayList<>();
+
+        if ("user".equalsIgnoreCase(role)) {
+            result = usersRepository.findAll().stream()
+                    .map(u -> new UserSummaryDTO(
+                            u.getFirstName() + " " + u.getLastName(),
+                            u.getEmail(),
+                            "user"))
+                    .collect(Collectors.toList());
+        } else {
+            result = adminUserRepository.findAll().stream()
+                    .filter(a -> a.getRole().getName().equalsIgnoreCase(role))
+                    .map(a -> new UserSummaryDTO(
+                            a.getFirstName() + " " + a.getLastName(),
+                            a.getEmail(),
+                            a.getRole().getName()))
+                    .collect(Collectors.toList());
+        }
+
+        return result;
+    }
+
+
+
 }

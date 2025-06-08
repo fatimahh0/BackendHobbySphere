@@ -20,4 +20,9 @@ public class ReviewService {
     public List<Review> getReviewsByActivity(Long activityId) {
         return reviewRepository.findByActivityIdOrderByDateDesc(activityId);  // Get reviews for a specific activity
     }
+    
+    public List<Review> getReviewsByBusiness(Long businessId) {
+        return reviewRepository.findReviewsByBusinessId(businessId);
+    }
+
 }
