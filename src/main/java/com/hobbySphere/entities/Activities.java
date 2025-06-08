@@ -18,14 +18,14 @@ public class Activities {
     @JoinColumn(name = "business_id", nullable = false)
     private Businesses business;
 
-    @Column(name = "activity_name", nullable = true)
+    @Column(name = "activity_name", nullable = false)
     private String activityName;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
     @ManyToOne
-    @JoinColumn(name = "activity_type_id", nullable = true)
+    @JoinColumn(name = "activity_type_id", nullable = false)
     private ActivityType activityType;
 
     private String location;

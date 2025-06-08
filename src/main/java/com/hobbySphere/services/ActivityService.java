@@ -131,7 +131,8 @@ public class ActivityService {
             LocalDateTime endDatetime,
             String status,
             Long businessId,
-            MultipartFile image) throws IOException {
+            MultipartFile image,
+            boolean imageRemoved) throws IOException {
 
         Activities activity = activityRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Activity not found"));
@@ -155,6 +156,16 @@ public class ActivityService {
         }
         activity.setBusiness(business);
 
+        // 🔥 Remove image if requested
+        if (imageRemoved && activity.getImageUrl() != null) {
+            // Optionally: delete the old image file from disk
+            Path oldImagePath = Paths.get("uploads/", Paths.get(activity.getImageUrl()).getFileName().toString());
+            Files.deleteIfExists(oldImagePath);
+
+            activity.setImageUrl(null);
+        }
+
+        // 🖼️ Save new image if provided
         if (image != null && !image.isEmpty()) {
             String imageFileName = UUID.randomUUID() + "_" + StringUtils.cleanPath(image.getOriginalFilename());
             Path imagePath = Paths.get("uploads/", imageFileName);
@@ -164,6 +175,7 @@ public class ActivityService {
 
         return activityRepository.save(activity);
     }
+
 
     @Transactional
     public void rejectActivity(Long activityId) {
@@ -205,6 +217,8 @@ public class ActivityService {
         return currencyRepository.findByCurrencyType(CurrencyType.CAD)
                 .orElseThrow(() -> new RuntimeException("Default currency not found"));
     }
+
+	
 
 	
 }

@@ -16,7 +16,7 @@ public class Review {
     private Activities activity;
 
     @ManyToOne
-    @JoinColumn(name = "customer_id", nullable = true)
+   @JoinColumn(name = "user_id", nullable = false)
     private Users customer;
 
     @Column(nullable = false)

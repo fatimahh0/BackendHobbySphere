@@ -31,11 +31,13 @@ public class JwtUtil {
                 .claim("firstName", user.getFirstName())
                 .claim("lastName", user.getLastName())
                 .claim("profileImageUrl", user.getProfilePictureUrl())
+                .claim("role", "USER")
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
+
     public String generateToken(Businesses business) {
         return Jwts.builder()
                 .setSubject(business.getEmail())

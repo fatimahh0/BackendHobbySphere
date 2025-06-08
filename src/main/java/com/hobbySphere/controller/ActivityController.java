@@ -177,13 +177,15 @@ public class ActivityController {
             @RequestParam("endDatetime") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDatetime,
             @RequestParam("status") String status,
             @RequestParam("businessId") Long businessId,
-            @RequestParam(value = "image", required = false) MultipartFile image
+            @RequestParam(value = "image", required = false) MultipartFile image,
+            @RequestParam(value = "imageRemoved", required = false) Boolean imageRemoved
     ) {
         try {
-            Activities updatedActivity = activityService.updateActivityWithImage(
-                    id, activityName, activityTypeId, description, location, maxParticipants, price,
-                    startDatetime, endDatetime, status, businessId, image
-            );
+        	Activities updatedActivity = activityService.updateActivityWithImage(
+        		    id, activityName, activityTypeId, description, location, maxParticipants, price,
+        		    startDatetime, endDatetime, status, businessId, image, imageRemoved != null && imageRemoved
+        		);
+
             return ResponseEntity.status(HttpStatus.OK).body(Map.of(
                     "message", "Activity updated successfully",
                     "activity", updatedActivity
