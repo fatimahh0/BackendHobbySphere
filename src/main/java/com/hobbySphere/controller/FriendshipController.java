@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import java.security.Principal;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/friends")
@@ -147,4 +148,29 @@ public class FriendshipController {
             return ResponseEntity.badRequest().body(Collections.singletonMap("message", ex.getMessage()));
         }
     }
+    
+    @GetMapping("/status/{userId}")
+    public ResponseEntity<?> getFriendshipStatus(@PathVariable Long userId, Principal principal) {
+        try {
+            Users currentUser = userService.getUserByEmaill(principal.getName());
+            Users otherUser = userService.getUserById(userId);
+
+            boolean youBlockedThem = friendshipService.didBlock(currentUser, otherUser);
+            boolean theyBlockedYou = friendshipService.didBlock(otherUser, currentUser);
+            boolean isFriend = friendshipService.areFriends(currentUser, otherUser);
+
+            return ResponseEntity.ok(
+                Map.of(
+                    "youBlockedThem", youBlockedThem,
+                    "theyBlockedYou", theyBlockedYou,
+                    "isFriend", isFriend
+                )
+            );
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("message", ex.getMessage()));
+        }
+    }
+
+
+
 }

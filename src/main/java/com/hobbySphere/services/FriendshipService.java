@@ -160,6 +160,23 @@ public class FriendshipService {
                 .map(Friendship::getFriend)  // return receivers
                 .collect(Collectors.toList());
     }
+    
+    
+ //  Check if current user blocked another user
+    public boolean isBlocked(Users currentUser, Users otherUser) {
+        return friendshipRepo.findByUserIdAndFriendIdAndStatus(currentUser.getId(), otherUser.getId(), "BLOCKED").isPresent();
+    }
 
+    //  Check if users are friends (ACCEPTED relationship either direction)
+    public boolean areFriends(Users user1, Users user2) {
+        return friendshipRepo.findAcceptedFriendship(user1.getId(), user2.getId()).isPresent();
+    }
+    
+    public boolean didBlock(Users blocker, Users blocked) {
+        return friendshipRepo.findByUserIdAndFriendIdAndStatus(blocker.getId(), blocked.getId(), "BLOCKED").isPresent();
+    }
+
+
+    
 
 } 

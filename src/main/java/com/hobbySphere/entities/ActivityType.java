@@ -1,5 +1,6 @@
 package com.hobbySphere.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
@@ -14,6 +15,11 @@ public class ActivityType {
     @JsonProperty("activity_type")               // JSON field
     private String name;
 
+    @JsonIgnore
+    @ManyToOne
+    @JoinColumn(name = "interest_id", nullable = true)
+    private Interests interest;
+
     public ActivityType() {}
 
     public ActivityType(Long id, String name) {
@@ -21,9 +27,18 @@ public class ActivityType {
         this.name = name;
     }
 
+    public ActivityType(Long id, String name, Interests interest) {
+        this.id = id;
+        this.name = name;
+        this.interest = interest;
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public Interests getInterest() { return interest; }
+    public void setInterest(Interests interest) { this.interest = interest; }
 }

@@ -1,6 +1,10 @@
 package com.hobbySphere.services;
 
+import com.hobbySphere.entities.Interests;
+import com.hobbySphere.entities.UserInterests;
 import com.hobbySphere.entities.Users;
+import com.hobbySphere.repositories.InterestsRepository;
+import com.hobbySphere.repositories.UserInterestsRepository;
 import com.hobbySphere.repositories.UsersRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,6 +34,13 @@ public class UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    
+    @Autowired
+    private UserInterestsRepository userInterestsRepository;
+
+    @Autowired
+    private InterestsRepository interestsRepository;
+
     
     private final EmailService emailService;
 
@@ -217,6 +228,28 @@ public class UserService {
         userRepository.save(user);
         return true;
     }    
+    
+    public void addUserInterests(Long userId, List<Long> interestIds) {
+        Users user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        for (Long interestId : interestIds) {
+            Interests interest = interestsRepository.findById(interestId)
+                    .orElseThrow(() -> new RuntimeException("Interest not found"));
+
+            UserInterests.UserInterestId compositeKey = new UserInterests.UserInterestId(user, interest);
+
+            if (!userInterestsRepository.existsById(compositeKey)) {
+                UserInterests userInterest = new UserInterests();
+                userInterest.setId(compositeKey);
+                userInterest.setInterest(interest);
+                userInterestsRepository.save(userInterest);
+            }
+        }
+    }
+
+    
+    
     
 }
 

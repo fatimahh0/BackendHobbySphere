@@ -291,4 +291,17 @@ public class ActivityController {
         response.put("bookingId", booking.getId());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+    
+    @GetMapping("/interest-based/{userId}")
+    @Operation(summary = "Get activities by user's interests")
+    public ResponseEntity<?> getActivitiesByUserInterests(@PathVariable Long userId) {
+        List<Activities> activities = activityService.findActivitiesByUserInterests(userId);
+        if (activities.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                Map.of("message", "No activities found for user's interests")
+            );
+        }
+        return ResponseEntity.ok(activities);
+    }
+
 }

@@ -40,6 +40,16 @@ public interface ActivitiesRepository extends JpaRepository<Activities, Long> {
            "FROM Activities a JOIN a.business b")
     List<AdminActivityDTO> findAllActivitiesWithBusinessInfo();
 
+    @Query("""
+    	    SELECT a FROM Activities a
+    	    WHERE a.activityType.interest.id IN (
+    	        SELECT ui.id.interest.id FROM UserInterests ui
+    	        WHERE ui.id.user.id = :userId
+    	    )
+    	""")
+    	List<Activities> findAllByUserInterests(@Param("userId") Long userId);
+
+    
 	Activities findByActivityName(String activity);
 
 

@@ -43,10 +43,7 @@ public class ChatMessagesController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Sender or receiver not found.");
         }
 
-        // ✅ Block message if not friends
-        if (!friendshipRepo.areFriends(sender.getId(), receiver.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only message your friends.");
-        }
+       
 
         String imageUrl = (image != null && !image.isEmpty()) ? chatService.uploadImage(image) : null;
 
@@ -64,10 +61,7 @@ public class ChatMessagesController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
 
-        if (!friendshipRepo.areFriends(currentUser.getId(), otherUser.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not friends.");
-        }
-
+       
         chatService.markMessagesAsRead(currentUser, otherUser);
 
         List<ChatMessages> messages = chatService.getConversation(currentUser, otherUser);

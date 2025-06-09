@@ -217,6 +217,11 @@ public class ActivityService {
         return currencyRepository.findByCurrencyType(CurrencyType.CAD)
                 .orElseThrow(() -> new RuntimeException("Default currency not found"));
     }
+    
+    public List<Activities> findActivitiesByUserInterests(Long userId) {
+        return activityRepository.findAllByUserInterests(userId);
+    }
+
 
 	
 

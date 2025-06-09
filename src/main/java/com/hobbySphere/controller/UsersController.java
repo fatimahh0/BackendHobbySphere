@@ -162,4 +162,15 @@ public class UsersController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Unexpected error"));
         }
     }
+    
+    
+    @PostMapping("/{userId}/interests")
+    public ResponseEntity<?> addUserInterests(
+            @PathVariable Long userId,
+            @RequestBody List<Long> interestIds
+    ) {
+        userService.addUserInterests(userId, interestIds);
+        return ResponseEntity.ok(Map.of("message", "User interests added successfully"));
+    }
+
     }
