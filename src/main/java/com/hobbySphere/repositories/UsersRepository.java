@@ -35,6 +35,7 @@ public interface UsersRepository extends JpaRepository<Users, Long> {
 
     
 
+    	Object findByPhoneNumber(String phone);
 
 	
 

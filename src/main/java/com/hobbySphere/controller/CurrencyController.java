@@ -1,8 +1,10 @@
 package com.hobbySphere.controller;
 
 import com.hobbySphere.dto.CurrencyRequest;
+import com.hobbySphere.entities.AppSettings;
 import com.hobbySphere.entities.Currency;
 import com.hobbySphere.enums.CurrencyType;
+import com.hobbySphere.repositories.AppSettingsRepository;
 import com.hobbySphere.repositories.CurrencyRepository;
 import com.hobbySphere.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +25,9 @@ public class CurrencyController {
 
     @Autowired
     private CurrencyRepository currencyRepository;
+    
+    @Autowired
+    private AppSettingsRepository appSettingsRepository;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -56,9 +61,15 @@ public class CurrencyController {
 
         try {
             CurrencyType currencyType = CurrencyType.valueOf(type);
-
             Optional<Currency> selectedCurrency = currencyRepository.findByCurrencyType(currencyType);
+
             if (selectedCurrency.isPresent()) {
+                // ✅ Update global setting
+                AppSettings settings = appSettingsRepository.findById(1L)
+                    .orElse(new AppSettings());
+                settings.setCurrency(selectedCurrency.get());
+                appSettingsRepository.save(settings);
+
                 return ResponseEntity.ok(selectedCurrency.get());
             } else {
                 return ResponseEntity.badRequest().body("Currency type not found in the database.");
@@ -68,4 +79,5 @@ public class CurrencyController {
             return ResponseEntity.badRequest().body("Invalid currency type. Choose: DOLLAR, EURO, or CAD.");
         }
     }
+
 }

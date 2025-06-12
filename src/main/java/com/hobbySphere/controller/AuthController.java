@@ -59,46 +59,46 @@ public class AuthController {
     
 
   
-
-    // Multipart User Registration
-    @PostMapping(value = "/user/register", consumes = "multipart/form-data")
-    public ResponseEntity<?> userRegisterMultipart(
+    @PostMapping(value = "/send-verification", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> sendVerification(
+            @RequestParam("email") String email,
             @RequestParam("username") String username,
             @RequestParam("firstName") String firstName,
             @RequestParam("lastName") String lastName,
-            @RequestParam("email") String email,
             @RequestParam("password") String password,
-            @RequestParam(value = "profileImage", required = false) MultipartFile profileImage
-    ) {
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
         try {
-            boolean emailExists = userService.findByEmail(email) != null;
-            boolean usernameExists = userService.findByUsername(username) != null;
-
-            if (emailExists && usernameExists) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body("Email and Username are already in use.");
-            } else if (usernameExists) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body("Username is already in use.");
-            } else if (emailExists) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body("Email is already in use.");
-            }
-
-            Users savedUser = userService.registerUser(
-                    username, firstName, lastName, email, password, profileImage
+            Map<String, String> userData = Map.of(
+                "email", email,
+                "username", username,
+                "firstName", firstName,
+                "lastName", lastName,
+                "password", password
             );
-
-            return ResponseEntity.ok(Map.of(
-                    "message", "User registration successful",
-                    "user", savedUser
-            ));
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Registration failed: " + e.getMessage());
+            boolean sent = userService.sendVerificationCodeForRegistration(userData, profileImage);
+            return ResponseEntity.ok(Map.of("message", "Verification code sent"));
+        } catch (RuntimeException | IOException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+
+    @PostMapping("/verify-email-code")
+    public ResponseEntity<?> verifyEmailCode(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String code = request.get("code");
+
+        boolean verified = userService.verifyEmailCodeAndRegister(email, code);
+
+        if (verified) {
+            return ResponseEntity.ok(Map.of("message", "Account created successfully"));
+        } else {
+            return ResponseEntity.status(400).body(Map.of("error", "Invalid code or email"));
+        }
+    }
+
+
+    
   
     @PostMapping(value = "/business/register", consumes = "multipart/form-data")
     public ResponseEntity<?> registerBusinessMultipart(

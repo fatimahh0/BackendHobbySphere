@@ -1,5 +1,7 @@
 package com.hobbySphere.controller;
 
+import com.hobbySphere.dto.BookingDTO;
+import com.hobbySphere.dto.BookingPriceResponse;
 import com.hobbySphere.entities.ActivityBookings;
 import com.hobbySphere.services.ActivityBookingService;
 import com.hobbySphere.security.JwtUtil;
@@ -224,4 +226,65 @@ public class ActivityBookingController {
             throw new IllegalStateException("Booking must be CANCELED and belong to you.");
         }
     }
+    
+    @GetMapping("/mybookings/with-symbol")
+    public ResponseEntity<?> getMyBookingsWithSymbols(@RequestHeader("Authorization") String tokenHeader) {
+        try {
+            if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Missing or invalid Authorization header"));
+            }
+
+            String token = tokenHeader.substring(7).trim(); // Remove "Bearer "
+
+            if (!jwtUtil.isUserToken(token)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Only USER accounts can access this endpoint"));
+            }
+
+            String userEmail = jwtUtil.extractUsername(token);
+            List<BookingPriceResponse> responses = bookingService.getBookingsWithCurrencySymbol(userEmail);
+            return ResponseEntity.ok(responses);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Invalid or expired token"));
+        }
+    }
+
+    @Operation(summary = "Get all bookings in the system (SUPER_ADMIN only)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "All bookings retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized or invalid token"),
+        @ApiResponse(responseCode = "403", description = "Access denied – not SUPER_ADMIN")
+    })
+    
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllBookingsForAdmin(@RequestHeader("Authorization") String tokenHeader) {
+        try {
+            if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Missing or invalid Authorization header"));
+            }
+
+            String token = tokenHeader.substring(7).trim();
+            String role = jwtUtil.extractRole(token);
+            System.out.println("Extracted role: " + role);
+
+            if (!"SUPER_ADMIN".equals(role)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Only SUPER_ADMIN users can access this endpoint"));
+            }
+
+            List<BookingDTO> allBookings = bookingService.getAllBookingsAsDTO(); // ✅ DTO method
+            return ResponseEntity.ok(allBookings);
+
+        } catch (Exception e) {
+            e.printStackTrace();  // ✅ Show the real issue in console
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+
 }   

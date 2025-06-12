@@ -24,8 +24,12 @@ public class Users {
     @Column(nullable = false)
     private String lastName;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String email;
+    
+    @Column(unique = true)
+    private String phoneNumber;
+
 
     @Column(nullable = false)
     private String passwordHash;
@@ -40,8 +44,18 @@ public class Users {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+    
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
     
     @Enumerated(EnumType.STRING)
     @Column(name = "preferred_language")
@@ -147,5 +161,5 @@ public class Users {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
-    }
+        }
 }

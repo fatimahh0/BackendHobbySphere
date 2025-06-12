@@ -4,6 +4,7 @@ import com.hobbySphere.entities.Activities;
 import com.hobbySphere.entities.ActivityBookings;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.repositories.CurrencyRepository;
+import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.ActivityService;
 import com.hobbySphere.services.ActivityBookingService;
 import com.hobbySphere.services.UserService;
@@ -16,6 +17,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+
+import com.hobbySphere.dto.ActivityPriceResponse;
 import com.hobbySphere.dto.BookingRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +39,9 @@ import java.util.*;
 })
 @Tag(name = "Activities API", description = "Endpoints for managing activities")
 public class ActivityController {
+	
+	@Autowired
+	private JwtUtil jwtUtil;
 
     @Autowired
     private CurrencyRepository currencyRepository;
@@ -302,6 +308,27 @@ public class ActivityController {
             );
         }
         return ResponseEntity.ok(activities);
+    }
+
+    @GetMapping("/with-symbol")
+    public ResponseEntity<?> getActivitiesWithSymbols(@RequestHeader("Authorization") String tokenHeader) {
+        try {
+            if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid Authorization header"));
+            }
+
+            String token = tokenHeader.substring(7).trim(); // Remove "Bearer "
+
+            if (!jwtUtil.isSuperAdmin(token)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Only SUPER_ADMIN can access this endpoint"));
+            }
+
+            List<ActivityPriceResponse> responses = activityService.getActivitiesWithCurrencySymbol();
+            return ResponseEntity.ok(responses);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid or expired token"));
+        }
     }
 
 }

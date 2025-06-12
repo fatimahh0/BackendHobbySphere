@@ -123,5 +123,31 @@ public class ReviewController {
     	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
     	    }
     	}
+    
+    @Operation(
+    	    summary = "Get all reviews for a business",
+    	    description = "Retrieve all reviews for activities belonging to a specific business."
+    	)
+    	@ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Reviews retrieved successfully"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized access"),
+    	    @ApiResponse(responseCode = "404", description = "No reviews found for the business")
+    	})
+    	@GetMapping("/business/{businessId}")
+    	public ResponseEntity<?> getReviewsByBusiness(
+    	        @RequestHeader("Authorization") String token,
+    	        @Parameter(description = "ID of the business") @PathVariable Long businessId) {
+
+    	    if (!isAuthorized(token)) {
+    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied.");
+    	    }
+
+    	    List<Review> reviews = reviewService.getReviewsByBusiness(businessId);
+    	    if (reviews.isEmpty()) {
+    	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No reviews found for this business.");
+    	    }
+
+    	    return ResponseEntity.ok(reviews);
+    	}
 
 }

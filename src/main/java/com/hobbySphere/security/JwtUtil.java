@@ -45,6 +45,7 @@ public class JwtUtil {
                 .claim("businessName", business.getBusinessName())
                 .claim("logoUrl", business.getBusinessLogoUrl())
                 .claim("bannerUrl", business.getBusinessBannerUrl())
+                .claim ("role", "BUSINESS")
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -62,9 +63,6 @@ public class JwtUtil {
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
-
-
-
 
     public String extractUsername(String token) {
         return Jwts.parserBuilder()
@@ -141,6 +139,4 @@ public class JwtUtil {
             return false;
         }
     }
-
-   
 }

@@ -2,12 +2,17 @@ package com.hobbySphere.services;
 import com.hobbySphere.enums.*;
 
 import com.hobbySphere.repositories.ActivityBookingsRepository;
+import com.hobbySphere.repositories.AppSettingsRepository;
 import com.hobbySphere.repositories.CurrencyRepository;
 import com.hobbySphere.repositories.UsersRepository;
 
 import jakarta.transaction.Transactional;
 
+import com.hobbySphere.dto.BookingDTO;
+import com.hobbySphere.dto.BookingPriceResponse;
+import com.hobbySphere.entities.Activities;
 import com.hobbySphere.entities.ActivityBookings;
+import com.hobbySphere.entities.AppSettings;
 import com.hobbySphere.entities.Currency;
 import com.hobbySphere.enums.CurrencyType;
 
@@ -16,6 +21,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 
 import java.util.List;
+import java.util.stream.Collectors;
+
 
 @Service
 public class ActivityBookingService {
@@ -171,14 +178,56 @@ public class ActivityBookingService {
 	            .orElseThrow(() -> new RuntimeException("Default currency not found"));
 	}
 
-
-	
-
 	public void deleteByActivityId(Long activityId) {
 		activityBookingsRepository.deleteByActivityId(activityId);
 	}
 
+	@Autowired
+	private AppSettingsRepository appSettingsRepository;
 
+	@Transactional
+	public List<BookingPriceResponse> getBookingsWithCurrencySymbol(String userEmail) {
+	    Currency selectedCurrency = appSettingsRepository.findById(1L)
+	        .map(AppSettings::getCurrency)
+	        .orElseThrow(() -> new RuntimeException("Currency not set in app settings"));
 
+	    return activityBookingsRepository.findByUserEmailWithActivity(userEmail).stream()
+	        .map(booking -> {
+	            Activities activity = booking.getActivity();
+	            if (activity == null) {
+	                throw new RuntimeException("Activity not found for booking ID: " + booking.getId());
+	            }
+
+	            return new BookingPriceResponse(
+	                booking.getId(),
+	                activity.getActivityName(),
+	                booking.getNumberOfParticipants(),
+	                booking.getTotalPrice(),
+	                selectedCurrency.getSymbol()
+	            );
+	        })
+	        .collect(Collectors.toList());
+	}
+
+	public List<ActivityBookings> getAllBookings() {
+	    return activityBookingsRepository.findAll(); // assuming JPA repository is injected
+	}
+
+	public List<BookingDTO> getAllBookingsAsDTO() {
+	    Currency selectedCurrency = appSettingsRepository.findById(1L)
+	        .map(AppSettings::getCurrency)
+	        .orElseThrow(() -> new RuntimeException("Currency not set in app settings"));
+
+	    return activityBookingsRepository.findAllWithActivityAndUser().stream()
+	        .map(b -> new BookingDTO(
+	        	    b.getId(),
+	        	    b.getActivity().getActivityName(),
+	        	    b.getUser().getEmail(),
+	        	    b.getNumberOfParticipants(),
+	        	    b.getTotalPrice().doubleValue(), 
+	        	    selectedCurrency.getSymbol()// ✅ Fix here
+	        	))
+	        .collect(Collectors.toList());
+	}
 
 }

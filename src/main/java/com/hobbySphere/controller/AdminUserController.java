@@ -31,5 +31,7 @@ public class AdminUserController {
     public List<UserSummaryDTO> getUsersByRole(@RequestParam String role) {
         return adminUserService.getUsersByRole(role);
     }
+    
+    
 
 }

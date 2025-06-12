@@ -98,4 +98,11 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
     @Transactional
     @Query("DELETE FROM ActivityBookings ab WHERE ab.activity.id = :activityId")
     void deleteByActivityId(@Param("activityId") Long activityId);
+    
+    @Query("SELECT b FROM ActivityBookings b JOIN FETCH b.activity a WHERE b.user.email = :userEmail")
+    List<ActivityBookings> findByUserEmailWithActivity(@Param("userEmail") String userEmail);
+
+    @Query("SELECT b FROM ActivityBookings b JOIN FETCH b.activity JOIN FETCH b.user")
+    List<ActivityBookings> findAllWithActivityAndUser();
+
 }

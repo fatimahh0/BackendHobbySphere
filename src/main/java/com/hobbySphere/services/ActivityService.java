@@ -2,6 +2,7 @@ package com.hobbySphere.services;
 
 import com.hobbySphere.entities.*;
 import com.hobbySphere.enums.CurrencyType;
+import com.hobbySphere.dto.ActivityPriceResponse;
 import com.hobbySphere.dto.ActivitySummaryDTO;
 import com.hobbySphere.repositories.*;
 
@@ -222,6 +223,23 @@ public class ActivityService {
         return activityRepository.findAllByUserInterests(userId);
     }
 
+    @Autowired
+    private AppSettingsRepository appSettingsRepository;
+
+    public List<ActivityPriceResponse> getActivitiesWithCurrencySymbol() {
+        Currency selectedCurrency = appSettingsRepository.findById(1L)
+            .map(AppSettings::getCurrency)
+            .orElseThrow(() -> new RuntimeException("Currency not set in app settings"));
+
+        return activityRepository.findAll().stream()
+            .map(activity -> new ActivityPriceResponse(
+                activity.getId(),
+                activity.getActivityName(),
+                activity.getPrice(),
+                selectedCurrency.getSymbol()
+            ))
+            .collect(Collectors.toList());
+    }
 
 	
 

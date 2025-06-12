@@ -7,6 +7,7 @@ public class UserDto {
     private String firstName;
     private String lastName;
     private String email;
+    private String phoneNumber;           
     private String profileImageUrl;
 
     public UserDto() {}
@@ -16,6 +17,7 @@ public class UserDto {
         this.firstName = user.getFirstName();
         this.lastName = user.getLastName();
         this.email = user.getEmail();
+        this.phoneNumber = user.getPhoneNumber(); 
         this.profileImageUrl = user.getProfilePictureUrl();
     }
 
@@ -34,6 +36,10 @@ public class UserDto {
 
     public String getEmail() {
         return email;
+    }
+
+    public String getPhoneNumber() { // 
+        return phoneNumber;
     }
 
     public String getProfileImageUrl() {
@@ -57,7 +63,11 @@ public class UserDto {
         this.email = email;
     }
 
+    public void setPhoneNumber(String phoneNumber) { // 
+        this.phoneNumber = phoneNumber;
+    }
+
     public void setProfileImageUrl(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
-    }
+        }
 }

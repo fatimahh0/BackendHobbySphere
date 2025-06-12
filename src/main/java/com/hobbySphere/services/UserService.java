@@ -1,9 +1,11 @@
 package com.hobbySphere.services;
 
 import com.hobbySphere.entities.Interests;
+import com.hobbySphere.entities.PendingUser;
 import com.hobbySphere.entities.UserInterests;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.repositories.InterestsRepository;
+import com.hobbySphere.repositories.PendingUserRepository;
 import com.hobbySphere.repositories.UserInterestsRepository;
 import com.hobbySphere.repositories.UsersRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.Optional;
@@ -40,8 +43,11 @@ public class UserService {
 
     @Autowired
     private InterestsRepository interestsRepository;
-
     
+    @Autowired
+    private PendingUserRepository pendingUserRepository;
+
+    @Autowired
     private final EmailService emailService;
 
     //  Inject EmailService using constructor
@@ -49,10 +55,79 @@ public class UserService {
         this.emailService = emailService;
     }
     
+    public boolean sendVerificationCodeForRegistration(Map<String, String> userData, MultipartFile profileImage) throws IOException {
+        String email = userData.get("email");
+        String phone = userData.get("phone");
+        String username = userData.get("username");
+        String password = userData.get("password");
+        String firstName = userData.get("firstName");
+        String lastName = userData.get("lastName");
+
+        if ((email == null && phone == null) || (email != null && phone != null)) {
+            throw new RuntimeException("You must provide either email or phone, not both");
+        }
+
+        if (email != null && (pendingUserRepository.existsByEmail(email) || userRepository.findByEmail(email) != null)) {
+            throw new RuntimeException("Email is already in use");
+        }
+
+        if (phone != null && (pendingUserRepository.existsByPhoneNumber(phone) || userRepository.findByPhoneNumber(phone) != null)) {
+            throw new RuntimeException("Phone number is already in use");
+        }
+
+        if (pendingUserRepository.existsByUsername(username) || userRepository.findByUsername(username) != null) {
+            throw new RuntimeException("Username is already in use");
+        }
+
+        String code = String.format("%06d", new Random().nextInt(999999));
+        String profileImageUrl = null;
+
+        if (profileImage != null && !profileImage.isEmpty()) {
+            String filename = UUID.randomUUID() + "_" + profileImage.getOriginalFilename();
+            Path path = Paths.get("uploads");
+            if (!Files.exists(path)) Files.createDirectories(path);
+            Path fullPath = path.resolve(filename);
+            Files.copy(profileImage.getInputStream(), fullPath, StandardCopyOption.REPLACE_EXISTING);
+            profileImageUrl = "/uploads/" + filename;
+        }
+
+        PendingUser pending = new PendingUser();
+        pending.setEmail(email);
+        pending.setPhoneNumber(phone);
+        pending.setUsername(username);
+        pending.setPasswordHash(passwordEncoder.encode(password));
+        pending.setFirstName(firstName);
+        pending.setLastName(lastName);
+        pending.setProfilePictureUrl(profileImageUrl);
+        pending.setVerificationCode(code);
+        pending.setCreatedAt(LocalDateTime.now());
+
+        pendingUserRepository.save(pending);
+
+        if (email != null) {
+        	String htmlMessage = """
+        		    <html>
+        		    <body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+        		        <h2 style="color: #4CAF50;">Welcome to HobbySphere!</h2>
+        		        <p style="font-size: 16px;">Hello,</p>
+        		        <p style="font-size: 16px;">Thank you for registering. Please use the code below to verify your email address:</p>
+        		        <h1 style="color: #2196F3;">%s</h1>
+        		        <p style="font-size: 14px; color: #777;">This code will expire in 10 minutes.</p>
+        		    </body>
+        		    </html>
+        		""".formatted(code);
+
+        		//  Use HTML mail method
+        		emailService.sendHtmlEmail(email, "Email Verification Code", htmlMessage);
+
+        }
+
+        return true;
+    }
+
+    
     private final Map<String, String> resetCodes = new ConcurrentHashMap<>();
-
-   
-
+    
     public Users registerUser(
             String username,
             String firstName,
@@ -248,15 +323,31 @@ public class UserService {
         }
     }
 
-    
-    
-    
+    public boolean verifyEmailCodeAndRegister(String email, String code) {
+        PendingUser pending = pendingUserRepository.findByEmail(email);
+
+        if (pending == null || !pending.getVerificationCode().equals(code)) {
+            return false;
+        }
+
+        // Create actual user
+        Users user = new Users();
+        user.setEmail(pending.getEmail());
+        user.setUsername(pending.getUsername());
+        user.setPasswordHash(pending.getPasswordHash());
+        user.setFirstName(pending.getFirstName());
+        user.setLastName(pending.getLastName());
+        user.setStatus("Active");
+        user.setCreatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+        pendingUserRepository.delete(pending); // Clean up
+
+        return true;
 }
+    
+    public List<Users> getAllUsers(){
+    	return userRepository.findAll();
+    	}
 
-
-
-
-
-
-
-
+}

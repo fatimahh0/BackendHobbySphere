@@ -122,13 +122,15 @@ public class AdminUserService {
 
         List<UserSummaryDTO> users = usersRepository.findAll().stream()
                 .map(u -> new UserSummaryDTO(
+                        u.getId(),
                         u.getFirstName() + " " + u.getLastName(),
                         u.getEmail(),
-                        "user"))
+                        "USER"))
                 .collect(Collectors.toList());
 
         List<UserSummaryDTO> admins = adminUserRepository.findAll().stream()
                 .map(a -> new UserSummaryDTO(
+                        a.getAdminId(),
                         a.getFirstName() + " " + a.getLastName(),
                         a.getEmail(),
                         a.getRole().getName()))
@@ -157,21 +159,23 @@ public class AdminUserService {
         adminUserRepository.findById(adminId)
                 .ifPresent(adminUserRepository::delete);
     }
-    
+
     public List<UserSummaryDTO> getUsersByRole(String role) {
         List<UserSummaryDTO> result = new ArrayList<>();
 
-        if ("user".equalsIgnoreCase(role)) {
+        if ("USER".equalsIgnoreCase(role)) {
             result = usersRepository.findAll().stream()
                     .map(u -> new UserSummaryDTO(
+                            u.getId(),
                             u.getFirstName() + " " + u.getLastName(),
                             u.getEmail(),
-                            "user"))
+                            "USER"))
                     .collect(Collectors.toList());
         } else {
             result = adminUserRepository.findAll().stream()
                     .filter(a -> a.getRole().getName().equalsIgnoreCase(role))
                     .map(a -> new UserSummaryDTO(
+                            a.getAdminId(),
                             a.getFirstName() + " " + a.getLastName(),
                             a.getEmail(),
                             a.getRole().getName()))
@@ -181,6 +185,9 @@ public class AdminUserService {
         return result;
     }
 
-
+    public boolean isUserAlreadyManager(Users user, Businesses business) {
+        List<AdminUsers> results = adminUserRepository.findByEmailAndBusiness(user.getEmail(), business);
+        return !results.isEmpty();
+}
 
 }
