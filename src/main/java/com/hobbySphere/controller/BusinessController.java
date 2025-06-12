@@ -133,36 +133,45 @@ public class BusinessController {
     @Operation(summary = "Request password reset")
     @PostMapping("/reset-password")
     public ResponseEntity<Map<String, String>> sendBusinessResetCode(
-            @RequestHeader("Authorization") String authHeader,
             @RequestBody Map<String, String> request) {
-        if (!isBusinessToken(authHeader)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
+
         boolean success = businessService.resetPassword(request.get("email"));
-        return success ? ResponseEntity.ok(Map.of("message", "Reset code sent"))
+
+        return success
+                ? ResponseEntity.ok(Map.of("message", "Reset code sent"))
                 : ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Business not found"));
     }
+
 
     @Operation(summary = "Verify reset code")
     @PostMapping("/verify-reset-code")
     public ResponseEntity<Map<String, String>> verifyBusinessResetCode(
-            @RequestHeader("Authorization") String authHeader,
             @RequestBody Map<String, String> request) {
-        if (!isBusinessToken(authHeader)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
+
         boolean verified = businessService.verifyResetCode(request.get("email"), request.get("code"));
-        return verified ? ResponseEntity.ok(Map.of("message", "Code verified"))
+        
+        return verified
+                ? ResponseEntity.ok(Map.of("message", "Code verified"))
                 : ResponseEntity.badRequest().body(Map.of("message", "Invalid code"));
     }
 
-    @Operation(summary  = "Update business password")
+
+    @Operation(summary = "Update business password")
     @PostMapping("/update-password")
     public ResponseEntity<Map<String, String>> updateBusinessPassword(
-            @RequestHeader("Authorization") String authHeader,
             @RequestBody Map<String, String> request) {
-        if (!isBusinessToken(authHeader)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
+
         String email = request.get("email");
         String newPassword = request.get("newPassword");
-        if (email == null || newPassword == null) return ResponseEntity.badRequest().body(Map.of("message", "Missing email or password"));
+
+        if (email == null || newPassword == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Missing email or password"));
+        }
+
         boolean updated = businessService.updatePasswordDirectly(email, newPassword);
-        return updated ? ResponseEntity.ok(Map.of("message", "Password updated"))
+        return updated
+                ? ResponseEntity.ok(Map.of("message", "Password updated"))
                 : ResponseEntity.badRequest().body(Map.of("message", "Business not found"));
     }
+
 }
