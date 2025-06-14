@@ -11,12 +11,21 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.hobbySphere.entities.PendingBusiness;
+
+
+import java.io.IOException;
+import java.nio.file.*;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,6 +56,9 @@ public class BusinessService {
     
     @Autowired
     private AdminUsersRepository adminUsersRepository;
+    
+    @Autowired 
+    private PendingBusinessRepository pendingBusinessRepository;
     
     private final EmailService emailService;
 
@@ -85,62 +97,194 @@ public class BusinessService {
         Businesses business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new RuntimeException("Business not found"));
 
+        //  Step 1: Get all activities owned by this business
         List<Activities> activities = activityRepository.findByBusinessId(businessId);
 
+        //  Step 2: For each activity, delete all bookings & reviews
         for (Activities activity : activities) {
             Long activityId = activity.getId();
+
+            // Delete all user bookings for this activity
             activityBookingRepository.deleteByActivity_Id(activityId);
+
+            // Delete all user reviews for this activity
             reviewRepository.deleteByActivity_Id(activityId);
+
+            // Delete the activity itself
             activityRepository.deleteById(activityId);
         }
 
+        //  Step 3: Delete links to business admins & internal admins
+        businessAdminsRepository.deleteByBusinessId(businessId);
+        adminUsersRepository.deleteByBusinessId(businessId);
+
+        //  Step 4: Finally delete the business itself
         businessRepository.deleteById(businessId);
     }
 
-    public Businesses registerBusiness(
-            String name,
-            String email,
-            String password,
-            String description,
-            String phoneNumber,
-            String websiteUrl,
+
+
+    // ✅ Step 1: Send verification code and save to PendingBusiness
+    public boolean sendBusinessVerificationCode(
+            Map<String, String> businessData,
             MultipartFile logo,
             MultipartFile banner
     ) throws IOException {
+        String email = businessData.get("email");
+        String phone = businessData.get("phoneNumber");
+        String businessName = businessData.get("businessName");
+        String password = businessData.get("password");
+        String description = businessData.get("description");
+        String websiteUrl = businessData.get("websiteUrl");
 
-        String logoPath = null;
-        String bannerPath = null;
-
-        Path uploadDir = Paths.get("uploads/");
-        if (!Files.exists(uploadDir)) {
-            Files.createDirectories(uploadDir);
+        if (email == null || phone == null) {
+            throw new RuntimeException("Both email and phone number are required for business registration");
         }
 
-        if (logo != null && !logo.isEmpty()) {
-            String logoFileName = UUID.randomUUID() + "_" + logo.getOriginalFilename();
-            Path logoPathFull = uploadDir.resolve(logoFileName);
-            Files.copy(logo.getInputStream(), logoPathFull, StandardCopyOption.REPLACE_EXISTING);
-            logoPath = "/uploads/" + logoFileName;
+        // Check if already used
+        if (businessRepository.findByEmail(email).isPresent() || pendingBusinessRepository.existsByEmail(email)) {
+            throw new RuntimeException("Email is already in use");
+        }
+        if (businessRepository.findByPhoneNumber(phone).isPresent() || pendingBusinessRepository.existsByPhoneNumber(phone)) {
+            throw new RuntimeException("Phone number is already in use");
         }
 
-        if (banner != null && !banner.isEmpty()) {
-            String bannerFileName = UUID.randomUUID() + "_" + banner.getOriginalFilename();
-            Path bannerPathFull = uploadDir.resolve(bannerFileName);
-            Files.copy(banner.getInputStream(), bannerPathFull, StandardCopyOption.REPLACE_EXISTING);
-            bannerPath = "/uploads/" + bannerFileName;
+        String code;
+        if (phone != null && email == null) {
+            code = "123456"; // static for phone-only (no Twilio)
+        } else
+			code = String.format("%06d", new Random().nextInt(999999)); 
+
+
+        String logoUrl = saveFile(logo);
+        String bannerUrl = saveFile(banner);
+
+        PendingBusiness pending = new PendingBusiness();
+        pending.setEmail(email);
+        pending.setPhoneNumber(phone);
+        pending.setBusinessName(businessName);
+        pending.setPasswordHash(passwordEncoder.encode(password));
+        pending.setDescription(description);
+        pending.setWebsiteUrl(websiteUrl);
+        pending.setBusinessLogoUrl(logoUrl);
+        pending.setBusinessBannerUrl(bannerUrl);
+        pending.setVerificationCode(code);
+        pending.setCreatedAt(LocalDateTime.now());
+
+        pendingBusinessRepository.save(pending);
+
+        // Send email
+        String html = """
+            <html>
+            <body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+                <h2 style="color: #4CAF50;">Welcome to HobbySphere Business!</h2>
+                <p>Please use the code below to verify your business:</p>
+                <h1 style="color: #2196F3;">%s</h1>
+                <p>This code will expire in 10 minutes.</p>
+            </body>
+            </html>
+        """.formatted(code);
+        emailService.sendHtmlEmail(email, "Business Verification Code", html);
+
+        // Send SMS - simulate for now (you can use Twilio or similar later)
+        System.out.println("Sending SMS to " + phone + ": Your verification code is: " + code);
+
+        return true;
+    }
+
+
+    // ✅ Step 2: Verify code and create actual Businesses entry
+    public boolean verifyBusinessEmailCode(String email, String code) {
+        PendingBusiness pending = pendingBusinessRepository.findByEmail(email);
+        if (pending == null || !pending.getVerificationCode().equals(code)) {
+            return false;
         }
 
         Businesses business = new Businesses();
-        business.setBusinessName(name);
-        business.setEmail(email);
-        business.setPasswordHash(passwordEncoder.encode(password));
-        business.setDescription(description);
-        business.setPhoneNumber(phoneNumber);
-        business.setWebsiteUrl(websiteUrl);
-        business.setBusinessLogoUrl(logoPath);
-        business.setBusinessBannerUrl(bannerPath);
+        business.setEmail(pending.getEmail());
+        business.setBusinessName(pending.getBusinessName());
+        business.setPasswordHash(pending.getPasswordHash());
+        business.setDescription(pending.getDescription());
+        business.setPhoneNumber(pending.getPhoneNumber());
+        business.setWebsiteUrl(pending.getWebsiteUrl());
+        business.setBusinessLogoUrl(pending.getBusinessLogoUrl());
+        business.setBusinessBannerUrl(pending.getBusinessBannerUrl());
+        business.setCreatedAt(LocalDateTime.now());
 
-        return businessRepository.save(business);
+        businessRepository.save(business);
+        pendingBusinessRepository.delete(pending);
+        return true;
+    }
+    
+    public boolean resendBusinessVerificationCode(String emailOrPhone) throws IOException {
+        PendingBusiness pending;
+
+        if (emailOrPhone.contains("@")) {
+            pending = pendingBusinessRepository.findByEmail(emailOrPhone);
+            if (pending == null) throw new RuntimeException("No pending business found with this email");
+
+            String code;
+            
+            code = String.format("%06d", new Random().nextInt(999999)); // real for email
+            
+
+            pending.setVerificationCode(code);
+            pending.setCreatedAt(LocalDateTime.now());
+            pendingBusinessRepository.save(pending);
+
+            String html = """
+                <html>
+                <body>
+                    <h2>HobbySphere Business Verification</h2>
+                    <p>Your new email verification code is:</p>
+                    <h1>%s</h1>
+                </body>
+                </html>
+            """.formatted(code);
+
+            emailService.sendHtmlEmail(emailOrPhone, "New Business Verification Code", html);
+            return true;
+        } else {
+            pending = pendingBusinessRepository.findByPhoneNumber(emailOrPhone);
+            if (pending == null) throw new RuntimeException("No pending business found with this phone");
+
+            pending.setVerificationCode("123456");
+            pending.setCreatedAt(LocalDateTime.now());
+            pendingBusinessRepository.save(pending);
+            return true;
+        }
+    }
+
+    private String saveFile(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) return null;
+        Path uploadPath = Paths.get("uploads");
+        if (!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
+
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        Path fullPath = uploadPath.resolve(fileName);
+        Files.copy(file.getInputStream(), fullPath, StandardCopyOption.REPLACE_EXISTING);
+        return "/uploads/" + fileName;
+    }
+
+    public boolean verifyBusinessPhoneCode(String phone, String code) {
+        PendingBusiness pending = pendingBusinessRepository.findByPhoneNumber(phone);
+        if (pending == null || !pending.getVerificationCode().equals(code)) {
+            return false;
+        }
+
+        Businesses business = new Businesses();
+        business.setPhoneNumber(pending.getPhoneNumber());
+        business.setBusinessName(pending.getBusinessName());
+        business.setPasswordHash(pending.getPasswordHash());
+        business.setDescription(pending.getDescription());
+        business.setWebsiteUrl(pending.getWebsiteUrl());
+        business.setBusinessLogoUrl(pending.getBusinessLogoUrl());
+        business.setBusinessBannerUrl(pending.getBusinessBannerUrl());
+        business.setCreatedAt(LocalDateTime.now());
+
+        businessRepository.save(business);
+        pendingBusinessRepository.delete(pending);
+        return true;
     }
 
     public Businesses updateBusinessWithImages(
@@ -209,33 +353,18 @@ public class BusinessService {
     @Transactional
     public boolean deleteBusinessByIdWithPassword(Long id, String password) {
         Optional<Businesses> optionalBusiness = businessRepository.findById(id);
-        if (optionalBusiness.isPresent()) {
-            Businesses business = optionalBusiness.get();
+        if (optionalBusiness.isEmpty()) return false;
 
-            if (!passwordEncoder.matches(password, business.getPasswordHash())) {
-                return false;
-            }
+        Businesses business = optionalBusiness.get();
 
-            List<Activities> activities = activityRepository.findByBusinessId(id);
-            for (Activities activity : activities) {
-                Long activityId = activity.getId();
-                activityBookingRepository.deleteByActivity_Id(activityId);
-                reviewRepository.deleteByActivity_Id(activityId);
-                activityRepository.deleteById(activityId);
-            }
-
-            //  Delete all business_admin links before deleting business
-            businessAdminsRepository.deleteByBusinessId(id);
-           
-            adminUsersRepository.deleteByBusinessId(id);
-
-            //  Now delete the business itself
-            businessRepository.deleteById(id);
-
-            return true;
+        // 🔐 Password check
+        if (!passwordEncoder.matches(password, business.getPasswordHash())) {
+            return false;
         }
 
-        return false;
+        delete(id);
+
+        return true;
     }
 
     
@@ -248,11 +377,21 @@ public class BusinessService {
         String code = String.format("%06d", new Random().nextInt(999999));
         resetCodes.put(email, code);
 
-        emailService.sendEmail(
-            email,
-            "Business Password Reset",
-            "Your password reset code is: " + code
-        );
+        String htmlMessage = """
+        	    <html>
+        	    <body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+        	        <h2 style="color: #FF9800;">Reset Your Password</h2>
+        	        <p style="font-size: 16px;">Hello,</p>
+        	        <p style="font-size: 16px;">We received a request to reset your password. Please use the code below to proceed:</p>
+        	        <h1 style="color: #2196F3;">%s</h1>
+        	        <p style="font-size: 14px; color: #777;">This code will expire in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
+        	        <p style="font-size: 14px; color: #999; margin-top: 40px;">— The HobbySphere Team</p>
+        	    </body>
+        	    </html>
+        	""".formatted(code);
+
+        	emailService.sendHtmlEmail(email, "Password Reset Code", htmlMessage);
+
 
         return true;
     }
@@ -274,6 +413,50 @@ public class BusinessService {
         resetCodes.remove(email);
         return true;
     }
+
+    public Businesses findByPhoneNumber(String phoneNumber) {
+        return businessRepository.findByPhoneNumber(phoneNumber)
+                .orElse(null);
+    }
+    
+    public boolean deleteBusinessLogo(Long businessId) {
+        Businesses business = businessRepository.findById(businessId)
+            .orElseThrow(() -> new RuntimeException("Business not found"));
+
+        if (business.getBusinessLogoUrl() != null && !business.getBusinessLogoUrl().isEmpty()) {
+            String logoPath = business.getBusinessLogoUrl().replace("/uploads", "uploads");
+            try {
+                Files.deleteIfExists(Paths.get(logoPath));
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to delete logo: " + e.getMessage());
+            }
+            business.setBusinessLogoUrl(null);
+            businessRepository.save(business);
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean deleteBusinessBanner(Long businessId) {
+        Businesses business = businessRepository.findById(businessId)
+            .orElseThrow(() -> new RuntimeException("Business not found"));
+
+        if (business.getBusinessBannerUrl() != null && !business.getBusinessBannerUrl().isEmpty()) {
+            String bannerPath = business.getBusinessBannerUrl().replace("/uploads", "uploads");
+            try {
+                Files.deleteIfExists(Paths.get(bannerPath));
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to delete banner: " + e.getMessage());
+            }
+            business.setBusinessBannerUrl(null);
+            businessRepository.save(business);
+            return true;
+        }
+
+        return false;
+    }
+
 
 
     

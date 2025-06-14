@@ -57,15 +57,23 @@ public class UserService {
     
     public boolean sendVerificationCodeForRegistration(Map<String, String> userData, MultipartFile profileImage) throws IOException {
         String email = userData.get("email");
-        String phone = userData.get("phone");
+        String phone = userData.get("phoneNumber");
+
         String username = userData.get("username");
         String password = userData.get("password");
         String firstName = userData.get("firstName");
         String lastName = userData.get("lastName");
 
-        if ((email == null && phone == null) || (email != null && phone != null)) {
+        boolean emailProvided = email != null && !email.trim().isEmpty();
+        boolean phoneProvided = phone != null && !phone.trim().isEmpty();
+
+        if (!emailProvided && !phoneProvided) {
+            throw new RuntimeException("You must provide either email or phone");
+        }
+        if (emailProvided && phoneProvided) {
             throw new RuntimeException("You must provide either email or phone, not both");
         }
+
 
         if (email != null && (pendingUserRepository.existsByEmail(email) || userRepository.findByEmail(email) != null)) {
             throw new RuntimeException("Email is already in use");
@@ -79,7 +87,7 @@ public class UserService {
             throw new RuntimeException("Username is already in use");
         }
 
-        String code = String.format("%06d", new Random().nextInt(999999));
+        String code = phone != null ? "123456" : String.format("%06d", new Random().nextInt(999999));
         String profileImageUrl = null;
 
         if (profileImage != null && !profileImage.isEmpty()) {
@@ -105,27 +113,63 @@ public class UserService {
         pendingUserRepository.save(pending);
 
         if (email != null) {
-        	String htmlMessage = """
-        		    <html>
-        		    <body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-        		        <h2 style="color: #4CAF50;">Welcome to HobbySphere!</h2>
-        		        <p style="font-size: 16px;">Hello,</p>
-        		        <p style="font-size: 16px;">Thank you for registering. Please use the code below to verify your email address:</p>
-        		        <h1 style="color: #2196F3;">%s</h1>
-        		        <p style="font-size: 14px; color: #777;">This code will expire in 10 minutes.</p>
-        		    </body>
-        		    </html>
-        		""".formatted(code);
+            String htmlMessage = """
+                <html>
+                <body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+                    <h2 style="color: #4CAF50;">Welcome to HobbySphere!</h2>
+                    <p style="font-size: 16px;">Hello,</p>
+                    <p style="font-size: 16px;">Thank you for registering. Please use the code below to verify your email address:</p>
+                    <h1 style="color: #2196F3;">%s</h1>
+                    <p style="font-size: 14px; color: #777;">This code will expire in 10 minutes.</p>
+                </body>
+                </html>
+            """.formatted(code);
 
-        		//  Use HTML mail method
-        		emailService.sendHtmlEmail(email, "Email Verification Code", htmlMessage);
-
+            emailService.sendHtmlEmail(email, "Email Verification Code", htmlMessage);
         }
 
         return true;
     }
 
-    
+    public boolean resendVerificationCode(String emailOrPhone) throws IOException {
+        PendingUser pending = null;
+
+        if (emailOrPhone.contains("@")) {
+            pending = pendingUserRepository.findByEmail(emailOrPhone);
+            if (pending == null) throw new RuntimeException("No pending user found with this email");
+
+            String code;
+            
+                code = String.format("%06d", new Random().nextInt(999999)); // real for email
+            
+
+            pending.setVerificationCode(code);
+            pending.setCreatedAt(LocalDateTime.now()); // reset timestamp
+            pendingUserRepository.save(pending);
+
+            String html = """
+                <html>
+                <body>
+                    <h2>HobbySphere Verification</h2>
+                    <p>Your new email verification code is:</p>
+                    <h1>%s</h1>
+                </body>
+                </html>
+            """.formatted(code);
+
+            emailService.sendHtmlEmail(emailOrPhone, "New Verification Code", html);
+            return true;
+        } else {
+            pending = pendingUserRepository.findByPhoneNumber(emailOrPhone);
+            if (pending == null) throw new RuntimeException("No pending user found with this phone");
+
+            pending.setVerificationCode("123456"); // static again
+            pending.setCreatedAt(LocalDateTime.now());
+            pendingUserRepository.save(pending);
+            return true;
+        }
+    }
+
     private final Map<String, String> resetCodes = new ConcurrentHashMap<>();
     
     public Users registerUser(
@@ -164,7 +208,34 @@ public class UserService {
     }
     
    
+    //user register with number 
+    public boolean verifyPhoneCodeAndRegister(String phoneNumber, String code) {
+        if (!"123456".equals(code)) {
+            return false;
+        }
 
+        PendingUser pending = pendingUserRepository.findByPhoneNumber(phoneNumber);
+        if (pending == null) {
+            return false;
+        }
+
+        Users user = new Users();
+        user.setPhoneNumber(pending.getPhoneNumber());
+        user.setUsername(pending.getUsername());
+        user.setPasswordHash(pending.getPasswordHash());
+        user.setFirstName(pending.getFirstName());
+        user.setLastName(pending.getLastName());
+        user.setProfilePictureUrl(pending.getProfilePictureUrl());
+        user.setStatus("Active");
+        user.setCreatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+        pendingUserRepository.delete(pending);
+
+        return true;
+    }
+
+   
 
     public Users findByUsername(String username) {
         return userRepository.findByUsername(username);
@@ -263,11 +334,21 @@ public class UserService {
         String code = String.format("%06d", new Random().nextInt(999999)); // 6-digit code
         resetCodes.put(email, code);
 
-        emailService.sendEmail(
-            email,
-            "Password Reset Code",
-            "Your password reset code is: " + code
-        );
+        String htmlMessage = """
+        	    <html>
+        	    <body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+        	        <h2 style="color: #FF9800;">Reset Your Password</h2>
+        	        <p style="font-size: 16px;">Hello,</p>
+        	        <p style="font-size: 16px;">We received a request to reset your password. Please use the code below to proceed:</p>
+        	        <h1 style="color: #2196F3;">%s</h1>
+        	        <p style="font-size: 14px; color: #777;">This code will expire in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
+        	        <p style="font-size: 14px; color: #999; margin-top: 40px;">— The HobbySphere Team</p>
+        	    </body>
+        	    </html>
+        	""".formatted(code);
+
+        	emailService.sendHtmlEmail(email, "Password Reset Code", htmlMessage);
+
 
         return true;
     }
@@ -344,10 +425,35 @@ public class UserService {
         pendingUserRepository.delete(pending); // Clean up
 
         return true;
-}
+    }
     
     public List<Users> getAllUsers(){
     	return userRepository.findAll();
     	}
+
+    public Users findByPhoneNumber(String phoneNumber) {
+        return userRepository.findByPhoneNumber(phoneNumber);
+    }
+    
+    public boolean deleteUserProfileImage(Long userId) {
+        Users user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String imageUrl = user.getProfilePictureUrl(); // e.g., "/uploads/uuid_filename.jpg"
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            String imagePath = imageUrl.replace("/uploads", "uploads"); // adjust path
+            Path path = Paths.get(imagePath);
+            try {
+                Files.deleteIfExists(path); // delete image from disk
+            } catch (IOException e) {
+                throw new RuntimeException("Error deleting image: " + e.getMessage());
+            }
+            user.setProfilePictureUrl(null); // clear DB field
+            userRepository.save(user);
+            return true;
+        }
+
+        return false; // no image to delete
+    }
 
 }

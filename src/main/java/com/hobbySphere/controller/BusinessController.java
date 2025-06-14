@@ -82,14 +82,28 @@ public class BusinessController {
 
     @Operation(summary = "Delete a business with password")
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteBusinessWithPassword(@PathVariable Long id, @RequestHeader("Authorization") String authHeader, @RequestBody Map<String, String> request) {
-        if (!isAuthorized(authHeader, id)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+    public ResponseEntity<?> deleteBusinessWithPassword(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> request) {
+
+        if (!isAuthorized(authHeader, id)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
+
         String password = request.get("password");
-        if (password == null || password.isEmpty()) return ResponseEntity.badRequest().body("Password is required");
-        return businessService.deleteBusinessByIdWithPassword(id, password)
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incorrect password or business not found");
+        if (password == null || password.isEmpty()) {
+            return ResponseEntity.badRequest().body("Password is required");
+        }
+
+        boolean deleted = businessService.deleteBusinessByIdWithPassword(id, password);
+        if (deleted) {
+            return ResponseEntity.ok(Map.of("message", "Business deleted successfully."));
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Incorrect password or business not found");
+        }
     }
+
 
     @Operation(summary = "Update business with images")
     @PutMapping("/update-with-images/{id}")
@@ -173,5 +187,26 @@ public class BusinessController {
                 ? ResponseEntity.ok(Map.of("message", "Password updated"))
                 : ResponseEntity.badRequest().body(Map.of("message", "Business not found"));
     }
+    
+    @DeleteMapping("/delete-logo/{id}")
+    public ResponseEntity<?> deleteLogo(@PathVariable Long id) {
+        boolean deleted = businessService.deleteBusinessLogo(id);
+        if (deleted) {
+            return ResponseEntity.ok("Logo deleted successfully.");
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No logo found to delete.");
+        }
+    }
+
+    @DeleteMapping("/delete-banner/{id}")
+    public ResponseEntity<?> deleteBanner(@PathVariable Long id) {
+        boolean deleted = businessService.deleteBusinessBanner(id);
+        if (deleted) {
+            return ResponseEntity.ok("Banner deleted successfully.");
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No banner found to delete.");
+        }
+    }
+
 
 }

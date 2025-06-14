@@ -10,4 +10,6 @@ public interface PendingUserRepository extends JpaRepository<PendingUser, Long> 
     boolean existsByEmail(String email);
     boolean existsByUsername(String username);
     boolean existsByPhoneNumber(String phoneNumber);
+    
+	PendingUser findByPhoneNumber(String phoneNumber);
 }

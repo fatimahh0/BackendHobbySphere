@@ -24,10 +24,10 @@ public class Users {
     @Column(nullable = false)
     private String lastName;
 
-    @Column(unique = true)
+    @Column(unique = true,nullable = true)
     private String email;
     
-    @Column(unique = true)
+    @Column(unique = true,nullable = true)
     private String phoneNumber;
 
 

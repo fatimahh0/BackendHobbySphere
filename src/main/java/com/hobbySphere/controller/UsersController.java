@@ -172,5 +172,16 @@ public class UsersController {
         userService.addUserInterests(userId, interestIds);
         return ResponseEntity.ok(Map.of("message", "User interests added successfully"));
     }
+    
+    @DeleteMapping("/delete-profile-image/{id}")
+    public ResponseEntity<?> deleteProfileImage(@PathVariable Long id) {
+        boolean success = userService.deleteUserProfileImage(id);
+        if (success) {
+            return ResponseEntity.ok("Profile image deleted successfully");
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No profile image found or already deleted");
+        }
+    }
+
 
     }

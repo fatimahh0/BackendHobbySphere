@@ -298,37 +298,28 @@ public class ActivityController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
     
+    
     @GetMapping("/interest-based/{userId}")
-    @Operation(summary = "Get activities by user's interests")
+    @Operation(summary = "Get pending activities by user's interests", description = "Returns only upcoming (not ended or terminated) activities based on user's interests")
     public ResponseEntity<?> getActivitiesByUserInterests(@PathVariable Long userId) {
         List<Activities> activities = activityService.findActivitiesByUserInterests(userId);
-        if (activities.isEmpty()) {
+        LocalDateTime now = LocalDateTime.now();
+
+        List<Activities> pendingActivities = activities.stream()
+            .filter(a -> a.getEndDatetime().isAfter(now)) // Not ended
+            .filter(a -> !"Terminated".equalsIgnoreCase(a.getStatus())) // Not terminated
+            .toList();
+
+        if (pendingActivities.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                Map.of("message", "No activities found for user's interests")
+                Map.of("message", "No pending activities found for user's interests")
             );
         }
-        return ResponseEntity.ok(activities);
+
+        return ResponseEntity.ok(pendingActivities);
     }
+    
 
-    @GetMapping("/with-symbol")
-    public ResponseEntity<?> getActivitiesWithSymbols(@RequestHeader("Authorization") String tokenHeader) {
-        try {
-            if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing or invalid Authorization header"));
-            }
-
-            String token = tokenHeader.substring(7).trim(); // Remove "Bearer "
-
-            if (!jwtUtil.isSuperAdmin(token)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Only SUPER_ADMIN can access this endpoint"));
-            }
-
-            List<ActivityPriceResponse> responses = activityService.getActivitiesWithCurrencySymbol();
-            return ResponseEntity.ok(responses);
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid or expired token"));
-        }
-    }
+    
 
 }

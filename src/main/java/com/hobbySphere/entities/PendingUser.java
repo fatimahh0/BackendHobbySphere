@@ -107,5 +107,5 @@ public class PendingUser {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
- }
+    }
 }

@@ -58,23 +58,25 @@ public class AuthController {
     private UsersRepository UserRepository;
     
 
-  
+
     @PostMapping(value = "/send-verification", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> sendVerification(
-            @RequestParam("email") String email,
+    		@RequestParam(required = false) String email,
+    		@RequestParam(required = false) String phoneNumber,
             @RequestParam("username") String username,
             @RequestParam("firstName") String firstName,
             @RequestParam("lastName") String lastName,
             @RequestParam("password") String password,
             @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
         try {
-            Map<String, String> userData = Map.of(
-                "email", email,
-                "username", username,
-                "firstName", firstName,
-                "lastName", lastName,
-                "password", password
-            );
+        	Map<String, String> userData = new HashMap<>();
+        	if (email != null) userData.put("email", email);
+        	if (phoneNumber != null) userData.put("phoneNumber", phoneNumber);
+        	userData.put("username", username);
+        	userData.put("firstName", firstName);
+        	userData.put("lastName", lastName);
+        	userData.put("password", password);
+
             boolean sent = userService.sendVerificationCodeForRegistration(userData, profileImage);
             return ResponseEntity.ok(Map.of("message", "Verification code sent"));
         } catch (RuntimeException | IOException e) {
@@ -91,49 +93,185 @@ public class AuthController {
         boolean verified = userService.verifyEmailCodeAndRegister(email, code);
 
         if (verified) {
-            return ResponseEntity.ok(Map.of("message", "Account created successfully"));
-        } else {
-            return ResponseEntity.status(400).body(Map.of("error", "Invalid code or email"));
+            Users user = userService.findByEmail(email);
+            if (user != null) {
+                Map<String, Object> userData = new HashMap<>();
+                userData.put("id", user.getId());
+                userData.put("username", user.getUsername());
+                userData.put("firstName", user.getFirstName());
+                userData.put("lastName", user.getLastName());
+                userData.put("email", user.getEmail());
+                userData.put("profilePictureUrl", user.getProfilePictureUrl());
+
+                return ResponseEntity.ok(Map.of(
+                    "message", "User verified and account created successfully",
+                    "user", userData
+                ));
+            }
         }
+
+        return ResponseEntity.status(400).body(Map.of("error", "Invalid code or email"));
     }
+
+
+    ///user register with number
+    @PostMapping("/user/verify-phone-code")
+    public ResponseEntity<?> verifyUserPhoneCode(@RequestBody Map<String, String> request) {
+        String phone = request.get("phoneNumber");
+        String code = request.get("code");
+
+        boolean verified = userService.verifyPhoneCodeAndRegister(phone, code);
+
+        if (verified) {
+            Users user = userService.findByPhoneNumber(phone);
+            if (user != null) {
+                Map<String, Object> userData = new HashMap<>();
+                userData.put("id", user.getId());
+                userData.put("username", user.getUsername());
+                userData.put("firstName", user.getFirstName());
+                userData.put("lastName", user.getLastName());
+                userData.put("phoneNumber", user.getPhoneNumber());
+                userData.put("profilePictureUrl", user.getProfilePictureUrl());
+
+                return ResponseEntity.ok(Map.of(
+                    "message", "User phone verified and account created successfully",
+                    "user", userData
+                ));
+            }
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "Invalid phone number or verification code"));
+    }
+
 
 
     
   
-    @PostMapping(value = "/business/register", consumes = "multipart/form-data")
-    public ResponseEntity<?> registerBusinessMultipart(
-            @RequestParam("businessName") String businessName,
-            @RequestParam("email") String email,
-            @RequestParam("password") String password,
-            @RequestParam("description") String description,
-            @RequestParam("phoneNumber") String phoneNumber,
-            @RequestParam("websiteUrl") String websiteUrl,
-            @RequestParam(value = "businessLogo", required = false) MultipartFile businessLogo,
-            @RequestParam(value = "businessBanner", required = false) MultipartFile businessBanner
+    @PostMapping(value = "/business/send-verification", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> sendBusinessVerification(
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String phoneNumber,
+            @RequestParam String businessName,
+            @RequestParam String password,
+            @RequestParam String description,
+            @RequestParam String websiteUrl,
+            @RequestPart(value = "businessLogo", required = false) MultipartFile logo,
+            @RequestPart(value = "businessBanner", required = false) MultipartFile banner
     ) {
         try {
-            Optional<Businesses> existing = businessService.findByEmail(email);
-            if (existing.isPresent()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "Email already in use"));
-            }
-
-            Businesses savedBusiness = businessService.registerBusiness(
-                    businessName, email, password, description,
-                    phoneNumber, websiteUrl, businessLogo, businessBanner
+            Map<String, String> businessData = Map.of(
+                "email", email != null ? email : "",
+                "phoneNumber", phoneNumber != null ? phoneNumber : "",
+                "businessName", businessName,
+                "password", password,
+                "description", description,
+                "websiteUrl", websiteUrl
             );
 
-            return ResponseEntity.ok(Map.of(
-                    "message", "Business registration successful",
-                    "business", savedBusiness
-            ));
+            businessService.sendBusinessVerificationCode(businessData, logo, banner);
 
+            return ResponseEntity.ok(Map.of(
+                "message", phoneNumber != null ? "Static code 123456 set for phone verification" : "Verification code sent to email"
+            ));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Registration failed: " + e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+    @PostMapping("/business/verify-code")
+    public ResponseEntity<?> verifyBusinessCode(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email");
+        String code = payload.get("code");
+
+        boolean verified = businessService.verifyBusinessEmailCode(email, code);
+
+        if (verified) {
+            Optional<Businesses> businessOpt = businessService.findByEmail(email);
+            if (businessOpt.isPresent()) {
+                Businesses business = businessOpt.get();
+
+                Map<String, Object> businessData = new HashMap<>();
+                businessData.put("id", business.getId());
+                businessData.put("businessName", business.getBusinessName());
+                businessData.put("email", business.getEmail());
+                businessData.put("phoneNumber", business.getPhoneNumber());
+                businessData.put("websiteUrl", business.getWebsiteUrl());
+                businessData.put("description", business.getDescription());
+                businessData.put("businessLogo", business.getBusinessLogoUrl());
+                businessData.put("businessBanner", business.getBusinessBannerUrl());
+
+                return ResponseEntity.ok(Map.of(
+                    "message", "Business email verified and account created successfully",
+                    "business", businessData
+                ));
+            }
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "Invalid verification code or email"));
+    }
+
+
     
+
+    @PostMapping("/business/verify-phone-code")
+    public ResponseEntity<?> verifyBusinessPhoneCode(@RequestBody Map<String, String> request) {
+        String phone = request.get("phoneNumber");
+        String code = request.get("code");
+
+        boolean verified = businessService.verifyBusinessPhoneCode(phone, code);
+
+        if (verified) {
+            Businesses business = businessService.findByPhoneNumber(phone);
+            if (business != null) {
+                Map<String, Object> businessData = new HashMap<>();
+                businessData.put("id", business.getId());
+                businessData.put("businessName", business.getBusinessName());
+                businessData.put("email", business.getEmail());
+                businessData.put("phoneNumber", business.getPhoneNumber());
+                businessData.put("websiteUrl", business.getWebsiteUrl());
+                businessData.put("description", business.getDescription());
+                businessData.put("businessLogo", business.getBusinessLogoUrl());
+                businessData.put("businessBanner", business.getBusinessBannerUrl());
+
+                return ResponseEntity.ok(Map.of(
+                    "message", "Business phone verified and account created successfully",
+                    "business", businessData
+                ));
+            }
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "Invalid phone number or verification code"));
+    }
+
+
+    
+    @PostMapping("/resend-user-code")
+    public ResponseEntity<?> resendUserCode(@RequestBody Map<String, String> request) {
+        String contact = request.get("emailOrPhone");
+
+        try {
+            userService.resendVerificationCode(contact);
+            return ResponseEntity.ok(Map.of("message", "Verification code resent"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/resend-business-code")
+    public ResponseEntity<?> resendBusinessCode(@RequestBody Map<String, String> request) {
+        String contact = request.get("emailOrPhone");
+
+        try {
+            businessService.resendBusinessVerificationCode(contact);
+            return ResponseEntity.ok(Map.of("message", "Verification code resent"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     // User Login
     @PostMapping("/user/login")
     public ResponseEntity<?> userLogin(@RequestBody @Valid Users user) {
@@ -204,6 +342,45 @@ public class AuthController {
         return ResponseEntity.ok("Profile updated successfully");
     }
 
+ //user login with number
+    
+    @PostMapping("/user/login-phone")
+    public ResponseEntity<?> userLoginWithPhone(@RequestBody @Valid Users user) {
+        String phone = user.getPhoneNumber();
+        String rawPassword = user.getPasswordHash();
+
+        if (phone == null || rawPassword == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Phone number and password are required"));
+        }
+
+        Users existingUser = userService.findByPhoneNumber(phone);
+        if (existingUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "User not found with this phone number"));
+        }
+
+        if (!passwordEncoder.matches(rawPassword, existingUser.getPasswordHash())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Incorrect password"));
+        }
+
+        String token = jwtUtil.generateToken(existingUser);
+
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("id", existingUser.getId());
+        userData.put("username", existingUser.getUsername());
+        userData.put("firstName", existingUser.getFirstName());
+        userData.put("lastName", existingUser.getLastName());
+        userData.put("phoneNumber", existingUser.getPhoneNumber());
+        userData.put("profilePictureUrl", existingUser.getProfilePictureUrl());
+
+        return ResponseEntity.ok(Map.of(
+            "message", "User login with phone successful",
+            "token", token,
+            "user", userData
+        ));
+    }
+
     // Business Login
     // Business Login
     @PostMapping("/business/login")
@@ -245,6 +422,48 @@ public class AuthController {
 
         return ResponseEntity.ok(response);
     }
+
+    //business login with number
+    @PostMapping("/business/login-phone")
+    public ResponseEntity<?> businessLoginWithPhone(@RequestBody @Valid Users user) {
+        String phone = user.getPhoneNumber();
+        String rawPassword = user.getPasswordHash();
+
+        if (phone == null || rawPassword == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Phone number and password are required"));
+        }
+
+        Businesses business = businessService.findByPhoneNumber(phone);
+        if (business == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Business not found with this phone number"));
+        }
+
+        if (!passwordEncoder.matches(rawPassword, business.getPasswordHash())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Incorrect password"));
+        }
+
+        String token = jwtUtil.generateToken(business);
+
+        Map<String, Object> businessData = new HashMap<>();
+        businessData.put("id", business.getId());
+        businessData.put("businessName", business.getBusinessName());
+        businessData.put("email", business.getEmail());
+        businessData.put("phoneNumber", business.getPhoneNumber());
+        businessData.put("websiteUrl", business.getWebsiteUrl());
+        businessData.put("description", business.getDescription());
+        businessData.put("businessLogo", business.getBusinessLogoUrl());
+        businessData.put("businessBanner", business.getBusinessBannerUrl());
+
+        return ResponseEntity.ok(Map.of(
+            "message", "Business login with phone successful",
+            "token", token,
+            "business", businessData
+        ));
+    }
+
+
 
  // Google Login
     @PostMapping("/google-login")

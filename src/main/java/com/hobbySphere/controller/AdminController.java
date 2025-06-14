@@ -37,6 +37,9 @@ public class AdminController {
     @Autowired private AdminUsersRepository adminUsersRepository;
     @Autowired private ReviewRepository reviewRepository;
     @Autowired private JwtUtil jwtUtil;
+    @Autowired
+    private com.hobbySphere.services.BusinessService businessService;
+
     @Autowired private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     private boolean isSuperAdmin(String token) {
@@ -320,5 +323,29 @@ public class AdminController {
                 "notifyUserFeedback", admin.getNotifyUserFeedback()
         ));
     }
+    
+    @Operation(summary = "Delete a business and all related data", description = "Only SUPER_ADMIN can delete a business account along with all related activities, bookings, reviews, and admin links.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Business deleted successfully"),
+        @ApiResponse(responseCode = "404", description = "Business not found"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    @DeleteMapping("/businesses/{businessId}")
+    public ResponseEntity<String> deleteBusinessBySuperAdmin(@PathVariable Long businessId,
+                                                             @RequestHeader("Authorization") String token) {
+        if (!isSuperAdmin(token)) return ResponseEntity.status(401).body("Unauthorized");
+
+        try {
+            businessService.delete(businessId); // ✅ this handles everything: activities, bookings, reviews, links
+            return ResponseEntity.ok("Business and all related data deleted successfully.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body("Business not found.");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Failed to delete business: " + e.getMessage());
+        }
+    }
+
+    
+    
 
 }

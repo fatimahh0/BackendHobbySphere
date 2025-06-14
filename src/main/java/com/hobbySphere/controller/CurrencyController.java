@@ -48,6 +48,19 @@ public class CurrencyController {
         return jwtUtil.isUserToken(jwt);
     }
 
+
+//ADDED
+@GetMapping("/current")
+public ResponseEntity<?> getCurrentCurrency() {
+    AppSettings settings = appSettingsRepository.findById(1L).orElse(null);
+    if (settings == null || settings.getCurrency() == null) {
+        return ResponseEntity.ok("CAD"); // or your default
+    }
+    return ResponseEntity.ok(settings.getCurrency().getCurrencyType().name());
+}
+
+
+
     @PostMapping("/chooseCurrency")
     public ResponseEntity<?> chooseCurrency(
             @RequestHeader("Authorization") String token,

@@ -8,7 +8,6 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.jpa.repository.Modifying;
 
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -47,14 +46,13 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
     @Query("SELECT ab FROM ActivityBookings ab WHERE ab.bookingStatus IN ('Completed', 'Canceled')")
     List<ActivityBookings> findBookingHistory();
 
-    // ✅ Total revenue
-    @Query("SELECT SUM(b.totalPrice) FROM ActivityBookings b WHERE b.activity.business.id = :businessId")
+    @Query("SELECT SUM(b.totalPrice) FROM ActivityBookings b WHERE b.activity.business.id = :businessId AND b.bookingStatus IN ('Pending', 'Confirmed', 'Completed', 'Terminated')")
     Double sumRevenueByBusinessId(@Param("businessId") Long businessId);
 
-    // ✅ Monthly booking count
     @Query(value = "SELECT COUNT(*) FROM activity_bookings ab " +
                    "JOIN activities a ON ab.activity_id = a.activity_id " +
                    "WHERE a.business_id = :businessId " +
+                   "AND ab.booking_status IN ('Pending', 'Confirmed', 'Completed', 'Terminated') " +
                    "AND EXTRACT(MONTH FROM ab.booking_datetime) = :month " +
                    "AND EXTRACT(YEAR FROM ab.booking_datetime) = :year",
            nativeQuery = true)
@@ -62,22 +60,23 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
                                      @Param("month") int month,
                                      @Param("year") int year);
 
-    // ✅ Peak booking hours
     @Query(value = "SELECT EXTRACT(HOUR FROM ab.booking_datetime) AS hour, COUNT(*) AS count " +
                    "FROM activity_bookings ab " +
                    "JOIN activities a ON ab.activity_id = a.activity_id " +
                    "WHERE a.business_id = :businessId " +
+                   "AND ab.booking_status IN ('Pending', 'Confirmed', 'Completed', 'Terminated') " +
                    "GROUP BY hour ORDER BY count DESC",
            nativeQuery = true)
     List<Object[]> findPeakBookingHours(@Param("businessId") Long businessId);
 
-    @Query("SELECT COUNT(DISTINCT b.user.id) FROM ActivityBookings b WHERE b.activity.business.id = :businessId")
+    @Query("SELECT COUNT(DISTINCT b.user.id) FROM ActivityBookings b WHERE b.activity.business.id = :businessId AND b.bookingStatus IN ('Pending', 'Confirmed', 'Completed', 'Terminated')")
     int countDistinctCustomers(@Param("businessId") Long businessId);
 
     @Query(value = "SELECT COUNT(*) FROM (" +
                    "SELECT user_id FROM activity_bookings ab " +
                    "JOIN activities a ON ab.activity_id = a.activity_id " +
                    "WHERE a.business_id = :businessId " +
+                   "AND ab.booking_status IN ('Pending', 'Confirmed', 'Completed', 'Terminated') " +
                    "GROUP BY user_id HAVING COUNT(*) > 1) AS returning_customers",
            nativeQuery = true)
     int countReturningCustomers(@Param("businessId") Long businessId);
@@ -86,7 +85,7 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
 
     List<ActivityBookings> findByActivityIdAndUserId(Long activityId, Long userId);
 
-    void deleteByUserId(Long userId);               // ✅ from file1
+    void deleteByUserId(Long userId);
     void deleteByActivity_Id(Long activityId);
 
     long countByBookingDatetimeAfter(LocalDateTime date);
@@ -98,11 +97,10 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
     @Transactional
     @Query("DELETE FROM ActivityBookings ab WHERE ab.activity.id = :activityId")
     void deleteByActivityId(@Param("activityId") Long activityId);
-    
+
     @Query("SELECT b FROM ActivityBookings b JOIN FETCH b.activity a WHERE b.user.email = :userEmail")
     List<ActivityBookings> findByUserEmailWithActivity(@Param("userEmail") String userEmail);
 
     @Query("SELECT b FROM ActivityBookings b JOIN FETCH b.activity JOIN FETCH b.user")
     List<ActivityBookings> findAllWithActivityAndUser();
-
 }
