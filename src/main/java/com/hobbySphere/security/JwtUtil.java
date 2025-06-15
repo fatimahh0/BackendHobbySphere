@@ -24,8 +24,10 @@ public class JwtUtil {
     private final long EXPIRATION_TIME = 86400000; // 1 day in milliseconds
 
     public String generateToken(Users user) {
+        String subject = user.getEmail() != null ? user.getEmail() : user.getPhoneNumber();
+
         return Jwts.builder()
-                .setSubject(user.getEmail())
+                .setSubject(subject)
                 .claim("id", user.getId())
                 .claim("username", user.getUsername())
                 .claim("firstName", user.getFirstName())
@@ -37,6 +39,7 @@ public class JwtUtil {
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
+
 
     public String generateToken(Businesses business) {
         return Jwts.builder()

@@ -266,12 +266,20 @@ public class UserService {
 
 
 
-	public Users getUserByEmaill(String email) {
-	    Users user = userRepository.findByEmail(email);  
-	    if (user == null) {
-	        throw new RuntimeException("Utilisateur non trouvé avec l'email : " + email);
-	    }
-	    return user;
+	public Users getUserByEmaill(String identifier) {
+		 Users user = null;
+
+	        if (identifier.contains("@")) {
+	            user = userRepository.findByEmail(identifier);
+	        } else {
+	            user = userRepository.findByPhoneNumber(identifier);
+	        }
+
+	        if (user == null) {
+	            throw new RuntimeException("User not found with: " + identifier);
+	        }
+
+	        return user;
 	}
 
 
@@ -455,5 +463,7 @@ public class UserService {
 
         return false; // no image to delete
     }
+  
+
 
 }

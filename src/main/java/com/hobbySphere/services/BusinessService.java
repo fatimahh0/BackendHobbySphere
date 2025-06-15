@@ -211,6 +211,8 @@ public class BusinessService {
         business.setBusinessBannerUrl(pending.getBusinessBannerUrl());
         business.setCreatedAt(LocalDateTime.now());
 
+  
+
         businessRepository.save(business);
         pendingBusinessRepository.delete(pending);
         return true;
@@ -274,6 +276,7 @@ public class BusinessService {
 
         Businesses business = new Businesses();
         business.setPhoneNumber(pending.getPhoneNumber());
+        business.setEmail(pending.getEmail()); 
         business.setBusinessName(pending.getBusinessName());
         business.setPasswordHash(pending.getPasswordHash());
         business.setDescription(pending.getDescription());

@@ -18,7 +18,7 @@ public class Businesses {
     @Column(name = "business_name", nullable = false)
     private String businessName;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = true, unique = true)
     private String email;
 
     @Column(name = "phone_number")
