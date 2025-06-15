@@ -7,6 +7,9 @@ import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 @Entity
 @Table(
     name = "ActivityBookings",
@@ -21,11 +24,13 @@ public class ActivityBookings {
 
     @ManyToOne
     @JoinColumn(name = "activity_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JsonIgnoreProperties({"bookings", "createdBy", "category"}) // Ignore unnecessary properties during serialization
     private Activities activity;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JsonIgnoreProperties({"bookings", "roles", "password"}) // Ignore unnecessary properties during serialization
     private Users user;
 
@@ -46,6 +51,7 @@ public class ActivityBookings {
     
     @ManyToOne
     @JoinColumn(name = "currency_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Currency currency;
 
     @Column(name = "created_at", updatable = false)

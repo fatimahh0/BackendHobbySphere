@@ -5,6 +5,9 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 @Entity
 @Table(name = "notifications")
 public class Notifications {
@@ -16,12 +19,13 @@ public class Notifications {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Users user;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String message;
 
-    @Enumerated(EnumType.STRING) // ✅ Store as String in DB (no need for enum constraint)
+    @Enumerated(EnumType.STRING) 
     @Column(name = "notification_type", nullable = false)
     private NotificationType notificationType;
 

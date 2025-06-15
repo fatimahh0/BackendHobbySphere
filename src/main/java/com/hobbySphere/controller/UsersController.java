@@ -1,7 +1,9 @@
 package com.hobbySphere.controller;
 
 import com.hobbySphere.dto.UserDto;
+import com.hobbySphere.entities.AdminUsers;
 import com.hobbySphere.entities.Users;
+import com.hobbySphere.services.AdminUserService;
 import com.hobbySphere.services.UserService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -14,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/users")
@@ -29,6 +32,9 @@ public class UsersController {
 
 	@Autowired
 	private UsersRepository usersRepository;
+	
+	@Autowired
+	private AdminUserService adminUserService;
 
     private final UserService userService;
 
@@ -80,12 +86,24 @@ public class UsersController {
             }
 
             token = token.substring(7).trim();
+
+            // ✅ DEBUG: print extracted email from token
             String email = jwtUtil.extractUsername(token);
-            String role = jwtUtil.extractRole(token); // Optional
+            System.out.println("Extracted email from token: " + email);
+
+            String role = jwtUtil.extractRole(token);
+
+            // SUPER_ADMIN case
+            if ("SUPER_ADMIN".equalsIgnoreCase(role)) {
+                boolean deleted = userService.deleteUserById(id);
+                return deleted
+                        ? ResponseEntity.ok("User deleted by SUPER_ADMIN successfully")
+                        : ResponseEntity.status(404).body("User not found");
+            }
 
             Users user = usersRepository.findByEmail(email);
             if (user == null || (!user.getId().equals(id) && !"SUPER_ADMIN".equalsIgnoreCase(role))) {
-                return ResponseEntity.status(403).body("Access denied");
+                return ResponseEntity.status(403).body("Access denied: user not found or not authorized");
             }
 
             String password = requestBody.get("password");
@@ -99,9 +117,10 @@ public class UsersController {
                     : ResponseEntity.status(403).body("Invalid password or user not found");
 
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Unexpected error");
+            return ResponseEntity.status(500).body("Unexpected error: " + e.getMessage());
         }
     }
+
 
     @PostMapping("/reset-password")
     public ResponseEntity<Map<String, String>> sendResetCode(@RequestBody Map<String, String> body) {
@@ -183,5 +202,6 @@ public class UsersController {
         }
     }
 
+    
 
     }

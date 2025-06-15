@@ -3,6 +3,9 @@ package com.hobbySphere.entities;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 @Entity
 @Table(name = "reviews")
 public class Review {
@@ -13,10 +16,12 @@ public class Review {
 
     @ManyToOne
     @JoinColumn(name = "activity_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Activities activity;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false) // 👈 must match DB column name exactly
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Users customer;
 
 

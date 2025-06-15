@@ -3,6 +3,10 @@ package com.hobbySphere.entities;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hobbySphere.enums.LanguageType;
 
@@ -33,6 +37,7 @@ public class AdminUsers {
 
     @ManyToOne
     @JoinColumn(name = "role_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Role role;
 
     @Column(name = "notify_activity_updates")
@@ -47,6 +52,7 @@ public class AdminUsers {
 
     @ManyToOne
     @JoinColumn(name = "business_id", nullable = true)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Businesses business;
 
     @Column(name = "created_at", updatable = false)

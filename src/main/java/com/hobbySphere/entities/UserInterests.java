@@ -5,6 +5,9 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 @Entity
 @Table(name = "UserInterests")
 public class UserInterests {
@@ -16,6 +19,7 @@ public class UserInterests {
 
         @ManyToOne
         @JoinColumn(name = "user_id", referencedColumnName = "user_id", nullable = false)
+        @OnDelete(action = OnDeleteAction.CASCADE)
         private Users user;
 
         @ManyToOne

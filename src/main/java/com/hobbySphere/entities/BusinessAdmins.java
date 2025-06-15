@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 import com.hobbySphere.entities.*;
 import com.hobbySphere.enums.LanguageType;
 
@@ -16,12 +19,14 @@ public class BusinessAdmins {
 
     @ManyToOne
     @MapsId("businessId")  // Maps the businessId field in the composite key
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "business_id", nullable = false)
     private Businesses business;
 
     @ManyToOne
     @MapsId("adminId")  // Maps the adminId field in the composite key
     @JoinColumn(name = "admin_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private AdminUsers admin;
     
     @Column(name = "updated_at")

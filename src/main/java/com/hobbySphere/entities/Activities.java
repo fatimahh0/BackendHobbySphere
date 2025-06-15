@@ -5,6 +5,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 @Entity
 @Table(name = "Activities")
 public class Activities {
@@ -16,6 +19,7 @@ public class Activities {
 
     @ManyToOne
     @JoinColumn(name = "business_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Businesses business;
 
     @Column(name = "activity_name", nullable = false)
@@ -26,6 +30,7 @@ public class Activities {
 
     @ManyToOne
     @JoinColumn(name = "activity_type_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private ActivityType activityType;
 
     private String location;
@@ -55,6 +60,7 @@ public class Activities {
 
     @ManyToOne
     @JoinColumn(name = "currency_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Currency currency;
 
     @Column(name = "created_at", updatable = false)

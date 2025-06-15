@@ -1,5 +1,8 @@
 package com.hobbySphere.entities;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -18,6 +21,7 @@ public class ActivityType {
     @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "interest_id", nullable = true)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Interests interest;
 
     public ActivityType() {}

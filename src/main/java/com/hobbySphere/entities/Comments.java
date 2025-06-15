@@ -3,6 +3,9 @@ package com.hobbySphere.entities;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 @Entity
 @Table(name = "Comments")
 public class Comments {
@@ -13,11 +16,13 @@ public class Comments {
     private Long id;
 
     @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "post_id", nullable = false)  // Foreign key to Posts
     private Posts post;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)  // Foreign key to Users
+    @JoinColumn(name = "user_id", nullable = false)  
+    @OnDelete(action = OnDeleteAction.CASCADE)// Foreign key to Users
     private Users user;
 
     @Column(columnDefinition = "TEXT", nullable = false)

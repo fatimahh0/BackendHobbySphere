@@ -1,5 +1,6 @@
 package com.hobbySphere.services;
 
+import com.hobbySphere.entities.AdminUsers;
 import com.hobbySphere.entities.Interests;
 import com.hobbySphere.entities.PendingUser;
 import com.hobbySphere.entities.UserInterests;
@@ -46,6 +47,9 @@ public class UserService {
     
     @Autowired
     private PendingUserRepository pendingUserRepository;
+    
+    @Autowired
+    private AdminUserService adminUserService;
 
     @Autowired
     private final EmailService emailService;
@@ -307,15 +311,19 @@ public class UserService {
 	public boolean deleteUserById(Long id) {
 	    Optional<Users> userOptional = userRepository.findById(id);
 	    if (userOptional.isPresent()) {
-	        userRepository.deleteById(id);
+	        Users user = userOptional.get();
+
+	        // 🔁 Remove manager record if user is promoted as a manager
+	        Optional<AdminUsers> adminOpt = adminUserService.findByUserEmail(user.getEmail());
+	        adminOpt.ifPresent(admin -> adminUserService.deleteManagerById(admin.getAdminId()));
+
+	        // ✅ Now delete the user
+	        userRepository.delete(user);
 	        return true;
 	    } else {
 	        return false;
 	    }
 	}
-
-
-
 
 	public boolean deleteUserByIdWithPassword(Long id, String inputPassword) {
 	    Optional<Users> optionalUser = userRepository.findById(id);
@@ -463,7 +471,5 @@ public class UserService {
 
         return false; // no image to delete
     }
-  
-
 
 }

@@ -3,6 +3,9 @@ package com.hobbySphere.entities;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 @Entity
 @Table(name = "app_settings")
 public class AppSettings {
@@ -12,6 +15,7 @@ public class AppSettings {
 
     @OneToOne
     @JoinColumn(name = "currency_id", referencedColumnName = "currency_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Currency currency;
 
     @Column(name = "updated_at")

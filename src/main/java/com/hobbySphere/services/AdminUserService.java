@@ -190,4 +190,13 @@ public class AdminUserService {
         return !results.isEmpty();
 }
 
+    public void deleteManagerByEmail(String email) {
+        Optional<AdminUsers> admin = adminUserRepository.findByEmail(email);
+        admin.ifPresent(a -> adminUserRepository.deleteById(a.getAdminId()));
+    }
+
+    public Optional<AdminUsers> findByUserEmail(String email) {
+        return adminUserRepository.findByEmail(email); // email-based lookup
+    }
+
 }
