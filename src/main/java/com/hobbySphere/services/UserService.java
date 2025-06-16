@@ -325,20 +325,32 @@ public class UserService {
 	    }
 	}
 
-	public boolean deleteUserByIdWithPassword(Long id, String inputPassword) {
-	    Optional<Users> optionalUser = userRepository.findById(id);
-	    if (optionalUser.isEmpty()) {
-	        return false;
-	    }
 
-	    Users user = optionalUser.get();
-	    if (!passwordEncoder.matches(inputPassword, user.getPasswordHash())) {
-	        return false;
-	    }
+		public boolean deleteUserByIdWithPassword(Long id, String inputPassword) {
+		    Optional<Users> optionalUser = userRepository.findById(id);
+		    if (optionalUser.isEmpty()) {
+		        return false;
+		    }
 
-	    userRepository.deleteById(id);
-	    return true;
-	}
+		    Users user = optionalUser.get();
+
+		    if (!passwordEncoder.matches(inputPassword, user.getPasswordHash())) {
+		        return false;
+		    }
+
+		  
+		    if (user.getEmail() != null) {
+		        List<AdminUsers> admins = adminUserService.findAllByUserEmail(user.getEmail());
+		        for (AdminUsers admin : admins) {
+		            adminUserService.deleteManagerById(admin.getAdminId());
+		        }
+		    }
+
+		  
+		    userRepository.delete(user);
+
+		    return true;
+		}
 
 
 
@@ -471,5 +483,7 @@ public class UserService {
 
         return false; // no image to delete
     }
+
+	
 
 }

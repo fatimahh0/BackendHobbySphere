@@ -199,4 +199,11 @@ public class AdminUserService {
         return adminUserRepository.findByEmail(email); // email-based lookup
     }
 
+    public List<AdminUsers> findAllByUserEmail(String email) {
+        return adminUserRepository.findAllByEmail(email);
+    }
+
+
+	
+
 }

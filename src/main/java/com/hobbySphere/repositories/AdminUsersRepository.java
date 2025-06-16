@@ -28,5 +28,7 @@ public interface AdminUsersRepository extends JpaRepository<AdminUsers, Long> {
     
     List<AdminUsers> findByEmailAndBusiness(String email, Businesses business);
 
+	List<AdminUsers> findAllByEmail(String email);
+
 
 }
