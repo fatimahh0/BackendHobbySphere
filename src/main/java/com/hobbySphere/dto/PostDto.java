@@ -3,6 +3,10 @@ package com.hobbySphere.dto;
 import com.hobbySphere.entities.Posts;
 import com.hobbySphere.entities.Users;
 
+/**
+ * Data Transfer Object for Posts.
+ * Used to send clean and formatted data to the frontend.
+ */
 public class PostDto {
     public Long id;
     public String content;
@@ -17,6 +21,9 @@ public class PostDto {
     public String lastName;
     public String profilePictureUrl;
 
+    //  field for visibility (e.g., "PUBLIC" or "FRIENDS_ONLY")
+    public String visibility;
+
     public PostDto(Posts post, Long currentUserId) {
         this.id = post.getId();
         this.content = post.getContent();
@@ -25,8 +32,11 @@ public class PostDto {
         this.postDatetime = post.getPostDatetime().toString();
         this.likeCount = post.getLikedUsers() != null ? post.getLikedUsers().size() : 0;
         this.commentCount = post.getComments() != null ? post.getComments().size() : 0;
+
         this.isLiked = post.getLikedUsers().stream()
                 .anyMatch(user -> user.getId().equals(currentUserId));
+
+        this.visibility = post.getVisibility().toString(); // 🔹 Include visibility value
 
         Users user = post.getUser();
         if (user != null) {

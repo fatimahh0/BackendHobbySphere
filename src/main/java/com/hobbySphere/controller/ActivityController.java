@@ -275,7 +275,13 @@ public class ActivityController {
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
-        Users user = userService.findByEmail(principal.getName());
+        Users user;
+        try {
+            user = userService.getUserByEmaill(principal.getName());  
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "User not found"));
+        }
+
         activityService.updateStatusIfCanceled(activity);
 
         if (bookingService.hasUserAlreadyBooked(activity.getId(), user.getId())) {
@@ -297,7 +303,7 @@ public class ActivityController {
         response.put("bookingId", booking.getId());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
-    
+
     
     @GetMapping("/interest-based/{userId}")
     @Operation(summary = "Get pending activities by user's interests", description = "Returns only upcoming (not ended or terminated) activities based on user's interests")

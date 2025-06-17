@@ -17,6 +17,7 @@ import org.springframework.http.HttpHeaders;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
@@ -201,6 +202,60 @@ public class UsersController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No profile image found or already deleted");
         }
     }
+
+    @PutMapping("/profile-visibility")
+    public ResponseEntity<String> updateProfileVisibility(@RequestParam boolean isPublic,
+                                                          @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        try {
+            if (token == null || !token.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body("Missing or invalid token");
+            }
+
+            String email = jwtUtil.extractUsername(token.substring(7).trim());
+            Users user = usersRepository.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(404).body("User not found");
+            }
+
+            user.setPublicProfile(isPublic);
+            usersRepository.save(user);
+
+            return ResponseEntity.ok("Profile visibility updated to " + (isPublic ? "PUBLIC" : "PRIVATE"));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Unexpected error: " + e.getMessage());
+        }
+    }
+    
+    @GetMapping("/{id}")
+    public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
+        Optional<Users> userOpt = usersRepository.findById(id);
+        return userOpt.map(user -> ResponseEntity.ok(new UserDto(user)))
+                      .orElse(ResponseEntity.status(404).build());
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<String> updateStatus(@PathVariable Long id, @RequestParam String status) {
+        Optional<Users> userOpt = usersRepository.findById(id);
+        if (userOpt.isEmpty()) return ResponseEntity.status(404).body("User not found");
+
+        Users user = userOpt.get();
+        user.setStatus(status);
+        usersRepository.save(user);
+        return ResponseEntity.ok("User status updated to " + status);
+    }
+
+    @GetMapping("/{userId}/suggestions")
+    public ResponseEntity<?> getFriendSuggestions(@PathVariable Long userId) {
+        try {
+            List<Users> suggestions = userService.suggestFriendsByInterest(userId);
+            List<UserDto> result = suggestions.stream().map(UserDto::new).toList();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error fetching suggestions: " + e.getMessage());
+        }
+    }
+
 
     
 

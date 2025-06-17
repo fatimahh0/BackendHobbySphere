@@ -40,6 +40,9 @@ public class Users {
     @Column(nullable = true) // ✅ Allow null temporarily to avoid migration error
     private String status; // ✅ Status field without hard NOT NULL during migration
 
+    @Column(name = "is_public_profile", nullable = true)
+    private boolean isPublicProfile = true;
+
     // ✅ Add updated_at as the last column
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
@@ -55,6 +58,8 @@ public class Users {
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
     }
+    
+    
 
     
     @Enumerated(EnumType.STRING)
@@ -114,6 +119,15 @@ public class Users {
     public void setLastName(String lastName) {
         this.lastName = lastName;
     }
+    
+    public boolean isPublicProfile() {
+        return isPublicProfile;
+    }
+
+    public void setPublicProfile(boolean isPublicProfile) {
+        this.isPublicProfile = isPublicProfile;
+    }
+
 
     public String getEmail() {
         return email;

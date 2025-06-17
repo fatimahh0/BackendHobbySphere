@@ -39,8 +39,8 @@ public class ActivityBookingService {
 
     // Method to get bookings by user email
     
-    public List<ActivityBookings> getBookingsByEmail(String userEmail) {
-        List<ActivityBookings> bookings = activityBookingsRepository.findByUserEmail(userEmail);
+    public List<ActivityBookings> getBookingsByUserId(Long userId) {
+        List<ActivityBookings> bookings = activityBookingsRepository.findByUserId(userId);
         LocalDateTime now = LocalDateTime.now();
 
         for (ActivityBookings booking : bookings) {
@@ -60,8 +60,8 @@ public class ActivityBookingService {
     }
 
     // Method to get bookings by user email and statuses (e.g., Pending, Completed, Canceled)
-    public List<ActivityBookings> getBookingsByEmailAndStatuses(String userEmail, List<String> statuses) {
-        List<ActivityBookings> bookings = activityBookingsRepository.findByUserEmailAndBookingStatusIn(userEmail, statuses);
+    public List<ActivityBookings> getBookingsByUserIdAndStatuses(Long userId, List<String> statuses) {
+        List<ActivityBookings> bookings = activityBookingsRepository.findByUserIdAndBookingStatusIn(userId, statuses);
         LocalDateTime now = LocalDateTime.now();
 
         for (ActivityBookings booking : bookings) {
@@ -75,31 +75,44 @@ public class ActivityBookingService {
         return bookings;
     }
 
-
-    // Method to cancel a booking by ID (only for the current user)
-    public void cancelBooking(Long bookingId, String userEmail) {
+    public void cancelBooking(Long bookingId, Long userId) {
         ActivityBookings booking = activityBookingsRepository.findById(bookingId)
-            .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
-        
-        if (!booking.getUser().getEmail().equals(userEmail)) {
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+
+        if (!booking.getUser().getId().equals(userId)) {
             throw new IllegalArgumentException("You can only cancel your own bookings");
         }
-        
+
         booking.setBookingStatus("Canceled");
         activityBookingsRepository.save(booking);
     }
 
-    // Method to set a booking to Pending (only for the current user)
-    public void pendingBooking(Long bookingId, String userEmail) {
+    public void pendingBooking(Long bookingId, Long userId) {
         ActivityBookings booking = activityBookingsRepository.findById(bookingId)
-            .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
-        
-        if (!booking.getUser().getEmail().equals(userEmail)) {
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+
+        if (!booking.getUser().getId().equals(userId)) {
             throw new IllegalArgumentException("You can only set your own bookings to pending");
         }
-        
+
         booking.setBookingStatus("Pending");
         activityBookingsRepository.save(booking);
+    }
+
+    public boolean deleteCanceledBookingByIdAndUserId(Long bookingId, Long userId) {
+        ActivityBookings booking = activityBookingsRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (!booking.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized: booking does not belong to user");
+        }
+
+        if (!"Canceled".equalsIgnoreCase(booking.getBookingStatus())) {
+            return false;
+        }
+
+        activityBookingsRepository.delete(booking);
+        return true;
     }
 
     // Method to save a new booking
@@ -112,21 +125,7 @@ public class ActivityBookingService {
         return activityBookingsRepository.sumParticipantsByActivityId(activityId);
     }
 
-    public boolean deleteCanceledBookingByIdAndEmail(Long bookingId, String userEmail) {
-        ActivityBookings booking = activityBookingsRepository.findById(bookingId)
-            .orElseThrow(() -> new RuntimeException("Booking not found"));
-
-        if (!booking.getUser().getEmail().equals(userEmail)) {
-            throw new RuntimeException("Unauthorized: booking does not belong to user");
-        }
-
-        if (!"Canceled".equalsIgnoreCase(booking.getBookingStatus())) {
-            return false; // Only allow deletion if status is Canceled
-        }
-
-        activityBookingsRepository.delete(booking);
-        return true;
-    }
+  
 
     public void rejectBooking(Long bookingId) {
         ActivityBookings booking = activityBookingsRepository.findById(bookingId)

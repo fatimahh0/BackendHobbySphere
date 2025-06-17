@@ -103,4 +103,19 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
 
     @Query("SELECT b FROM ActivityBookings b JOIN FETCH b.activity JOIN FETCH b.user")
     List<ActivityBookings> findAllWithActivityAndUser();
+
+	boolean existsByUserIdAndActivityIdAndBookingStatus(Long id, Long id2, String string);
+	
+	List<ActivityBookings> findByUserIdAndBookingStatusIn(Long userId, List<String> statuses);
+
+	boolean existsByActivityIdAndUserIdAndBookingStatus(Long activityId, Long userId, String string);
+	
+	@Query("SELECT DISTINCT b.activity.id FROM ActivityBookings b WHERE b.user.id = :userId AND b.bookingStatus = 'Completed'")
+	List<Long> findCompletedActivityIdsByUser(@Param("userId") Long userId);
+
+	
+	List<ActivityBookings> findByUserIdAndBookingStatus(Long userId, String bookingStatus);
+	
+
+	
 }

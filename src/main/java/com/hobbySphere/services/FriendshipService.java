@@ -169,11 +169,20 @@ public class FriendshipService {
 
     //  Check if users are friends (ACCEPTED relationship either direction)
     public boolean areFriends(Users user1, Users user2) {
+        if (user1 == null || user2 == null || user1.getId() == null || user2.getId() == null) {
+            return false;  
+        }
         return friendshipRepo.findAcceptedFriendship(user1.getId(), user2.getId()).isPresent();
     }
+
     
     public boolean didBlock(Users blocker, Users blocked) {
         return friendshipRepo.findByUserIdAndFriendIdAndStatus(blocker.getId(), blocked.getId(), "BLOCKED").isPresent();
+    }
+
+    public boolean hasPendingRequestBetween(Users currentUser, Users otherUser) {
+        return friendshipRepo.findByUserIdAndFriendIdAndStatus(currentUser.getId(), otherUser.getId(), "PENDING").isPresent()
+            || friendshipRepo.findByUserIdAndFriendIdAndStatus(otherUser.getId(), currentUser.getId(), "PENDING").isPresent();
     }
 
 

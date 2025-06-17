@@ -149,4 +149,7 @@ public class Activities {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
     public LocalDateTime getDate() { return endDatetime; }
+
+
+	
 }

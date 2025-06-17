@@ -90,6 +90,7 @@ public class ReviewController {
         return new ResponseEntity<>(reviews, HttpStatus.OK);
     }
     
+    
     @Operation(
     	    summary = "Add a review",
     	    description = "Allows a customer to submit a review for an activity"
@@ -101,7 +102,7 @@ public class ReviewController {
     	    @ApiResponse(responseCode = "404", description = "Activity or user not found"),
     	    @ApiResponse(responseCode = "500", description = "Internal server error")
     	})
-    	@PostMapping
+    	@PostMapping("addreviews")
     	public ResponseEntity<?> addReview(
     	        @RequestHeader("Authorization") String token,
     	        @RequestBody ReviewDTO dto) {
@@ -149,5 +150,49 @@ public class ReviewController {
 
     	    return ResponseEntity.ok(reviews);
     	}
+
+    
+    @GetMapping("/check-completed/{activityId}")
+    public ResponseEntity<?> hasCompletedActivity(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long activityId) {
+
+        try {
+            boolean hasCompleted = reviewService.hasUserCompletedActivity(activityId, token);
+            return ResponseEntity.ok(hasCompleted);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        }
+    }
+    
+    @GetMapping("/completed-activities")
+    public ResponseEntity<?> getCompletedActivitiesForUser(@RequestHeader("Authorization") String token) {
+        try {
+            List<Long> activityIds = reviewService.getCompletedActivityIdsForUser(token);
+            return ResponseEntity.ok(activityIds);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/should-show-modal/{activityId}")
+    public ResponseEntity<?> shouldShowReviewModal(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long activityId) {
+        try {
+            boolean result = reviewService.shouldShowReviewModal(activityId, token);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        }
+    }
+    
+    @GetMapping("/suggest")
+    public ResponseEntity<Long> suggestReviewActivity(@RequestHeader("Authorization") String token) {
+        Long activityId = reviewService.getFirstCompletedUnreviewedActivity(token);
+        return ResponseEntity.ok(activityId);
+    }
+
+
 
 }

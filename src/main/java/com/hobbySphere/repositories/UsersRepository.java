@@ -1,5 +1,6 @@
 package com.hobbySphere.repositories;
 
+import com.hobbySphere.entities.Interests;
 import com.hobbySphere.entities.Users;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -31,4 +32,11 @@ public interface UsersRepository extends JpaRepository<Users, Long> {
         ORDER BY TO_CHAR(u.createdAt, 'YYYY-MM')
     """)
     List<Object[]> countMonthlyRegistrations(@Param("startDate") LocalDateTime startDate);
+
+    @Query("SELECT DISTINCT ui.id.user FROM UserInterests ui " +
+    	       "WHERE ui.interest IN :interests " +
+    	       "AND ui.id.user.id <> :userId")
+    	List<Users> findUsersWithMatchingInterests(@Param("userId") Long userId,
+    	                                           @Param("interests") List<Interests> interests);
+
 }

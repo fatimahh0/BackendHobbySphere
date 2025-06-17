@@ -1,16 +1,14 @@
 package com.hobbySphere.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.hobbySphere.enums.PostVisibility; // Import the enum
+
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
-
-import java.util.List;
-import java.util.ArrayList;
 
 @Entity
 @Table(name = "Posts")
@@ -44,6 +42,12 @@ public class Posts {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // 🔹 New field: post visibility (public or friends only)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true)
+    private PostVisibility visibility = PostVisibility.PUBLIC;
+
+    // Users who liked the post
     @ManyToMany
     @JoinTable(
         name = "post_likes",
@@ -53,6 +57,7 @@ public class Posts {
     @JsonIgnore
     private Set<Users> likedUsers = new HashSet<>();
 
+    // Comments linked to this post
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Comments> comments = new ArrayList<>();
@@ -159,11 +164,22 @@ public class Posts {
         this.comments = comments;
     }
 
+    // Count total likes
     public int getLikeCount() {
         return likedUsers != null ? likedUsers.size() : 0;
     }
 
+    // Count total comments
     public int getCommentCount() {
         return comments != null ? comments.size() : 0;
+    }
+
+    // 🔹 Getter/Setter for visibility
+    public PostVisibility getVisibility() {
+        return visibility;
+    }
+
+    public void setVisibility(PostVisibility visibility) {
+        this.visibility = visibility;
     }
 }

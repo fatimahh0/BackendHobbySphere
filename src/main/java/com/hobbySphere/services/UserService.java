@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 @Service
 public class UserService {
@@ -47,6 +48,10 @@ public class UserService {
     
     @Autowired
     private PendingUserRepository pendingUserRepository;
+    
+    @Autowired
+    private FriendshipService friendshipService;
+
     
     @Autowired
     private AdminUserService adminUserService;
@@ -484,6 +489,36 @@ public class UserService {
         return false; // no image to delete
     }
 
-	
+    public List<Users> suggestFriendsByInterest(Long userId) {
+        Users currentUser = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Get current user's interest IDs
+        List<Long> myInterestIds = userInterestsRepository.findById_User_Id(userId)
+            .stream()
+            .map(ui -> ui.getId().getInterest().getId())
+            .collect(Collectors.toList());
+
+        if (myInterestIds.isEmpty()) return List.of();
+
+        // Users with shared interests
+        List<UserInterests> sharedInterests = userInterestsRepository.findByInterestIdIn(myInterestIds);
+
+        Set<Users> potentialFriends = sharedInterests.stream()
+            .map(ui -> ui.getId().getUser())
+            .filter(user -> !user.getId().equals(userId))
+            .collect(Collectors.toSet());
+
+        // Remove current friends
+        List<Users> currentFriends = friendshipService.getAcceptedFriends(currentUser);
+        potentialFriends.removeAll(currentFriends);
+
+        // Remove blocked users and pending requests
+        return potentialFriends.stream()
+            .filter(user -> !friendshipService.didBlock(currentUser, user))
+            .filter(user -> !friendshipService.didBlock(user, currentUser))
+            .filter(user -> !friendshipService.hasPendingRequestBetween(currentUser, user))
+            .toList();
+    }
 
 }

@@ -9,6 +9,7 @@ public class UserDto {
     private String email;
     private String phoneNumber;
     private String profileImageUrl;
+    private boolean isPublicProfile; // ✅ NEW
 
     public UserDto() {}
 
@@ -19,9 +20,10 @@ public class UserDto {
         this.email = user.getEmail();
         this.phoneNumber = user.getPhoneNumber();
         this.profileImageUrl = user.getProfilePictureUrl();
+        this.isPublicProfile = user.isPublicProfile(); 
     }
 
-    // Getters
+    // === Getters ===
     public Long getId() {
         return id;
     }
@@ -46,7 +48,11 @@ public class UserDto {
         return profileImageUrl;
     }
 
-    // Setters
+    public boolean isPublicProfile() {
+        return isPublicProfile;
+    }
+
+    // === Setters ===
     public void setId(Long id) {
         this.id = id;
     }
@@ -69,5 +75,9 @@ public class UserDto {
 
     public void setProfileImageUrl(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
+    }
+
+    public void setPublicProfile(boolean isPublicProfile) {
+        this.isPublicProfile = isPublicProfile;
     }
 }

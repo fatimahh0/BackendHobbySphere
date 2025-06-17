@@ -28,5 +28,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
    List<Review> findByCustomerUsernameOrderByDateDesc(String username);
 
+   boolean existsByActivityIdAndCustomerId(Long activityId, Long customerId);
+
+   
+
 
 }
