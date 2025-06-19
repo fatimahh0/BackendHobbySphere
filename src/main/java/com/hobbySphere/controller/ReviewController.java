@@ -37,7 +37,7 @@ public class ReviewController {
 
         String jwt = token.substring(7);
         String role = jwtUtil.extractRole(jwt);  // This method must extract "role" claim from token
-        return "BUSINESS".equals(role) || "SUPER_ADMIN".equals(role);
+        return "BUSINESS".equals(role) || "SUPER_ADMIN".equals(role) || "MANAGER".equals(role);
     }
 
     @Operation(
@@ -191,7 +191,7 @@ public class ReviewController {
     public ResponseEntity<Long> suggestReviewActivity(@RequestHeader("Authorization") String token) {
         Long activityId = reviewService.getFirstCompletedUnreviewedActivity(token);
         return ResponseEntity.ok(activityId);
-    }
+        }
 
 
 

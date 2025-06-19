@@ -1,9 +1,11 @@
 package com.hobbySphere.controller;
 
 import com.hobbySphere.dto.CurrencyRequest;
+import com.hobbySphere.services.CurrencyService;
 import com.hobbySphere.entities.AppSettings;
 import com.hobbySphere.entities.Currency;
 import com.hobbySphere.enums.CurrencyType;
+import com.hobbySphere.enums.DefaultCurrencies;
 import com.hobbySphere.repositories.AppSettingsRepository;
 import com.hobbySphere.repositories.CurrencyRepository;
 import com.hobbySphere.security.JwtUtil;
@@ -31,6 +33,10 @@ public class CurrencyController {
 
     @Autowired
     private JwtUtil jwtUtil;
+    
+    @Autowired
+    private CurrencyService currencyService;
+
 
     private boolean isAuthorized(String token) {
         if (token == null || !token.startsWith("Bearer ")) return false;
@@ -52,6 +58,7 @@ public class CurrencyController {
 //ADDED
 @GetMapping("/current")
 public ResponseEntity<?> getCurrentCurrency() {
+	currencyService.ensureDefaultCurrencies();
     AppSettings settings = appSettingsRepository.findById(1L).orElse(null);
     if (settings == null || settings.getCurrency() == null) {
         return ResponseEntity.ok("CAD"); // or your default
@@ -69,6 +76,9 @@ public ResponseEntity<?> getCurrentCurrency() {
         if (!isAuthorized(token)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied.");
         }
+        
+        currencyService.ensureDefaultCurrencies();
+
 
         String type = request.getCurrencyType() != null ? request.getCurrencyType().toUpperCase() : "CAD";
 

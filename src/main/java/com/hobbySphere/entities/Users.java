@@ -26,10 +26,9 @@ public class Users {
 
     @Column(unique = true, nullable = true)
     private String email;
-    
-    @Column(unique = true,nullable = true)
-    private String phoneNumber;
 
+    @Column(unique = true, nullable = true)
+    private String phoneNumber;
 
     @Column(nullable = false)
     private String passwordHash;
@@ -41,16 +40,15 @@ public class Users {
     private String status; // ✅ Status field without hard NOT NULL during migration
 
     @Column(name = "is_public_profile", nullable = true)
-    private boolean isPublicProfile = true;
+    private Boolean isPublicProfile = true;
 
     // ✅ Add updated_at as the last column
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-    
+
     public String getPhoneNumber() {
         return phoneNumber;
     }
@@ -58,10 +56,7 @@ public class Users {
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
     }
-    
-    
 
-    
     @Enumerated(EnumType.STRING)
     @Column(name = "preferred_language")
     private LanguageType preferredLanguage;
@@ -74,7 +69,6 @@ public class Users {
         this.preferredLanguage = preferredLanguage;
     }
 
-    
     @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<ActivityBookings> activityBookings;
 
@@ -119,15 +113,14 @@ public class Users {
     public void setLastName(String lastName) {
         this.lastName = lastName;
     }
-    
-    public boolean isPublicProfile() {
+
+    public Boolean isPublicProfile() {
         return isPublicProfile;
     }
 
-    public void setPublicProfile(boolean isPublicProfile) {
+    public void setPublicProfile(Boolean isPublicProfile) {
         this.isPublicProfile = isPublicProfile;
     }
-
 
     public String getEmail() {
         return email;
@@ -164,11 +157,11 @@ public class Users {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
-    
+
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
-    
+
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }

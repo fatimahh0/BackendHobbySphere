@@ -1,4 +1,5 @@
 package com.hobbySphere.controller;
+
 import com.hobbySphere.repositories.*;
 import com.hobbySphere.entities.*;
 import com.hobbySphere.security.JwtUtil;
@@ -26,9 +27,9 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = {
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175"
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175"
 })
 @Tag(name = "Authentication", description = "Endpoints for user login, registration, and Google login")
 public class AuthController {
@@ -41,9 +42,9 @@ public class AuthController {
 
     @Autowired
     private AdminUserService adminUserService;
-    
-    @Autowired 
-    private RoleRepository roleRepository; 
+
+    @Autowired
+    private RoleRepository roleRepository;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -53,29 +54,29 @@ public class AuthController {
 
     @Autowired
     private GoogleAuthService googleAuthService;
-    
+
     @Autowired
     private UsersRepository UserRepository;
-    
-
 
     @PostMapping(value = "/send-verification", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> sendVerification(
-    		@RequestParam(required = false) String email,
-    		@RequestParam(required = false) String phoneNumber,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String phoneNumber,
             @RequestParam("username") String username,
             @RequestParam("firstName") String firstName,
             @RequestParam("lastName") String lastName,
             @RequestParam("password") String password,
             @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
         try {
-        	Map<String, String> userData = new HashMap<>();
-        	if (email != null) userData.put("email", email);
-        	if (phoneNumber != null) userData.put("phoneNumber", phoneNumber);
-        	userData.put("username", username);
-        	userData.put("firstName", firstName);
-        	userData.put("lastName", lastName);
-        	userData.put("password", password);
+            Map<String, String> userData = new HashMap<>();
+            if (email != null)
+                userData.put("email", email);
+            if (phoneNumber != null)
+                userData.put("phoneNumber", phoneNumber);
+            userData.put("username", username);
+            userData.put("firstName", firstName);
+            userData.put("lastName", lastName);
+            userData.put("password", password);
 
             boolean sent = userService.sendVerificationCodeForRegistration(userData, profileImage);
             return ResponseEntity.ok(Map.of("message", "Verification code sent"));
@@ -83,7 +84,6 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
-
 
     @PostMapping("/verify-email-code")
     public ResponseEntity<?> verifyEmailCode(@RequestBody Map<String, String> request) {
@@ -104,17 +104,15 @@ public class AuthController {
                 userData.put("profilePictureUrl", user.getProfilePictureUrl());
 
                 return ResponseEntity.ok(Map.of(
-                    "message", "User verified and account created successfully",
-                    "user", userData
-                ));
+                        "message", "User verified and account created successfully",
+                        "user", userData));
             }
         }
 
         return ResponseEntity.status(400).body(Map.of("error", "Invalid code or email"));
     }
 
-
-    ///user register with number
+    /// user register with number
     @PostMapping("/user/verify-phone-code")
     public ResponseEntity<?> verifyUserPhoneCode(@RequestBody Map<String, String> request) {
         String phone = request.get("phoneNumber");
@@ -134,9 +132,8 @@ public class AuthController {
                 userData.put("profilePictureUrl", user.getProfilePictureUrl());
 
                 return ResponseEntity.ok(Map.of(
-                    "message", "User phone verified and account created successfully",
-                    "user", userData
-                ));
+                        "message", "User phone verified and account created successfully",
+                        "user", userData));
             }
         }
 
@@ -144,10 +141,6 @@ public class AuthController {
                 .body(Map.of("error", "Invalid phone number or verification code"));
     }
 
-
-
-    
-  
     @PostMapping(value = "/business/send-verification", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> sendBusinessVerification(
             @RequestParam(required = false) String email,
@@ -157,23 +150,21 @@ public class AuthController {
             @RequestParam String description,
             @RequestParam String websiteUrl,
             @RequestPart(value = "businessLogo", required = false) MultipartFile logo,
-            @RequestPart(value = "businessBanner", required = false) MultipartFile banner
-    ) {
+            @RequestPart(value = "businessBanner", required = false) MultipartFile banner) {
         try {
             Map<String, String> businessData = Map.of(
-                "email", email != null ? email : "",
-                "phoneNumber", phoneNumber != null ? phoneNumber : "",
-                "businessName", businessName,
-                "password", password,
-                "description", description,
-                "websiteUrl", websiteUrl
-            );
+                    "email", email != null ? email : "",
+                    "phoneNumber", phoneNumber != null ? phoneNumber : "",
+                    "businessName", businessName,
+                    "password", password,
+                    "description", description,
+                    "websiteUrl", websiteUrl);
 
             businessService.sendBusinessVerificationCode(businessData, logo, banner);
 
             return ResponseEntity.ok(Map.of(
-                "message", phoneNumber != null ? "Static code 123456 set for phone verification" : "Verification code sent to email"
-            ));
+                    "message", phoneNumber != null ? "Static code 123456 set for phone verification"
+                            : "Verification code sent to email"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -202,18 +193,14 @@ public class AuthController {
                 businessData.put("businessBanner", business.getBusinessBannerUrl());
 
                 return ResponseEntity.ok(Map.of(
-                    "message", "Business email verified and account created successfully",
-                    "business", businessData
-                ));
+                        "message", "Business email verified and account created successfully",
+                        "business", businessData));
             }
         }
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", "Invalid verification code or email"));
     }
-
-
-    
 
     @PostMapping("/business/verify-phone-code")
     public ResponseEntity<?> verifyBusinessPhoneCode(@RequestBody Map<String, String> request) {
@@ -236,9 +223,8 @@ public class AuthController {
                 businessData.put("businessBanner", business.getBusinessBannerUrl());
 
                 return ResponseEntity.ok(Map.of(
-                    "message", "Business phone verified and account created successfully",
-                    "business", businessData
-                ));
+                        "message", "Business phone verified and account created successfully",
+                        "business", businessData));
             }
         }
 
@@ -246,8 +232,6 @@ public class AuthController {
                 .body(Map.of("error", "Invalid phone number or verification code"));
     }
 
-
-    
     @PostMapping("/resend-user-code")
     public ResponseEntity<?> resendUserCode(@RequestBody Map<String, String> request) {
         String contact = request.get("emailOrPhone");
@@ -278,12 +262,12 @@ public class AuthController {
         Users existingUser = userService.findByEmail(user.getEmail());
         if (existingUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                                 .body(Map.of("message", "User not found"));
+                    .body(Map.of("message", "User not found"));
         }
 
         if (!passwordEncoder.matches(user.getPasswordHash(), existingUser.getPasswordHash())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                                 .body(Map.of("message", "Incorrect password"));
+                    .body(Map.of("message", "Incorrect password"));
         }
 
         String token = jwtUtil.generateToken(existingUser); // ✅ Use existingUser
@@ -294,7 +278,7 @@ public class AuthController {
         userData.put("firstName", existingUser.getFirstName());
         userData.put("lastName", existingUser.getLastName());
         userData.put("email", existingUser.getEmail());
-        userData.put("profilePictureUrl", existingUser.getProfilePictureUrl()); 
+        userData.put("profilePictureUrl", existingUser.getProfilePictureUrl());
 
         Map<String, Object> response = new HashMap<>();
         response.put("message", "User login successful");
@@ -305,7 +289,6 @@ public class AuthController {
 
     }
 
-    
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateUser(
             @PathVariable Long id,
@@ -342,8 +325,8 @@ public class AuthController {
         return ResponseEntity.ok("Profile updated successfully");
     }
 
- //user login with number
-    
+    // user login with number
+
     @PostMapping("/user/login-phone")
     public ResponseEntity<?> userLoginWithPhone(@RequestBody @Valid Users user) {
         String phone = user.getPhoneNumber();
@@ -375,10 +358,9 @@ public class AuthController {
         userData.put("profilePictureUrl", existingUser.getProfilePictureUrl());
 
         return ResponseEntity.ok(Map.of(
-            "message", "User login with phone successful",
-            "token", token,
-            "user", userData
-        ));
+                "message", "User login with phone successful",
+                "token", token,
+                "user", userData));
     }
 
     // Business Login
@@ -389,14 +371,14 @@ public class AuthController {
 
         if (optionalBusiness.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                                 .body(Map.of("message", "Business not found"));
+                    .body(Map.of("message", "Business not found"));
         }
 
         Businesses business = optionalBusiness.get();
 
         if (!passwordEncoder.matches(user.getPasswordHash(), business.getPasswordHash())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                                 .body(Map.of("message", "Incorrect password"));
+                    .body(Map.of("message", "Incorrect password"));
         }
 
         String token = jwtUtil.generateToken(business);
@@ -408,11 +390,10 @@ public class AuthController {
         businessData.put("email", business.getEmail());
         businessData.put("businessLogo", business.getBusinessLogoUrl());
         businessData.put("businessBanner", business.getBusinessBannerUrl());
-        businessData.put("businessName",business.getBusinessName());
-        businessData.put("phoneNumber",business.getPhoneNumber());
-        businessData.put("WebsiteUrl",business.getWebsiteUrl());
-        businessData.put("Description",business.getDescription());
-       
+        businessData.put("businessName", business.getBusinessName());
+        businessData.put("phoneNumber", business.getPhoneNumber());
+        businessData.put("WebsiteUrl", business.getWebsiteUrl());
+        businessData.put("Description", business.getDescription());
 
         // Full response map
         Map<String, Object> response = new HashMap<>();
@@ -423,7 +404,7 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    //business login with number
+    // business login with number
     @PostMapping("/business/login-phone")
     public ResponseEntity<?> businessLoginWithPhone(@RequestBody @Valid Users user) {
         String phone = user.getPhoneNumber();
@@ -457,15 +438,12 @@ public class AuthController {
         businessData.put("businessBanner", business.getBusinessBannerUrl());
 
         return ResponseEntity.ok(Map.of(
-            "message", "Business login with phone successful",
-            "token", token,
-            "business", businessData
-        ));
+                "message", "Business login with phone successful",
+                "token", token,
+                "business", businessData));
     }
 
-
-
- // Google Login
+    // Google Login
     @PostMapping("/google-login")
     public ResponseEntity<?> googleLogin(@RequestBody GoogleLoginRequest request, @RequestParam String userType) {
         String idToken = request.getIdToken();
@@ -498,8 +476,7 @@ public class AuthController {
                 String token = jwtUtil.generateToken(business);
                 return ResponseEntity.ok(Map.of(
                         "message", "Google business login successful",
-                        "token", token
-                ));
+                        "token", token));
             } else {
                 Users user = userService.findByEmail(email);
                 if (user == null) {
@@ -513,8 +490,7 @@ public class AuthController {
                 String token = jwtUtil.generateToken(user);
                 return ResponseEntity.ok(Map.of(
                         "message", " Google login successful",
-                        "token", token
-                ));
+                        "token", token));
             }
 
         } catch (Exception e) {
@@ -522,7 +498,7 @@ public class AuthController {
                     .body("Invalid Google ID token: " + e.getMessage());
         }
     }
-    
+
     @PostMapping("/admin/promote-to-manager/{userId}/{businessId}")
     public ResponseEntity<?> promoteToManager(@PathVariable Long userId, @PathVariable Long businessId) {
         Users user = userService.getUserById(userId);
@@ -531,159 +507,170 @@ public class AuthController {
         AdminUsers manager = adminUserService.promoteUserToManager(user, business);
 
         return ResponseEntity.ok(Map.of(
-            "message", "User promoted to Manager successfully",
-            "manager", Map.of(
-                "id", manager.getAdminId(),
-                "email", manager.getEmail(),
-                "role", manager.getRole().getName(),
-                "businessId", manager.getBusiness().getId()
-            )
-        ));
+                "message", "User promoted to Manager successfully",
+                "manager", Map.of(
+                        "id", manager.getAdminId(),
+                        "email", manager.getEmail(),
+                        "role", manager.getRole().getName(),
+                        "businessId", manager.getBusiness().getId())));
     }
 
+    @Operation(summary = "Login as a Manager", description = "Authenticates a Manager from the AdminUsers table based on email/username and password", responses = {
+            @ApiResponse(responseCode = "200", description = "Login successful, JWT token returned"),
+            @ApiResponse(responseCode = "401", description = "Invalid credentials or not a manager")
+    })
+    @PostMapping("/manager/login")
+    public ResponseEntity<?> managerLogin(@RequestBody AdminLoginRequest request) {
+        // 1. Find manager by username or email
+        Optional<AdminUsers> optionalAdmin = adminUserService.findByUsernameOrEmail(request.getUsernameOrEmail());
 
+        // 2. If not found, error
+        if (optionalAdmin.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Invalid credentials"));
+        }
 
- @Operation(
-    	    summary = "Login as a Manager",
-    	    description = "Authenticates a Manager from the AdminUsers table based on email/username and password",
-    	    responses = {
-    	        @ApiResponse(responseCode = "200", description = "Login successful, JWT token returned"),
-    	        @ApiResponse(responseCode = "401", description = "Invalid credentials or not a manager")
-    	    }
-    	)
-    	@PostMapping("/manager/login")
-    	public ResponseEntity<?> managerLogin(@RequestBody AdminLoginRequest request) {
-    	    AdminUsers admin = adminUserService.findByUsernameOrEmail(request.getUsernameOrEmail())
-    	        .orElse(null);
+        AdminUsers admin = optionalAdmin.get();
 
-    	    if (admin == null || !passwordEncoder.matches(request.getPassword(), admin.getPasswordHash())) {
-    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Invalid credentials"));
-    	    }
+        // 3. Password check
+        if (!passwordEncoder.matches(request.getPassword(), admin.getPasswordHash())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Invalid credentials"));
+        }
 
-    	    if (!"MANAGER".equalsIgnoreCase(admin.getRole().getName())) {
-    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Access denied: Not a Manager"));
-    	    }
+        // 4. Role check
+        if (!"MANAGER".equalsIgnoreCase(admin.getRole().getName())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Access denied: Not a Manager"));
+        }
 
-    	    String token = jwtUtil.generateToken(admin);
+        // 5. JWT
+        String token = jwtUtil.generateToken(admin);
 
-    	    Map<String, Object> managerData = new HashMap<>();
-    	    managerData.put("id", admin.getAdminId());
-    	    managerData.put("username", admin.getUsername());
-    	    managerData.put("firstName", admin.getFirstName());
-    	    managerData.put("lastName", admin.getLastName());
-    	    managerData.put("email", admin.getEmail());
-    	    managerData.put("role", admin.getRole().getName());
+        // 6. Manager data
+        Map<String, Object> managerData = new HashMap<>();
+        managerData.put("id", admin.getAdminId());
+        managerData.put("username", admin.getUsername());
+        managerData.put("firstName", admin.getFirstName());
+        managerData.put("lastName", admin.getLastName());
+        managerData.put("email", admin.getEmail());
+        managerData.put("role", admin.getRole().getName());
 
-    	    return ResponseEntity.ok(Map.of(
-    	        "message", "Manager login successful",
-    	        "token", token,
-    	        "manager", managerData
-    	    ));
-    	}
- 
- @Operation(
-		    summary = "Login as Super Admin",
-		    description = "Authenticates a Super Admin using email and password",
-		    responses = {
-		        @ApiResponse(responseCode = "200", description = "Login successful, JWT returned"),
-		        @ApiResponse(responseCode = "401", description = "Invalid credentials or not a Super Admin")
-		    }
-		)
-		@PostMapping("/superadmin/login")
-		public ResponseEntity<?> superAdminLogin(@RequestBody AdminLoginRequest request) {
-		    if (request.getUsernameOrEmail() == null || request.getPassword() == null) {
-		        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-		                .body(Map.of("message", "Email and password are required"));
-		    }
+        // 7. Business data (the business that promoted this manager)
+        Map<String, Object> businessData = null;
+        if (admin.getBusiness() != null) {
+            Businesses business = admin.getBusiness();
+            businessData = new HashMap<>();
+            businessData.put("id", business.getId());
+            businessData.put("businessName", business.getBusinessName());
+            businessData.put("email", business.getEmail());
+            businessData.put("phoneNumber", business.getPhoneNumber());
+            businessData.put("businessLogoUrl", business.getBusinessLogoUrl());
+            businessData.put("businessBannerUrl", business.getBusinessBannerUrl());
+            businessData.put("description", business.getDescription());
+            businessData.put("websiteUrl", business.getWebsiteUrl());
+            // Add other fields as needed
+        }
 
-		    // Force login by email only
-		    Optional<AdminUsers> adminOpt = adminUserService.findByEmail(request.getUsernameOrEmail());
+        // 8. Return token, manager, and business info
+        return ResponseEntity.ok(Map.of(
+                "message", "Manager login successful",
+                "token", token,
+                "manager", managerData,
+                "business", businessData));
+    }
 
-		    if (adminOpt.isEmpty()) {
-		        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-		                .body(Map.of("message", "No Super Admin found with this email"));
-		    }
+    @Operation(summary = "Login as Super Admin", description = "Authenticates a Super Admin using email and password", responses = {
+            @ApiResponse(responseCode = "200", description = "Login successful, JWT returned"),
+            @ApiResponse(responseCode = "401", description = "Invalid credentials or not a Super Admin")
+    })
+    @PostMapping("/superadmin/login")
+    public ResponseEntity<?> superAdminLogin(@RequestBody AdminLoginRequest request) {
+        if (request.getUsernameOrEmail() == null || request.getPassword() == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Email and password are required"));
+        }
 
-		    AdminUsers admin = adminOpt.get();
+        // Force login by email only
+        Optional<AdminUsers> adminOpt = adminUserService.findByEmail(request.getUsernameOrEmail());
 
-		    if (!passwordEncoder.matches(request.getPassword(), admin.getPasswordHash())) {
-		        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-		                .body(Map.of("message", "Incorrect password"));
-		    }
+        if (adminOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "No Super Admin found with this email"));
+        }
 
-		    if (!"SUPER_ADMIN".equalsIgnoreCase(admin.getRole().getName())) {
-		        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-		                .body(Map.of("message", "Access denied: Not a Super Admin"));
-		    }
+        AdminUsers admin = adminOpt.get();
 
-		    String token = jwtUtil.generateToken(admin);
+        if (!passwordEncoder.matches(request.getPassword(), admin.getPasswordHash())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Incorrect password"));
+        }
 
-		    Map<String, Object> adminData = new HashMap<>();
-		    adminData.put("id", admin.getAdminId());
-		    adminData.put("username", admin.getUsername());
-		    adminData.put("firstName", admin.getFirstName());
-		    adminData.put("lastName", admin.getLastName());
-		    adminData.put("email", admin.getEmail());
-		    adminData.put("role", admin.getRole().getName());
+        if (!"SUPER_ADMIN".equalsIgnoreCase(admin.getRole().getName())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Access denied: Not a Super Admin"));
+        }
 
-		    return ResponseEntity.ok(Map.of(
-		        "message", "Super Admin login successful",
-		        "token", token,
-		        "admin", adminData
-		    ));
-		}
+        String token = jwtUtil.generateToken(admin);
 
- 
- @Operation(
-		    summary = "Register a new Super Admin",
-		    description = "Registers a new AdminUser with the default role of SUPER_ADMIN"
-		)
-		@PostMapping("/admin/register")
-		public ResponseEntity<?> registerSuperAdmin(@RequestBody AdminRegisterRequest request) {
-		    // Check if email or username already exists
-		    if (adminUserService.findByUsernameOrEmail(request.getEmail()).isPresent()) {
-		        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-		                .body(Map.of("message", "Username or email already in use"));
-		    }
+        Map<String, Object> adminData = new HashMap<>();
+        adminData.put("id", admin.getAdminId());
+        adminData.put("username", admin.getUsername());
+        adminData.put("firstName", admin.getFirstName());
+        adminData.put("lastName", admin.getLastName());
+        adminData.put("email", admin.getEmail());
+        adminData.put("role", admin.getRole().getName());
 
-		    // Fetch the SUPER_ADMIN role
-		    Role role = roleRepository.findByName("SUPER_ADMIN")
-		            .orElseThrow(() -> new RuntimeException("Role SUPER_ADMIN not found"));
+        return ResponseEntity.ok(Map.of(
+                "message", "Super Admin login successful",
+                "token", token,
+                "admin", adminData));
+    }
 
-		    // Create the admin user
-		    AdminUsers newAdmin = new AdminUsers();
-		    newAdmin.setUsername(request.getUsername());
-		    newAdmin.setFirstName(request.getFirstName());
-		    newAdmin.setLastName(request.getLastName());
-		    newAdmin.setEmail(request.getEmail());
-		    newAdmin.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-		    newAdmin.setRole(role);
+    @Operation(summary = "Register a new Super Admin", description = "Registers a new AdminUser with the default role of SUPER_ADMIN")
+    @PostMapping("/admin/register")
+    public ResponseEntity<?> registerSuperAdmin(@RequestBody AdminRegisterRequest request) {
+        // Check if email or username already exists
+        if (adminUserService.findByUsernameOrEmail(request.getEmail()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Username or email already in use"));
+        }
 
-		    adminUserService.save(newAdmin);
+        // Fetch the SUPER_ADMIN role
+        Role role = roleRepository.findByName("SUPER_ADMIN")
+                .orElseThrow(() -> new RuntimeException("Role SUPER_ADMIN not found"));
 
-		    return ResponseEntity.ok(Map.of(
-		            "message", "Super Admin registered successfully",
-		            "adminId", newAdmin.getAdminId()
-		    ));
-		}
+        // Create the admin user
+        AdminUsers newAdmin = new AdminUsers();
+        newAdmin.setUsername(request.getUsername());
+        newAdmin.setFirstName(request.getFirstName());
+        newAdmin.setLastName(request.getLastName());
+        newAdmin.setEmail(request.getEmail());
+        newAdmin.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        newAdmin.setRole(role);
 
- @Operation(
-		    summary = "Remove a manager",
-		    description = "Deletes a manager from AdminUsers and BusinessAdmins tables"
-		)
-		@ApiResponse(responseCode = "200", description = "Manager removed successfully")
-		@ApiResponse(responseCode = "404", description = "Manager not found")
-		@DeleteMapping("/admin/remove-manager/{adminId}")
-		public ResponseEntity<?> removeManager(@PathVariable Long adminId) {
-		    Optional<AdminUsers> optionalManager = adminUserService.findById(adminId);
+        adminUserService.save(newAdmin);
 
-		    if (optionalManager.isEmpty()) {
-		        return ResponseEntity.status(404).body(Map.of("message", "Manager not found"));
-		    }
+        return ResponseEntity.ok(Map.of(
+                "message", "Super Admin registered successfully",
+                "adminId", newAdmin.getAdminId()));
+    }
 
-		    adminUserService.deleteManagerById(adminId);
+    @Operation(summary = "Remove a manager", description = "Deletes a manager from AdminUsers and BusinessAdmins tables")
+    @ApiResponse(responseCode = "200", description = "Manager removed successfully")
+    @ApiResponse(responseCode = "404", description = "Manager not found")
+    @DeleteMapping("/admin/remove-manager/{adminId}")
+    public ResponseEntity<?> removeManager(@PathVariable Long adminId) {
+        Optional<AdminUsers> optionalManager = adminUserService.findById(adminId);
 
-		    return ResponseEntity.ok(Map.of("message", "Manager removed successfully"));
-		}
+        if (optionalManager.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("message", "Manager not found"));
+        }
+
+        adminUserService.deleteManagerById(adminId);
+
+        return ResponseEntity.ok(Map.of("message", "Manager removed successfully"));
+        
+   }
 
 }
