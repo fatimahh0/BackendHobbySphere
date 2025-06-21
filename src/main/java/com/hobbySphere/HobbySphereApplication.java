@@ -11,29 +11,29 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.hobbySphere.enums.LanguageType;
 import com.hobbySphere.repositories.LanguageRepository;
 import com.hobbySphere.repositories.RoleRepository;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
+@EnableScheduling 
 @SpringBootApplication
 public class HobbySphereApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(HobbySphereApplication.class, args);
 	}
-	
-	 @Bean
-	    public PasswordEncoder passwordEncoder() {
-	        return new BCryptPasswordEncoder();
-	    }
 
-	 @Bean
-	    public CommandLineRunner seedLanguages(LanguageRepository repo) {
-	        return args -> {
-	            if (repo.count() == 0) {
-	                for (LanguageType type : LanguageType.values()) {
-	                    repo.save(new Languages(type));
-	                }
-	            }
-	        };
-	    }
-	 
-	 
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	@Bean
+	public CommandLineRunner seedLanguages(LanguageRepository repo) {
+		return args -> {
+			if (repo.count() == 0) {
+				for (LanguageType type : LanguageType.values()) {
+					repo.save(new Languages(type));
+				}
+			}
+		};
+	}
 }

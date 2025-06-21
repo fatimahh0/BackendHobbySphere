@@ -3,6 +3,7 @@ package com.hobbySphere.controller;
 import com.hobbySphere.dto.*;
 import com.hobbySphere.entities.AdminUsers;
 import com.hobbySphere.entities.Users;
+import com.hobbySphere.enums.UserStatus;
 import com.hobbySphere.services.AdminActivityService;
 import com.hobbySphere.services.AdminStatsService;
 import com.hobbySphere.services.AdminUserService;
@@ -142,7 +143,7 @@ public class AdminController {
     }
 
 
-    @Operation(summary = "Toggle user status", description = "Toggle a user’s status between Active and Disabled")
+    @Operation(summary = "Toggle user status", description = "Toggle a user’s status between ACTIVE and INACTIVE")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "User status toggled successfully"),
         @ApiResponse(responseCode = "404", description = "User not found"),
@@ -151,17 +152,29 @@ public class AdminController {
     @PutMapping("/{userId}/toggle-status")
     public ResponseEntity<String> toggleUserStatus(@PathVariable Long userId,
                                                    @RequestHeader("Authorization") String token) {
-        if (!isSuperAdmin(token)) return ResponseEntity.status(401).body("Unauthorized");
+        if (!isSuperAdmin(token)) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+
         Optional<Users> optionalUser = usersRepository.findById(userId);
         if (optionalUser.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
         }
+
         Users user = optionalUser.get();
-        String currentStatus = user.getStatus();
-        user.setStatus("Active".equalsIgnoreCase(currentStatus) ? "Disabled" : "Active");
+        UserStatus currentStatus = user.getStatus();
+
+        // Toggle between ACTIVE and INACTIVE
+        if (currentStatus == UserStatus.ACTIVE) {
+            user.setStatus(UserStatus.INACTIVE);
+        } else {
+            user.setStatus(UserStatus.ACTIVE);
+        }
+
         usersRepository.save(user);
-        return ResponseEntity.ok("User status updated to: " + user.getStatus());
+        return ResponseEntity.ok("User status updated to: " + user.getStatus().name());
     }
+
 
     @Operation(summary = "Delete user", description = "Permanently delete a user account by ID")
     @ApiResponses(value = {

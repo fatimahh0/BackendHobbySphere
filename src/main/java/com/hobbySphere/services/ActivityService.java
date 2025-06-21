@@ -38,12 +38,17 @@ public class ActivityService {
     @Autowired
     private ActivityBookingsRepository activityBookingsRepository;
 
+    @Autowired
+    private AppSettingsRepository appSettingsRepository;
+
     // Create a new activity with image upload
     public Activities createActivityWithImage(
             String activityName,
             Long activityTypeId,
             String description,
             String location,
+            Double latitude,
+            Double longitude,
             int maxParticipants,
             BigDecimal price,
             LocalDateTime startDatetime,
@@ -80,6 +85,8 @@ public class ActivityService {
         activity.setActivityType(type);
         activity.setDescription(description);
         activity.setLocation(location);
+        activity.setLatitude(latitude);
+        activity.setLongitude(longitude);
         activity.setMaxParticipants(maxParticipants);
         activity.setPrice(price);
         activity.setStartDatetime(startDatetime);
@@ -92,40 +99,14 @@ public class ActivityService {
         return activityRepository.save(activity);
     }
 
-    public List<Activities> findByBusinessId(Long businessId) {
-        return activityRepository.findByBusinessId(businessId);
-    }
-
-    public Activities save(Activities activity) {
-        return activityRepository.save(activity);
-    }
-
-    public Activities findById(Long id) {
-        return activityRepository.findById(id).orElse(null);
-    }
-
-    public List<Activities> findAllActivities() {
-        return activityRepository.findAll();
-    }
-
-    public void deleteActivity(Long id) {
-        activityRepository.deleteById(id);
-    }
-
-    @Transactional
-    public void updateStatusIfCanceled(Activities activity) {
-        if ("Canceled".equalsIgnoreCase(activity.getStatus())) {
-            activity.setStatus("Pending");
-            activityRepository.save(activity);
-        }
-    }
-
     public Activities updateActivityWithImage(
             Long id,
             String activityName,
             Long activityTypeId,
             String description,
             String location,
+            Double latitude,
+            Double longitude,
             int maxParticipants,
             BigDecimal price,
             LocalDateTime startDatetime,
@@ -145,6 +126,8 @@ public class ActivityService {
         activity.setActivityType(type);
         activity.setDescription(description);
         activity.setLocation(location);
+        activity.setLatitude(latitude);
+        activity.setLongitude(longitude);
         activity.setMaxParticipants(maxParticipants);
         activity.setPrice(price);
         activity.setStartDatetime(startDatetime);
@@ -157,16 +140,12 @@ public class ActivityService {
         }
         activity.setBusiness(business);
 
-        // 🔥 Remove image if requested
         if (imageRemoved && activity.getImageUrl() != null) {
-            // Optionally: delete the old image file from disk
             Path oldImagePath = Paths.get("uploads/", Paths.get(activity.getImageUrl()).getFileName().toString());
             Files.deleteIfExists(oldImagePath);
-
             activity.setImageUrl(null);
         }
 
-        // 🖼️ Save new image if provided
         if (image != null && !image.isEmpty()) {
             String imageFileName = UUID.randomUUID() + "_" + StringUtils.cleanPath(image.getOriginalFilename());
             Path imagePath = Paths.get("uploads/", imageFileName);
@@ -177,6 +156,33 @@ public class ActivityService {
         return activityRepository.save(activity);
     }
 
+    public List<Activities> findByBusinessId(Long businessId) {
+        return activityRepository.findByBusinessId(businessId);
+    }
+
+    public Activities save(Activities activity) {
+        return activityRepository.save(activity);
+    }
+
+    public Activities findById(Long id) {
+        return activityRepository.findById(id).orElse(null);
+    }
+
+    public List<Activities> findAllActivities() {
+        return activityRepository.findAllPublicActiveBusinessActivities();
+    }
+
+    public void deleteActivity(Long id) {
+        activityRepository.deleteById(id);
+    }
+
+    @Transactional
+    public void updateStatusIfCanceled(Activities activity) {
+        if ("Canceled".equalsIgnoreCase(activity.getStatus())) {
+            activity.setStatus("Pending");
+            activityRepository.save(activity);
+        }
+    }
 
     @Transactional
     public void rejectActivity(Long activityId) {
@@ -218,13 +224,10 @@ public class ActivityService {
         return currencyRepository.findByCurrencyType(CurrencyType.CAD)
                 .orElseThrow(() -> new RuntimeException("Default currency not found"));
     }
-    
+
     public List<Activities> findActivitiesByUserInterests(Long userId) {
         return activityRepository.findAllByUserInterests(userId);
     }
-
-    @Autowired
-    private AppSettingsRepository appSettingsRepository;
 
     public List<ActivityPriceResponse> getActivitiesWithCurrencySymbol() {
         Currency selectedCurrency = appSettingsRepository.findById(1L)
@@ -241,7 +244,7 @@ public class ActivityService {
             .collect(Collectors.toList());
     }
 
-	
-
-	
+    public List<Activities> getAllVisibleActivitiesForUsers() {
+        return activityRepository.findAllPublicActiveBusinessActivities();
+    }
 }

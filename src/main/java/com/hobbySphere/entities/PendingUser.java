@@ -1,6 +1,9 @@
 package com.hobbySphere.entities;
 
+import com.hobbySphere.enums.LanguageType;
+import com.hobbySphere.enums.UserStatus;
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -20,92 +23,85 @@ public class PendingUser {
     @Column(unique = true)
     private String phoneNumber;
 
+    @Column(nullable = false)
     private String firstName;
+
+    @Column(nullable = false)
     private String lastName;
+
+    @Column(nullable = false)
     private String passwordHash;
 
     @Column(name = "profile_picture_url")
     private String profilePictureUrl;
 
+    @Column(name = "verification_code")
     private String verificationCode;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private UserStatus status = UserStatus.PENDING;
+
+    @Column(name = "is_public_profile")
+    private Boolean isPublicProfile = true;
+
+
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        if (this.status == null) this.status = UserStatus.PENDING;
+        if (this.isPublicProfile == null) this.isPublicProfile = true;
+    }
 
     // Getters and Setters
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
 
-    public String getEmail() {
-        return email;
-    }
+    public String getEmail() { return email; }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+    public void setEmail(String email) { this.email = email; }
 
-    public String getUsername() {
-        return username;
-    }
+    public String getUsername() { return username; }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
+    public void setUsername(String username) { this.username = username; }
 
-    public String getPhoneNumber() {
-        return phoneNumber;
-    }
+    public String getPhoneNumber() { return phoneNumber; }
 
-    public void setPhoneNumber(String phoneNumber) {
-        this.phoneNumber = phoneNumber;
-    }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
 
-    public String getFirstName() {
-        return firstName;
-    }
+    public String getFirstName() { return firstName; }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
 
-    public String getLastName() {
-        return lastName;
-    }
+    public String getLastName() { return lastName; }
 
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
+    public void setLastName(String lastName) { this.lastName = lastName; }
 
-    public String getPasswordHash() {
-        return passwordHash;
-    }
+    public String getPasswordHash() { return passwordHash; }
 
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-    }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 
-    public String getProfilePictureUrl() {
-        return profilePictureUrl;
-    }
+    public String getProfilePictureUrl() { return profilePictureUrl; }
 
-    public void setProfilePictureUrl(String profilePictureUrl) {
-        this.profilePictureUrl = profilePictureUrl;
-    }
+    public void setProfilePictureUrl(String profilePictureUrl) { this.profilePictureUrl = profilePictureUrl; }
 
-    public String getVerificationCode() {
-        return verificationCode;
-    }
+    public String getVerificationCode() { return verificationCode; }
 
-    public void setVerificationCode(String verificationCode) {
-        this.verificationCode = verificationCode;
-    }
+    public void setVerificationCode(String verificationCode) { this.verificationCode = verificationCode; }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+    public UserStatus getStatus() { return status; }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
+    public void setStatus(UserStatus status) { this.status = status; }
+
+    public Boolean getIsPublicProfile() { return isPublicProfile; }
+
+    public void setIsPublicProfile(Boolean isPublicProfile) { this.isPublicProfile = isPublicProfile; }
+
+  
+    public LocalDateTime getCreatedAt() { return createdAt; }
+
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

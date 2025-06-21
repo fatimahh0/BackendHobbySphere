@@ -128,14 +128,16 @@ public class ActivityController {
     @PostMapping(value = "/create", consumes = "multipart/form-data")
     @Operation(summary = "Create a new activity with image upload", description = "Create a new activity and optionally upload an image")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Activity created successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid input")
+        @ApiResponse(responseCode = "201", description = "Activity created successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid input")
     })
     public ResponseEntity<?> createActivityWithImage(
             @RequestParam("activityName") String activityName,
             @RequestParam("activityTypeId") Long activityTypeId,
             @RequestParam("description") String description,
             @RequestParam("location") String location,
+            @RequestParam("latitude") Double latitude,
+            @RequestParam("longitude") Double longitude,
             @RequestParam("maxParticipants") int maxParticipants,
             @RequestParam("price") BigDecimal price,
             @RequestParam("startDatetime") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDatetime,
@@ -146,7 +148,7 @@ public class ActivityController {
     ) {
         try {
             Activities activity = activityService.createActivityWithImage(
-                    activityName, activityTypeId, description, location, maxParticipants, price,
+                    activityName, activityTypeId, description, location, latitude, longitude, maxParticipants, price,
                     startDatetime, endDatetime, status, businessId, image
             );
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
@@ -163,13 +165,14 @@ public class ActivityController {
         }
     }
 
+
     // ✅ Update activity with image
     @PutMapping("/{id}/update-with-image")
     @Operation(summary = "Update an existing activity with an image", description = "This API updates an existing activity with new details and an optional image.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Activity updated successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid input"),
-            @ApiResponse(responseCode = "404", description = "Activity not found")
+        @ApiResponse(responseCode = "200", description = "Activity updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid input"),
+        @ApiResponse(responseCode = "404", description = "Activity not found")
     })
     public ResponseEntity<?> updateActivityWithImage(
             @PathVariable Long id,
@@ -177,6 +180,8 @@ public class ActivityController {
             @RequestParam("activityTypeId") Long activityTypeId,
             @RequestParam("description") String description,
             @RequestParam("location") String location,
+            @RequestParam("latitude") Double latitude,
+            @RequestParam("longitude") Double longitude,
             @RequestParam("maxParticipants") int maxParticipants,
             @RequestParam("price") BigDecimal price,
             @RequestParam("startDatetime") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDatetime,
@@ -187,10 +192,10 @@ public class ActivityController {
             @RequestParam(value = "imageRemoved", required = false) Boolean imageRemoved
     ) {
         try {
-        	Activities updatedActivity = activityService.updateActivityWithImage(
-        		    id, activityName, activityTypeId, description, location, maxParticipants, price,
-        		    startDatetime, endDatetime, status, businessId, image, imageRemoved != null && imageRemoved
-        		);
+            Activities updatedActivity = activityService.updateActivityWithImage(
+                    id, activityName, activityTypeId, description, location, latitude, longitude, maxParticipants, price,
+                    startDatetime, endDatetime, status, businessId, image, imageRemoved != null && imageRemoved
+            );
 
             return ResponseEntity.status(HttpStatus.OK).body(Map.of(
                     "message", "Activity updated successfully",
@@ -205,6 +210,7 @@ public class ActivityController {
             ));
         }
     }
+
 
     // ✅ Delete activity
     @DeleteMapping("/{id}")
@@ -231,19 +237,38 @@ public class ActivityController {
         }
     }
 
-    // ✅ Get activity by ID
     @GetMapping("/{id}")
-    @Operation(summary = "Get a single activity by ID", description = "Retrieve details of a specific activity by its ID")
+    @Operation(summary = "Get a single activity by ID", description = "Retrieve full details of a specific activity including location info")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Activity retrieved successfully"),
-            @ApiResponse(responseCode = "404", description = "Activity not found")
+        @ApiResponse(responseCode = "200", description = "Activity retrieved successfully"),
+        @ApiResponse(responseCode = "404", description = "Activity not found")
     })
-    public ResponseEntity<Activities> getActivityById(@PathVariable Long id) {
+    public ResponseEntity<?> getActivityById(@PathVariable Long id) {
         Activities activity = activityService.findById(id);
-        return activity != null
-                ? ResponseEntity.ok(activity)
-                : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        if (activity == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Activity not found"));
+        }
+
+        // 👇 Instead of returning raw entity, return a clean map with selected fields
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", activity.getId());
+        response.put("name", activity.getActivityName());
+        response.put("description", activity.getDescription());
+        response.put("activityType", activity.getActivityType().getName());
+        response.put("location", activity.getLocation());
+        response.put("latitude", activity.getLatitude());
+        response.put("longitude", activity.getLongitude());
+        response.put("startDatetime", activity.getStartDatetime());
+        response.put("endDatetime", activity.getEndDatetime());
+        response.put("price", activity.getPrice());
+        response.put("status", activity.getStatus());
+        response.put("imageUrl", activity.getImageUrl());
+        response.put("maxParticipants", activity.getMaxParticipants());
+        response.put("businessName", activity.getBusiness().getBusinessName());
+
+        return ResponseEntity.ok(response);
     }
+
 
     // ✅ Book an activity
     @PostMapping("/{activityId}/book")
@@ -304,6 +329,7 @@ public class ActivityController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    
     
     @GetMapping("/interest-based/{userId}")
     @Operation(summary = "Get pending activities by user's interests", description = "Returns only upcoming (not ended or terminated) activities based on user's interests")

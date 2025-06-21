@@ -6,11 +6,13 @@ import com.hobbySphere.repositories.*;
 import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import com.hobbySphere.entities.PendingBusiness;
+import com.hobbySphere.enums.BusinessStatus;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -124,11 +126,12 @@ public class BusinessService {
         businessRepository.deleteById(businessId);
     }
 
-    // ✅ Step 1: Send verification code and save to PendingBusiness
+    //  Step 1: Send verification code and save to PendingBusiness
     public boolean sendBusinessVerificationCode(
             Map<String, String> businessData,
             MultipartFile logo,
             MultipartFile banner) throws IOException {
+
         String email = businessData.get("email");
         String phone = businessData.get("phoneNumber");
         String businessName = businessData.get("businessName");
@@ -136,24 +139,40 @@ public class BusinessService {
         String description = businessData.get("description");
         String websiteUrl = businessData.get("websiteUrl");
 
+        // ✅ new fields
+        String isPublicProfileStr = businessData.get("isPublicProfile");
+        String statusStr = businessData.get("status");
+
         if (email == null || phone == null) {
             throw new RuntimeException("Both email and phone number are required for business registration");
         }
 
-        // Check if already used
-        if (businessRepository.findByEmail(email).isPresent() || pendingBusinessRepository.existsByEmail(email)) {
-            throw new RuntimeException("Email is already in use");
-        }
-        if (businessRepository.findByPhoneNumber(phone).isPresent()
-                || pendingBusinessRepository.existsByPhoneNumber(phone)) {
-            throw new RuntimeException("Phone number is already in use");
+     
+        businessRepository.findByEmail(email).ifPresent(existing -> {
+            if (existing.getStatus() == BusinessStatus.DELETED) {
+                businessRepository.delete(existing); // delete old DELETED entry
+            } else {
+                throw new RuntimeException("Email is already in use");
+            }
+        });
+
+        if (pendingBusinessRepository.existsByEmail(email)) {
+            throw new RuntimeException("Email is already pending verification");
         }
 
-        String code;
-        if (phone != null && email == null) {
-            code = "123456"; // static for phone-only (no Twilio)
-        } else
-            code = String.format("%06d", new Random().nextInt(999999));
+
+        businessRepository.findByPhoneNumber(phone).ifPresent(existing -> {
+            if (existing.getStatus() == BusinessStatus.DELETED) {
+                businessRepository.delete(existing);
+            } else {
+                throw new RuntimeException("Phone number is already in use");
+            }
+        });
+
+
+        String code = (phone != null && email == null)
+                ? "123456"
+                : String.format("%06d", new Random().nextInt(999999));
 
         String logoUrl = saveFile(logo);
         String bannerUrl = saveFile(banner);
@@ -170,6 +189,12 @@ public class BusinessService {
         pending.setVerificationCode(code);
         pending.setCreatedAt(LocalDateTime.now());
 
+        // ✅ set new values safely
+        if (isPublicProfileStr != null)
+            pending.setIsPublicProfile(Boolean.parseBoolean(isPublicProfileStr));
+        if (statusStr != null)
+            pending.setStatus(BusinessStatus.valueOf(statusStr.toUpperCase()));
+
         pendingBusinessRepository.save(pending);
 
         // Send email
@@ -185,7 +210,7 @@ public class BusinessService {
                 """.formatted(code);
         emailService.sendHtmlEmail(email, "Business Verification Code", html);
 
-        // Send SMS - simulate for now (you can use Twilio or similar later)
+        // Simulate SMS
         System.out.println("Sending SMS to " + phone + ": Your verification code is: " + code);
 
         return true;
@@ -208,6 +233,8 @@ public class BusinessService {
         business.setBusinessLogoUrl(pending.getBusinessLogoUrl());
         business.setBusinessBannerUrl(pending.getBusinessBannerUrl());
         business.setCreatedAt(LocalDateTime.now());
+        business.setStatus(BusinessStatus.ACTIVE);       
+        business.setUpdatedAt(LocalDateTime.now());
 
         businessRepository.save(business);
         pendingBusinessRepository.delete(pending);
@@ -283,6 +310,8 @@ public class BusinessService {
         business.setBusinessLogoUrl(pending.getBusinessLogoUrl());
         business.setBusinessBannerUrl(pending.getBusinessBannerUrl());
         business.setCreatedAt(LocalDateTime.now());
+        business.setStatus(BusinessStatus.ACTIVE);       
+        business.setUpdatedAt(LocalDateTime.now());
 
         businessRepository.save(business);
         pendingBusinessRepository.delete(pending);
@@ -457,5 +486,45 @@ public class BusinessService {
 
         return false;
     }
+
+    public List<Businesses> getAllPublicActiveBusinesses() {
+        return businessRepository.findByIsPublicProfileTrueAndStatus(BusinessStatus.ACTIVE);
+    }
+    
+    @Scheduled(cron = "0 0 2 * * *")
+    public void deleteInactiveBusinessesOlderThan30Days() {
+        LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30);
+
+        List<Businesses> toSoftDelete = businessRepository.findAll().stream()
+                .filter(b -> b.getStatus() == BusinessStatus.INACTIVE
+                        && b.getUpdatedAt() != null
+                        && b.getUpdatedAt().isBefore(cutoffDate))
+                .toList();
+
+        for (Businesses b : toSoftDelete) {
+            b.setStatus(BusinessStatus.DELETED);
+            b.setUpdatedAt(LocalDateTime.now());
+            businessRepository.save(b);
+            System.out.println("Soft-deleted business: " + b.getEmail());
+        }
+    }
+
+    
+    @Scheduled(cron = "0 0 3 * * *") // every day at 3 AM
+    public void permanentlyDeleteBusinessesAfter90Days() {
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(90);
+
+        List<Businesses> toDelete = businessRepository.findAll().stream()
+                .filter(b -> b.getStatus() == BusinessStatus.DELETED
+                        && b.getUpdatedAt() != null
+                        && b.getUpdatedAt().isBefore(cutoff))
+                .toList();
+
+        for (Businesses b : toDelete) {
+            businessRepository.delete(b);
+            System.out.println("Permanently deleted business: " + b.getEmail());
+        }
+    }
+
 
 }

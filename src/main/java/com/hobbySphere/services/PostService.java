@@ -4,8 +4,8 @@ import com.hobbySphere.dto.PostDto;
 import com.hobbySphere.entities.Posts;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.enums.PostVisibility;
+import com.hobbySphere.enums.UserStatus;
 import com.hobbySphere.repositories.PostsRepository;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,10 +21,9 @@ import java.util.stream.Collectors;
 public class PostService {
 
     private final PostsRepository postsRepository;
-    
+
     @Autowired
     private FriendshipService friendshipService;
-
 
     public PostService(PostsRepository postsRepository) {
         this.postsRepository = postsRepository;
@@ -84,10 +83,23 @@ public class PostService {
         return posts.stream()
                 .filter(post -> {
                     try {
-                        System.out.println("🔍 Checking post ID: " + post.getId() + ", user: " + post.getUser().getId());
+                        Users poster = post.getUser();
+
+                        // Skip if user is INACTIVE or DELETED
+                        if (poster.getStatus() != UserStatus.ACTIVE) return false;
+
+                        // If poster profile is private, only allow friends or self
+                        if (!poster.isPublicProfile()
+                                && !poster.getId().equals(currentUserId)
+                                && !areFriends(currentUserId, poster.getId())) {
+                            return false;
+                        }
+
+                        // Post visibility rules
                         if (post.getVisibility() == PostVisibility.PUBLIC) return true;
-                        if (post.getUser().getId().equals(currentUserId)) return true;
-                        return areFriends(currentUserId, post.getUser().getId());
+                        if (poster.getId().equals(currentUserId)) return true;
+                        return areFriends(currentUserId, poster.getId());
+
                     } catch (Exception e) {
                         System.err.println("❌ Error in filter logic: " + e.getMessage());
                         return false;
@@ -97,9 +109,8 @@ public class PostService {
                 .collect(Collectors.toList());
     }
 
-
     /**
-     * Stubbed method: check if two users are friends (replace with real logic).
+     * Check if two users are friends.
      */
     private boolean areFriends(Long viewerId, Long posterId) {
         Users viewer = new Users();
@@ -110,7 +121,6 @@ public class PostService {
 
         return friendshipService.areFriends(viewer, poster);
     }
-
 
     /**
      * Delete a post if it belongs to the specified user ID.

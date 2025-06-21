@@ -14,6 +14,7 @@ import com.hobbySphere.entities.Activities;
 import com.hobbySphere.entities.ActivityBookings;
 import com.hobbySphere.entities.AppSettings;
 import com.hobbySphere.entities.Currency;
+import com.hobbySphere.entities.Users;
 import com.hobbySphere.enums.CurrencyType;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +41,7 @@ public class ActivityBookingService {
     // Method to get bookings by user email
     
     public List<ActivityBookings> getBookingsByUserId(Long userId) {
-        List<ActivityBookings> bookings = activityBookingsRepository.findByUserId(userId);
+        List<ActivityBookings> bookings = activityBookingsRepository.findByUserIdAndActiveBusiness(userId);
         LocalDateTime now = LocalDateTime.now();
 
         for (ActivityBookings booking : bookings) {
@@ -53,6 +54,7 @@ public class ActivityBookingService {
 
         return bookings;
     }
+
 
 
     public boolean hasUserAlreadyBooked(Long activityId, Long userId) {
@@ -61,7 +63,7 @@ public class ActivityBookingService {
 
     // Method to get bookings by user email and statuses (e.g., Pending, Completed, Canceled)
     public List<ActivityBookings> getBookingsByUserIdAndStatuses(Long userId, List<String> statuses) {
-        List<ActivityBookings> bookings = activityBookingsRepository.findByUserIdAndBookingStatusIn(userId, statuses);
+        List<ActivityBookings> bookings = activityBookingsRepository.findByUserIdAndStatusesAndActiveBusiness(userId, statuses);
         LocalDateTime now = LocalDateTime.now();
 
         for (ActivityBookings booking : bookings) {
@@ -74,6 +76,7 @@ public class ActivityBookingService {
 
         return bookings;
     }
+
 
     public void cancelBooking(Long bookingId, Long userId) {
         ActivityBookings booking = activityBookingsRepository.findById(bookingId)
@@ -227,6 +230,18 @@ public class ActivityBookingService {
 	        	    selectedCurrency.getSymbol()// ✅ Fix here
 	        	))
 	        .collect(Collectors.toList());
+	}
+
+	public boolean updateVisibilityAndStatus(Long userId, boolean isPublicProfile, UserStatus newStatus) {
+	    Users user = userRepository.findById(userId)
+	            .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+
+	    user.setPublicProfile(isPublicProfile);
+	    user.setStatus(newStatus);
+	    user.setUpdatedAt(LocalDateTime.now());
+
+	    userRepository.save(user);
+	    return true;
 	}
 
 }

@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.hobbySphere.enums.LanguageType;
+import com.hobbySphere.enums.UserStatus;
 
 @Entity
 @Table(name = "Users")
@@ -36,11 +37,17 @@ public class Users {
     @Column(name = "profile_picture_url", nullable = true)
     private String profilePictureUrl;
 
-    @Column(nullable = true) // ✅ Allow null temporarily to avoid migration error
-    private String status; // ✅ Status field without hard NOT NULL during migration
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true)
+    private UserStatus status;
+
 
     @Column(name = "is_public_profile", nullable = true)
     private Boolean isPublicProfile = true;
+
+    
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
 
     // ✅ Add updated_at as the last column
     @Column(name = "updated_at")
@@ -76,9 +83,15 @@ public class Users {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         if (this.status == null) {
-            this.status = "Active"; // ✅ Set default if null
+            this.status = UserStatus.ACTIVE;
         }
     }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
 
     // Getters and Setters
 
@@ -146,13 +159,22 @@ public class Users {
         this.profilePictureUrl = profilePictureUrl;
     }
 
-    public String getStatus() {
+    public UserStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(UserStatus status) {
         this.status = status;
     }
+
+    public LocalDateTime getLastLogin() {
+        return lastLogin;
+    }
+
+    public void setLastLogin(LocalDateTime lastLogin) {
+        this.lastLogin = lastLogin;
+    }
+
 
     public LocalDateTime getCreatedAt() {
         return createdAt;

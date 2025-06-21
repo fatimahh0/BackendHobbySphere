@@ -1,6 +1,7 @@
 package com.hobbySphere.controller;
 
 import com.hobbySphere.entities.Businesses;
+import com.hobbySphere.enums.BusinessStatus;
 import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.BusinessService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -207,6 +208,60 @@ public class BusinessController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No banner found to delete.");
         }
     }
+
+    @Operation(summary = "Get all public and active businesses")
+    @GetMapping("/public")
+    public ResponseEntity<List<Businesses>> getPublicActiveBusinesses() {
+        List<Businesses> businesses = businessService.getAllPublicActiveBusinesses();
+        return ResponseEntity.ok(businesses);
+    }
+
+    @Operation(summary = "Update business status (ACTIVE / INACTIVE)")
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateBusinessStatus(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> request) {
+
+        if (!isAuthorized(authHeader, id)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
+
+        String newStatus = request.get("status");
+        if (newStatus == null) {
+            return ResponseEntity.badRequest().body("Missing status");
+        }
+
+        try {
+            Businesses business = businessService.findById(id);
+            business.setStatus(BusinessStatus.valueOf(newStatus.toUpperCase()));
+            return ResponseEntity.ok(businessService.save(business));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Invalid status value");
+        }
+    }
+    
+    @Operation(summary = "Toggle public profile visibility")
+    @PutMapping("/{id}/visibility")
+    public ResponseEntity<?> updateBusinessVisibility(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Boolean> request) {
+
+        if (!isAuthorized(authHeader, id)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
+
+        Boolean isPublic = request.get("isPublicProfile");
+        if (isPublic == null) {
+            return ResponseEntity.badRequest().body("Missing isPublicProfile value");
+        }
+
+        Businesses business = businessService.findById(id);
+        business.setIsPublicProfile(isPublic);
+        return ResponseEntity.ok(businessService.save(business));
+    }
+
 
 
 }

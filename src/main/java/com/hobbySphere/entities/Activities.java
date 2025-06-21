@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
@@ -33,7 +32,14 @@ public class Activities {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private ActivityType activityType;
 
+    @Column(name = "location")
     private String location;
+
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
 
     @Column(name = "start_datetime")
     private LocalDateTime startDatetime;
@@ -73,13 +79,15 @@ public class Activities {
     public Activities() {}
 
     public Activities(Businesses business, String activityName, String description, ActivityType activityType,
-                      String location, LocalDateTime startDatetime, LocalDateTime endDatetime,
-                      BigDecimal price, String status, String imageUrl, int maxParticipants) {
+                      String location, Double latitude, Double longitude, LocalDateTime startDatetime,
+                      LocalDateTime endDatetime, BigDecimal price, String status, String imageUrl, int maxParticipants) {
         this.business = business;
         this.activityName = activityName;
         this.description = description;
         this.activityType = activityType;
         this.location = location;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.startDatetime = startDatetime;
         this.endDatetime = endDatetime;
         this.price = price;
@@ -118,6 +126,12 @@ public class Activities {
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
 
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+
     public LocalDateTime getStartDatetime() { return startDatetime; }
     public void setStartDatetime(LocalDateTime startDatetime) { this.startDatetime = startDatetime; }
 
@@ -149,7 +163,4 @@ public class Activities {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
     public LocalDateTime getDate() { return endDatetime; }
-
-
-	
 }

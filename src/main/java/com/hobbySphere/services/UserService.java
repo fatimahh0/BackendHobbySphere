@@ -5,11 +5,14 @@ import com.hobbySphere.entities.Interests;
 import com.hobbySphere.entities.PendingUser;
 import com.hobbySphere.entities.UserInterests;
 import com.hobbySphere.entities.Users;
+import com.hobbySphere.enums.LanguageType;
+import com.hobbySphere.enums.UserStatus;
 import com.hobbySphere.repositories.InterestsRepository;
 import com.hobbySphere.repositories.PendingUserRepository;
 import com.hobbySphere.repositories.UserInterestsRepository;
 import com.hobbySphere.repositories.UsersRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -67,38 +70,74 @@ public class UserService {
     public boolean sendVerificationCodeForRegistration(Map<String, String> userData, MultipartFile profileImage) throws IOException {
         String email = userData.get("email");
         String phone = userData.get("phoneNumber");
-
         String username = userData.get("username");
         String password = userData.get("password");
         String firstName = userData.get("firstName");
         String lastName = userData.get("lastName");
+        String publicProfileStr = userData.get("isPublicProfile");
+
+        // Default status = PENDING
+        UserStatus statusEnum = UserStatus.PENDING;
+        String statusStr = userData.get("status");
+        if (statusStr != null) {
+            try {
+                statusEnum = UserStatus.valueOf(statusStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Invalid status value: " + statusStr);
+            }
+        }
 
         boolean emailProvided = email != null && !email.trim().isEmpty();
         boolean phoneProvided = phone != null && !phone.trim().isEmpty();
 
         if (!emailProvided && !phoneProvided) {
-            throw new RuntimeException("You must provide either email or phone");
+            throw new RuntimeException("You must provide either email or phone.");
         }
         if (emailProvided && phoneProvided) {
-            throw new RuntimeException("You must provide either email or phone, not both");
+            throw new RuntimeException("Provide only one: email or phone, not both.");
+        }
+
+        if (emailProvided) {
+            Users existing = userRepository.findByEmail(email);
+            if (existing != null) {
+                if (existing.getStatus() == UserStatus.DELETED) {
+                    userRepository.delete(existing); // ✅ remove old deleted record
+                } else {
+                    throw new RuntimeException("Email already in use.");
+                }
+            }
+
+            if (pendingUserRepository.existsByEmail(email)) {
+                throw new RuntimeException("Email is already pending verification");
+            }
         }
 
 
-        if (email != null && (pendingUserRepository.existsByEmail(email) || userRepository.findByEmail(email) != null)) {
-            throw new RuntimeException("Email is already in use");
+        if (phoneProvided) {
+            Users existing = userRepository.findByPhoneNumber(phone);
+            if (existing != null) {
+                if (existing.getStatus() == UserStatus.DELETED) {
+                    userRepository.delete(existing); // ✅ remove old deleted record
+                } else {
+                    throw new RuntimeException("Phone number already in use.");
+                }
+            }
+
+            if (pendingUserRepository.existsByPhoneNumber(phone)) {
+                throw new RuntimeException("Phone number is already pending verification");
+            }
         }
 
-        if (phone != null && (pendingUserRepository.existsByPhoneNumber(phone) || userRepository.findByPhoneNumber(phone) != null)) {
-            throw new RuntimeException("Phone number is already in use");
-        }
 
         if (pendingUserRepository.existsByUsername(username) || userRepository.findByUsername(username) != null) {
-            throw new RuntimeException("Username is already in use");
+            throw new RuntimeException("Username already in use.");
         }
 
-        String code = phone != null ? "123456" : String.format("%06d", new Random().nextInt(999999));
-        String profileImageUrl = null;
+        // Generate verification code
+        String code = phoneProvided ? "123456" : String.format("%06d", new Random().nextInt(999999));
 
+        // Upload profile image if present
+        String profileImageUrl = null;
         if (profileImage != null && !profileImage.isEmpty()) {
             String filename = UUID.randomUUID() + "_" + profileImage.getOriginalFilename();
             Path path = Paths.get("uploads");
@@ -108,6 +147,7 @@ public class UserService {
             profileImageUrl = "/uploads/" + filename;
         }
 
+        // Create and save pending user
         PendingUser pending = new PendingUser();
         pending.setEmail(email);
         pending.setPhoneNumber(phone);
@@ -118,10 +158,18 @@ public class UserService {
         pending.setProfilePictureUrl(profileImageUrl);
         pending.setVerificationCode(code);
         pending.setCreatedAt(LocalDateTime.now());
+        pending.setStatus(statusEnum); 
+
+        if (publicProfileStr != null) {
+            pending.setIsPublicProfile(Boolean.parseBoolean(publicProfileStr));
+        } else {
+            pending.setIsPublicProfile(true);
+        }
 
         pendingUserRepository.save(pending);
 
-        if (email != null) {
+        // Send verification email (if email)
+        if (emailProvided) {
             String htmlMessage = """
                 <html>
                 <body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
@@ -181,42 +229,34 @@ public class UserService {
 
     private final Map<String, String> resetCodes = new ConcurrentHashMap<>();
     
-    public Users registerUser(
-            String username,
-            String firstName,
-            String lastName,
-            String email,
-            String password,
-            MultipartFile profileImage
-    ) throws IOException {
-        if (userRepository.findByEmail(email) != null) {
-            throw new RuntimeException("Email already exists");
-        }
-
-        String imageUrl = null;
-        if (profileImage != null && !profileImage.isEmpty()) {
-            String filename = UUID.randomUUID() + "_" + profileImage.getOriginalFilename();
-            Path uploadPath = Paths.get("uploads/");
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-            Path filePath = uploadPath.resolve(filename);
-            Files.copy(profileImage.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            imageUrl = "/uploads/" + filename;
-        }
-
-        Users user = new Users();
-        user.setUsername(username);
-        user.setFirstName(firstName);
-        user.setLastName(lastName);
-        user.setEmail(email);
-        user.setPasswordHash(passwordEncoder.encode(password));
-        user.setProfilePictureUrl(imageUrl);
-
-        return userRepository.save(user);
-    }
     
-   
+    //user register with email
+    public boolean verifyEmailCodeAndRegister(String email, String code) {
+        PendingUser pending = pendingUserRepository.findByEmail(email);
+
+        if (pending == null || !pending.getVerificationCode().equals(code)) {
+            return false;
+        }
+
+        // Create actual user
+        Users user = new Users();
+        user.setEmail(pending.getEmail());
+        user.setUsername(pending.getUsername());
+        user.setPasswordHash(pending.getPasswordHash());
+        user.setFirstName(pending.getFirstName());
+        user.setLastName(pending.getLastName());
+        user.setProfilePictureUrl(pending.getProfilePictureUrl());
+        user.setPublicProfile(pending.getIsPublicProfile());
+        user.setStatus(UserStatus.ACTIVE); 
+        user.setCreatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+        pendingUserRepository.delete(pending); // Clean up
+
+        return true;
+    }
+
+
     //user register with number 
     public boolean verifyPhoneCodeAndRegister(String phoneNumber, String code) {
         if (!"123456".equals(code)) {
@@ -235,7 +275,8 @@ public class UserService {
         user.setFirstName(pending.getFirstName());
         user.setLastName(pending.getLastName());
         user.setProfilePictureUrl(pending.getProfilePictureUrl());
-        user.setStatus("Active");
+        user.setPublicProfile(pending.getIsPublicProfile());
+        user.setStatus(UserStatus.ACTIVE); // ✅ Fix: use enum
         user.setCreatedAt(LocalDateTime.now());
 
         userRepository.save(user);
@@ -243,6 +284,7 @@ public class UserService {
 
         return true;
     }
+
 
    
 
@@ -304,10 +346,11 @@ public class UserService {
 
 
 	public List<UserDto> getAllUserDtos() {
-		 return userRepository.findAll()
-                 .stream()
-                 .map(UserDto::new)
-                 .collect(Collectors.toList());
+	    return userRepository.findAll().stream()
+	            .filter(user -> user.getStatus() == UserStatus.ACTIVE)
+	            .filter(Users::isPublicProfile)
+	            .map(UserDto::new)
+	            .toList();
 	}
 
 
@@ -437,32 +480,14 @@ public class UserService {
         }
     }
 
-    public boolean verifyEmailCodeAndRegister(String email, String code) {
-        PendingUser pending = pendingUserRepository.findByEmail(email);
-
-        if (pending == null || !pending.getVerificationCode().equals(code)) {
-            return false;
-        }
-
-        // Create actual user
-        Users user = new Users();
-        user.setEmail(pending.getEmail());
-        user.setUsername(pending.getUsername());
-        user.setPasswordHash(pending.getPasswordHash());
-        user.setFirstName(pending.getFirstName());
-        user.setLastName(pending.getLastName());
-        user.setStatus("Active");
-        user.setCreatedAt(LocalDateTime.now());
-
-        userRepository.save(user);
-        pendingUserRepository.delete(pending); // Clean up
-
-        return true;
-    }
     
-    public List<Users> getAllUsers(){
-    	return userRepository.findAll();
-    	}
+    public List<Users> getAllUsers() {
+        return userRepository.findAll().stream()
+                .filter(user -> user.getStatus() == UserStatus.ACTIVE)
+                .filter(Users::isPublicProfile)
+                .toList();
+    }
+
 
     public Users findByPhoneNumber(String phoneNumber) {
         return userRepository.findByPhoneNumber(phoneNumber);
@@ -497,11 +522,11 @@ public class UserService {
         List<Long> myInterestIds = userInterestsRepository.findById_User_Id(userId)
             .stream()
             .map(ui -> ui.getId().getInterest().getId())
-            .collect(Collectors.toList());
+            .toList();
 
         if (myInterestIds.isEmpty()) return List.of();
 
-        // Users with shared interests
+        // Get users who share interests
         List<UserInterests> sharedInterests = userInterestsRepository.findByInterestIdIn(myInterestIds);
 
         Set<Users> potentialFriends = sharedInterests.stream()
@@ -509,16 +534,61 @@ public class UserService {
             .filter(user -> !user.getId().equals(userId))
             .collect(Collectors.toSet());
 
-        // Remove current friends
         List<Users> currentFriends = friendshipService.getAcceptedFriends(currentUser);
-        potentialFriends.removeAll(currentFriends);
 
-        // Remove blocked users and pending requests
+        // ✅ Apply all filters together
         return potentialFriends.stream()
+            .filter(user -> user.getStatus() == UserStatus.ACTIVE)
+            .filter(Users::isPublicProfile)
+            .filter(user -> !currentFriends.contains(user))
             .filter(user -> !friendshipService.didBlock(currentUser, user))
             .filter(user -> !friendshipService.didBlock(user, currentUser))
             .filter(user -> !friendshipService.hasPendingRequestBetween(currentUser, user))
             .toList();
+    }
+
+    public boolean updateVisibilityAndStatus(Long userId, boolean isPublicProfile, UserStatus newStatus) {
+        Users user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setPublicProfile(isPublicProfile);
+        user.setStatus(newStatus);
+        user.setUpdatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+        return true;
+    }
+
+    @Scheduled(cron = "0 0 2 * * *") // Every day at 2 AM
+    public void softDeleteInactiveUsersAfter30Days() {
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(30);
+
+        List<Users> inactiveUsers = userRepository.findAll().stream()
+                .filter(u -> u.getStatus() == UserStatus.INACTIVE)
+                .filter(u -> u.getUpdatedAt() != null && u.getUpdatedAt().isBefore(cutoff))
+                .toList();
+
+        for (Users user : inactiveUsers) {
+            user.setStatus(UserStatus.DELETED);
+            user.setUpdatedAt(LocalDateTime.now());
+            userRepository.save(user);
+            System.out.println("Soft-deleted user: " + user.getEmail());
+        }
+    }
+
+    @Scheduled(cron = "0 0 3 * * *") // Every day at 3 AM
+    public void permanentlyDeleteUsersAfter90Days() {
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(90);
+
+        List<Users> toDelete = userRepository.findAll().stream()
+                .filter(u -> u.getStatus() == UserStatus.DELETED)
+                .filter(u -> u.getUpdatedAt() != null && u.getUpdatedAt().isBefore(cutoff))
+                .toList();
+
+        for (Users user : toDelete) {
+            userRepository.delete(user);
+            System.out.println("Permanently deleted user: " + user.getEmail());
+        }
     }
 
 }

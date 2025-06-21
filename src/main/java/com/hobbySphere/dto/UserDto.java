@@ -1,6 +1,9 @@
 package com.hobbySphere.dto;
 
 import com.hobbySphere.entities.Users;
+import com.hobbySphere.enums.UserStatus;
+
+import java.time.LocalDateTime;
 
 public class UserDto {
     private Long id;
@@ -9,7 +12,11 @@ public class UserDto {
     private String email;
     private String phoneNumber;
     private String profileImageUrl;
-    private boolean isPublicProfile; // ✅ NEW
+    private boolean isPublicProfile;
+
+    // ✅ NEW
+    private UserStatus status;
+    private LocalDateTime lastLogin;
 
     public UserDto() {}
 
@@ -20,7 +27,9 @@ public class UserDto {
         this.email = user.getEmail();
         this.phoneNumber = user.getPhoneNumber();
         this.profileImageUrl = user.getProfilePictureUrl();
-        this.isPublicProfile = user.isPublicProfile(); 
+        this.isPublicProfile = user.isPublicProfile();
+        this.status = user.getStatus(); // 
+        this.lastLogin = user.getLastLogin(); // 
     }
 
     // === Getters ===
@@ -52,6 +61,14 @@ public class UserDto {
         return isPublicProfile;
     }
 
+    public UserStatus getStatus() {
+        return status;
+    }
+
+    public LocalDateTime getLastLogin() {
+        return lastLogin;
+    }
+
     // === Setters ===
     public void setId(Long id) {
         this.id = id;
@@ -79,5 +96,13 @@ public class UserDto {
 
     public void setPublicProfile(boolean isPublicProfile) {
         this.isPublicProfile = isPublicProfile;
+    }
+
+    public void setStatus(UserStatus status) {
+        this.status = status;
+    }
+
+    public void setLastLogin(LocalDateTime lastLogin) {
+        this.lastLogin = lastLogin;
     }
 }

@@ -11,6 +11,8 @@ public class ActivityDetailsDTO {
     private Long activityTypeId;
     private String activityTypeName; 
     private String location;
+    private Double latitude;       // ✅ NEW
+    private Double longitude;      // ✅ NEW
     private LocalDateTime startDatetime;
     private LocalDateTime endDatetime;
     private BigDecimal price;
@@ -22,7 +24,8 @@ public class ActivityDetailsDTO {
     // ✅ Updated Constructor
     public ActivityDetailsDTO(Long id, String activityName, String description,
                               Long activityTypeId, String activityTypeName,
-                              String location, LocalDateTime startDatetime, LocalDateTime endDatetime,
+                              String location, Double latitude, Double longitude,
+                              LocalDateTime startDatetime, LocalDateTime endDatetime,
                               BigDecimal price, int maxParticipants, String status,
                               String imageUrl, String businessName) {
         this.id = id;
@@ -31,6 +34,8 @@ public class ActivityDetailsDTO {
         this.activityTypeId = activityTypeId;
         this.activityTypeName = activityTypeName;
         this.location = location;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.startDatetime = startDatetime;
         this.endDatetime = endDatetime;
         this.price = price;
@@ -58,6 +63,12 @@ public class ActivityDetailsDTO {
 
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
+
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
 
     public LocalDateTime getStartDatetime() { return startDatetime; }
     public void setStartDatetime(LocalDateTime startDatetime) { this.startDatetime = startDatetime; }

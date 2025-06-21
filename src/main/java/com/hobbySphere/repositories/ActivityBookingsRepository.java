@@ -112,5 +112,32 @@ public interface ActivityBookingsRepository extends JpaRepository<ActivityBookin
         List<Long> findCompletedActivityIdsByUser(@Param("userId") Long userId);
 
         List<ActivityBookings> findByUserIdAndBookingStatus(Long userId, String bookingStatus);
+        
+    
+        @Query("SELECT ab FROM ActivityBookings ab " +
+               "WHERE ab.user.id = :userId " +
+               "AND ab.activity.business.status = com.hobbySphere.enums.BusinessStatus.ACTIVE")
+        List<ActivityBookings> findByUserIdAndActiveBusiness(@Param("userId") Long userId);
+
+        @Query("SELECT ab FROM ActivityBookings ab " +
+               "WHERE ab.user.id = :userId " +
+               "AND ab.bookingStatus IN :statuses " +
+               "AND ab.activity.business.status = com.hobbySphere.enums.BusinessStatus.ACTIVE")
+        List<ActivityBookings> findByUserIdAndStatusesAndActiveBusiness(
+                @Param("userId") Long userId,
+                @Param("statuses") List<String> statuses);
+
+        @Query("SELECT b FROM ActivityBookings b " +
+               "JOIN FETCH b.activity a " +
+               "WHERE b.user.email = :userEmail " +
+               "AND a.business.status = com.hobbySphere.enums.BusinessStatus.ACTIVE")
+        List<ActivityBookings> findByUserEmailWithActivityAndActiveBusiness(@Param("userEmail") String userEmail);
+
+        @Query("SELECT b FROM ActivityBookings b " +
+               "JOIN FETCH b.activity a " +
+               "JOIN FETCH b.user u " +
+               "WHERE a.business.status = com.hobbySphere.enums.BusinessStatus.ACTIVE")
+        List<ActivityBookings> findAllWithActivityAndUserAndActiveBusiness();
+
 
 }

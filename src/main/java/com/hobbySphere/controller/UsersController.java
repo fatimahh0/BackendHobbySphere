@@ -3,6 +3,7 @@ package com.hobbySphere.controller;
 import com.hobbySphere.dto.UserDto;
 import com.hobbySphere.entities.AdminUsers;
 import com.hobbySphere.entities.Users;
+import com.hobbySphere.enums.UserStatus;
 import com.hobbySphere.services.AdminUserService;
 import com.hobbySphere.services.UserService;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,7 @@ import com.hobbySphere.repositories.*;
 import com.hobbySphere.security.JwtUtil;
 import org.springframework.http.HttpHeaders;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -235,16 +237,22 @@ public class UsersController {
     }
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<String> updateStatus(@PathVariable Long id, @RequestParam String status) {
+    public ResponseEntity<String> updateStatus(
+            @PathVariable Long id,
+            @RequestParam UserStatus status // ✅ safer enum
+    ) {
         Optional<Users> userOpt = usersRepository.findById(id);
         if (userOpt.isEmpty()) return ResponseEntity.status(404).body("User not found");
 
         Users user = userOpt.get();
         user.setStatus(status);
+        user.setUpdatedAt(LocalDateTime.now());
         usersRepository.save(user);
-        return ResponseEntity.ok("User status updated to " + status);
+        return ResponseEntity.ok("User status updated to " + status.name());
     }
 
+
+    
     @GetMapping("/{userId}/suggestions")
     public ResponseEntity<?> getFriendSuggestions(@PathVariable Long userId) {
         try {
@@ -255,6 +263,21 @@ public class UsersController {
             return ResponseEntity.status(500).body("Error fetching suggestions: " + e.getMessage());
         }
     }
+    
+    @PutMapping("/{id}/visibility-status")
+    public ResponseEntity<String> updateVisibilityAndStatus(
+            @PathVariable Long id,
+            @RequestParam boolean isPublicProfile,
+            @RequestParam UserStatus status
+    ) {
+        boolean updated = userService.updateVisibilityAndStatus(id, isPublicProfile, status);
+        if (updated) {
+            return ResponseEntity.ok("Visibility and status updated successfully.");
+        } else {
+            return ResponseEntity.status(404).body("User not found.");
+        }
+    }
+
 
 
     

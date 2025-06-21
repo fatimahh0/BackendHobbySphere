@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.hobbySphere.enums.BusinessStatus;
 import com.hobbySphere.enums.LanguageType;
 
 @Entity
@@ -38,22 +39,25 @@ public class Businesses {
 
     @Column(name = "website_url")
     private String websiteUrl;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "preferred_language")
     private LanguageType preferredLanguage;
 
-    public LanguageType getPreferredLanguage() {
-        return preferredLanguage;
-    }
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true)
+    private BusinessStatus status = BusinessStatus.ACTIVE;
 
-    public void setPreferredLanguage(LanguageType preferredLanguage) {
-        this.preferredLanguage = preferredLanguage;
-    }
+    @Column(name = "is_public_profile", nullable = true)
+    private Boolean isPublicProfile = true;
 
     @OneToMany(mappedBy = "business", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<Activities> activities;
     
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -65,7 +69,7 @@ public class Businesses {
     }
 
     public Businesses(String businessName, String email, String phoneNumber, String passwordHash,
-            String businessLogoUrl, String businessBannerUrl, String description, String websiteUrl) {
+                      String businessLogoUrl, String businessBannerUrl, String description, String websiteUrl) {
         this.businessName = businessName;
         this.email = email;
         this.phoneNumber = phoneNumber;
@@ -77,7 +81,6 @@ public class Businesses {
     }
 
     // Getters and Setters
-
     public Long getId() {
         return id;
     }
@@ -150,6 +153,30 @@ public class Businesses {
         this.websiteUrl = websiteUrl;
     }
 
+    public LanguageType getPreferredLanguage() {
+        return preferredLanguage;
+    }
+
+    public void setPreferredLanguage(LanguageType preferredLanguage) {
+        this.preferredLanguage = preferredLanguage;
+    }
+
+    public BusinessStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(BusinessStatus status) {
+        this.status = status;
+    }
+
+    public Boolean getIsPublicProfile() {
+        return isPublicProfile;
+    }
+
+    public void setIsPublicProfile(Boolean isPublicProfile) {
+        this.isPublicProfile = isPublicProfile;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -166,9 +193,20 @@ public class Businesses {
         this.updatedAt = updatedAt;
     }
     
+    public LocalDateTime getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public void setLastLoginAt(LocalDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
+
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = this.updatedAt = LocalDateTime.now();
+        if (this.status == null) this.status = BusinessStatus.ACTIVE;
+        if (this.isPublicProfile == null) this.isPublicProfile = true;
     }
 
     @PreUpdate

@@ -1,5 +1,6 @@
 package com.hobbySphere.entities;
 
+import com.hobbySphere.enums.BusinessStatus;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -35,6 +36,13 @@ public class PendingBusiness {
 
     @Column(name = "verification_code")
     private String verificationCode;
+
+    @Column(name = "is_public_profile")
+    private Boolean isPublicProfile = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private BusinessStatus status = BusinessStatus.ACTIVE;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -119,6 +127,22 @@ public class PendingBusiness {
 
     public void setVerificationCode(String verificationCode) {
         this.verificationCode = verificationCode;
+    }
+
+    public Boolean getIsPublicProfile() {
+        return isPublicProfile;
+    }
+
+    public void setIsPublicProfile(Boolean isPublicProfile) {
+        this.isPublicProfile = isPublicProfile;
+    }
+
+    public BusinessStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(BusinessStatus status) {
+        this.status = status;
     }
 
     public LocalDateTime getCreatedAt() {

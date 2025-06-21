@@ -3,6 +3,7 @@ package com.hobbySphere.services;
 import com.hobbySphere.entities.Friendship;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.enums.NotificationType;
+import com.hobbySphere.enums.UserStatus;
 import com.hobbySphere.repositories.FriendshipRepository;
 import org.springframework.stereotype.Service;
 
@@ -146,36 +147,34 @@ public class FriendshipService {
     public List<Users> getAcceptedFriends(Users user) {
         List<Friendship> friendships = friendshipRepo.findAcceptedFriendships(user.getId());
 
-        return friendships.stream().map(f -> {
-            return f.getUser().getId().equals(user.getId()) ? f.getFriend() : f.getUser();
-        }).collect(Collectors.toList());
+        return friendships.stream()
+                .map(f -> f.getUser().getId().equals(user.getId()) ? f.getFriend() : f.getUser())
+                .filter(friend ->
+                        friend.getStatus() == UserStatus.ACTIVE &&
+                        (friend.isPublicProfile() || areFriends(user, friend))
+                )
+                .collect(Collectors.toList());
     }
 
-   
-    
     public List<Users> getSentRequests(Users user) {
         List<Friendship> sentRequests = friendshipRepo.findByUserIdAndStatus(user.getId(), "PENDING");
 
         return sentRequests.stream()
-                .map(Friendship::getFriend)  // return receivers
+                .map(Friendship::getFriend)
                 .collect(Collectors.toList());
     }
-    
-    
- //  Check if current user blocked another user
+
     public boolean isBlocked(Users currentUser, Users otherUser) {
         return friendshipRepo.findByUserIdAndFriendIdAndStatus(currentUser.getId(), otherUser.getId(), "BLOCKED").isPresent();
     }
 
-    //  Check if users are friends (ACCEPTED relationship either direction)
     public boolean areFriends(Users user1, Users user2) {
         if (user1 == null || user2 == null || user1.getId() == null || user2.getId() == null) {
-            return false;  
+            return false;
         }
         return friendshipRepo.findAcceptedFriendship(user1.getId(), user2.getId()).isPresent();
     }
 
-    
     public boolean didBlock(Users blocker, Users blocked) {
         return friendshipRepo.findByUserIdAndFriendIdAndStatus(blocker.getId(), blocked.getId(), "BLOCKED").isPresent();
     }
@@ -184,8 +183,4 @@ public class FriendshipService {
         return friendshipRepo.findByUserIdAndFriendIdAndStatus(currentUser.getId(), otherUser.getId(), "PENDING").isPresent()
             || friendshipRepo.findByUserIdAndFriendIdAndStatus(otherUser.getId(), currentUser.getId(), "PENDING").isPresent();
     }
-
-
-    
-
 } 
