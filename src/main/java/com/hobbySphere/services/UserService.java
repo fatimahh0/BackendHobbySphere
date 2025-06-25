@@ -30,6 +30,7 @@ import java.util.UUID;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -591,7 +592,7 @@ public class UserService {
         }
     }
 
-    public Users handleGoogleUser(String email, String fullName, String pictureUrl) {
+    public Users handleGoogleUser(String email, String fullName, String pictureUrl, AtomicBoolean wasInactive) {
         System.out.println("🔥 handleGoogleUser() called");
         System.out.println("📩 Incoming Email: " + email);
         System.out.println("👤 Incoming FullName: " + fullName);
@@ -600,31 +601,27 @@ public class UserService {
         Users existingUser = userRepository.findByEmail(email);
         if (existingUser != null) {
             System.out.println("👀 User already exists: " + existingUser.getUsername());
+
+            // 🔁 If INACTIVE, mark but don't update in DB yet
+            if (existingUser.getStatus() == UserStatus.INACTIVE) {
+                System.out.println("🟡 User is INACTIVE. Waiting for confirmation to reactivate.");
+                wasInactive.set(true);
+                return existingUser;
+            }
+
             existingUser.setLastLogin(LocalDateTime.now());
             return userRepository.save(existingUser);
         }
 
-        Users newUser = new Users();
-
-        // Safe fallback values
-        String firstName = "Google";
-        String lastName = "User";
-
+        // Fallback for name parsing
+        String firstName = "Google", lastName = "User";
         if (fullName != null && !fullName.trim().isEmpty()) {
             String[] parts = fullName.trim().split(" ", 2);
             firstName = parts[0];
-            if (parts.length > 1) {
-                lastName = parts[1];
-            }
+            if (parts.length > 1) lastName = parts[1];
         }
 
-        if (firstName == null || firstName.trim().isEmpty()) firstName = "Google";
-        if (lastName == null || lastName.trim().isEmpty()) lastName = "User";
-
-        // Logging parsed results
-        System.out.println("✅ Parsed First Name: " + firstName);
-        System.out.println("✅ Parsed Last Name: " + lastName);
-
+        Users newUser = new Users();
         newUser.setEmail(email);
         newUser.setUsername(email.split("@")[0]);
         newUser.setFirstName(firstName);
@@ -636,9 +633,23 @@ public class UserService {
         newUser.setCreatedAt(LocalDateTime.now());
         newUser.setLastLogin(LocalDateTime.now());
 
-        System.out.println("📥 Saving user: " + newUser.getUsername());
-
+        System.out.println("📥 Saving new Google user: " + newUser.getUsername());
         return userRepository.save(newUser);
+    }
+
+    // ✅ Reactivate confirmed inactive user manually
+    public Users confirmReactivation(Long userId) {
+        Users user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getStatus() == UserStatus.INACTIVE) {
+            user.setStatus(UserStatus.ACTIVE);
+            user.setUpdatedAt(LocalDateTime.now());
+            user.setLastLogin(LocalDateTime.now());
+            return userRepository.save(user);
+        }
+
+        return user;
     }
 
 

@@ -287,22 +287,18 @@ public class AuthController {
                     .body(Map.of("message", "Incorrect password"));
         }
 
-        // ❌ If DELETED, reject login
         if (existingUser.getStatus() == UserStatus.DELETED) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "This account has been deleted and cannot be accessed."));
         }
 
-        // 🔄 If INACTIVE, reactivate and update status
         boolean wasInactive = false;
         if (existingUser.getStatus() == UserStatus.INACTIVE) {
-            existingUser.setStatus(UserStatus.ACTIVE);
             wasInactive = true;
+        } else {
+            existingUser.setLastLogin(LocalDateTime.now());
+            userService.save(existingUser);
         }
-
-        // Update last login time
-        existingUser.setLastLogin(LocalDateTime.now());
-        userService.save(existingUser);
 
         String token = jwtUtil.generateToken(existingUser);
 
@@ -314,15 +310,15 @@ public class AuthController {
         userData.put("email", existingUser.getEmail());
         userData.put("profilePictureUrl", existingUser.getProfilePictureUrl());
 
-        String message = wasInactive ?
-                "User login successful. Your account has been reactivated." :
-                "User login successful";
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", wasInactive ?
+            "User login successful. Your account is inactive. Confirm reactivation." :
+            "User login successful");
+        result.put("token", token);
+        result.put("user", userData);
+        result.put("wasInactive", wasInactive);
 
-        return ResponseEntity.ok(Map.of(
-                "message", message,
-                "token", token,
-                "user", userData
-        ));
+        return ResponseEntity.ok(result);
     }
 
 
@@ -425,9 +421,11 @@ public class AuthController {
                 : "User login with phone successful";
 
         return ResponseEntity.ok(Map.of(
-                "message", message,
-                "token", token,
-                "user", userData));
+        	    "message", message,
+        	    "token", token,
+        	    "user", userData,
+        	    "wasInactive", wasInactive // ✅ Add this
+        	));
     }
 
     // Business Login
@@ -481,9 +479,12 @@ public class AuthController {
             "Business login successful";
 
         return ResponseEntity.ok(Map.of(
-                "message", message,
-                "token", token,
-                "business", businessData));
+        	    "message", message,
+        	    "token", token,
+        	    "business", businessData,
+        	    "wasInactive", wasInactive 
+        	));
+
     }
 
 
@@ -541,9 +542,11 @@ public class AuthController {
                 : "Business login with phone successful";
 
         return ResponseEntity.ok(Map.of(
-                "message", message,
-                "token", token,
-                "business", businessData));
+        	    "message", message,
+        	    "token", token,
+        	    "business", businessData,
+        	    "wasInactive", wasInactive 
+        	));
     }
 
 

@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @RequiredArgsConstructor
 @RestController
@@ -55,26 +56,28 @@ public class GoogleAuthController {
             String fullName = (String) payload.get("name");
             String pictureUrl = (String) payload.get("picture");
 
-            // Handle user creation or login
-            Users user = userService.handleGoogleUser(email, fullName, pictureUrl);
+            // 🟡 Track reactivation without modifying logic
+            AtomicBoolean wasInactive = new AtomicBoolean(false);
+            Users user = userService.handleGoogleUser(email, fullName, pictureUrl, wasInactive);
+
             String token = jwtUtil.generateToken(user);
             UserDto userDto = new UserDto(user);
 
             return ResponseEntity.ok(Map.of(
-            	    "token", token,
-            	    "user", Map.of(
-            	        "id", user.getId(),
-            	        "firstName", user.getFirstName(),
-            	        "lastName", user.getLastName(),
-            	        "email", user.getEmail(),
-            	        "profileImageUrl", user.getProfilePictureUrl(),
-            	        "username", user.getUsername(),
-            	        "status", user.getStatus().name(),
-            	        "lastLogin", user.getLastLogin(),
-            	        "publicProfile", user.isPublicProfile()
-            	    )
-            	));
-
+                "token", token,
+                "wasInactive", wasInactive.get(), // ✅ added
+                "user", Map.of(
+                    "id", user.getId(),
+                    "firstName", user.getFirstName(),
+                    "lastName", user.getLastName(),
+                    "email", user.getEmail(),
+                    "profileImageUrl", user.getProfilePictureUrl(),
+                    "username", user.getUsername(),
+                    "status", user.getStatus().name(),
+                    "lastLogin", user.getLastLogin(),
+                    "publicProfile", user.isPublicProfile()
+                )
+            ));
 
         } catch (Exception e) {
             e.printStackTrace();
