@@ -333,11 +333,12 @@ public class AuthController {
             @RequestPart("lastName") String lastName,
             @RequestPart("username") String username,
             @RequestPart(value = "password", required = false) String password,
-            @RequestPart(value = "profilePicture", required = false) MultipartFile profilePicture) throws IOException {
+            @RequestPart(value = "profilePicture", required = false) MultipartFile profilePicture
+    ) throws IOException {
 
         Optional<Users> optionalUser = UserRepository.findById(id);
         if (optionalUser.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "User not found"));
         }
 
         Users user = optionalUser.get();
@@ -347,19 +348,27 @@ public class AuthController {
         user.setUsername(username);
 
         if (profilePicture != null && !profilePicture.isEmpty()) {
-            // TODO: Save the file and get its URL
-            String imageUrl = userService.saveProfileImage(profilePicture); // You must implement this
+            String imageUrl = userService.saveProfileImage(profilePicture);
             user.setProfilePictureUrl(imageUrl);
         }
 
         if (password != null && !password.isEmpty()) {
-            // Optional: hash password before saving
-            user.setPasswordHash(password);
+            user.setPasswordHash(password); // Optional: hash it
         }
 
         UserRepository.save(user);
 
-        return ResponseEntity.ok("Profile updated successfully");
+        // ✅ Return updated user data in response
+        Map<String, Object> updatedData = new HashMap<>();
+        updatedData.put("id", user.getId());
+        updatedData.put("firstName", user.getFirstName());
+        updatedData.put("lastName", user.getLastName());
+        updatedData.put("username", user.getUsername());
+        updatedData.put("email", user.getEmail());
+        updatedData.put("phoneNumber", user.getPhoneNumber());
+        updatedData.put("profilePictureUrl", user.getProfilePictureUrl());
+
+        return ResponseEntity.ok(updatedData);
     }
 
     // user login with number

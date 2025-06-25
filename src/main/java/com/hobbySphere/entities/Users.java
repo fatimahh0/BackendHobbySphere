@@ -127,13 +127,18 @@ public class Users {
         this.lastName = lastName;
     }
 
-    public Boolean isPublicProfile() {
+    public Boolean getIsPublicProfile() {
         return isPublicProfile;
     }
 
-    public void setPublicProfile(Boolean isPublicProfile) {
+    public void setIsPublicProfile(Boolean isPublicProfile) {
         this.isPublicProfile = isPublicProfile;
     }
+    
+    public boolean isPublicProfile() {
+        return Boolean.TRUE.equals(this.isPublicProfile);
+    }
+
 
     public String getEmail() {
         return email;

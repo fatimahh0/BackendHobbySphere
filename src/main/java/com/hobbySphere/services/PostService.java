@@ -89,7 +89,7 @@ public class PostService {
                         if (poster.getStatus() != UserStatus.ACTIVE) return false;
 
                         // If poster profile is private, only allow friends or self
-                        if (!poster.isPublicProfile()
+                        if (!poster.getIsPublicProfile()
                                 && !poster.getId().equals(currentUserId)
                                 && !areFriends(currentUserId, poster.getId())) {
                             return false;

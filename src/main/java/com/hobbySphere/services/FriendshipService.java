@@ -151,7 +151,7 @@ public class FriendshipService {
                 .map(f -> f.getUser().getId().equals(user.getId()) ? f.getFriend() : f.getUser())
                 .filter(friend ->
                         friend.getStatus() == UserStatus.ACTIVE &&
-                        (friend.isPublicProfile() || areFriends(user, friend))
+                        (friend.getIsPublicProfile() || areFriends(user, friend))
                 )
                 .collect(Collectors.toList());
     }

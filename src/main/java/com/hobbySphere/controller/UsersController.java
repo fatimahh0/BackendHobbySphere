@@ -219,7 +219,7 @@ public class UsersController {
                 return ResponseEntity.status(404).body("User not found");
             }
 
-            user.setPublicProfile(isPublic);
+            user.setIsPublicProfile(isPublic);
             usersRepository.save(user);
 
             return ResponseEntity.ok("Profile visibility updated to " + (isPublic ? "PUBLIC" : "PRIVATE"));

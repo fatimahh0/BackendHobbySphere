@@ -236,7 +236,7 @@ public class ActivityBookingService {
 	    Users user = userRepository.findById(userId)
 	            .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
 
-	    user.setPublicProfile(isPublicProfile);
+	    user.setIsPublicProfile(isPublicProfile);
 	    user.setStatus(newStatus);
 	    user.setUpdatedAt(LocalDateTime.now());
 

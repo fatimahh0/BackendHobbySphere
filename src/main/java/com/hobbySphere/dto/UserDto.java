@@ -27,7 +27,7 @@ public class UserDto {
         this.email = user.getEmail();
         this.phoneNumber = user.getPhoneNumber();
         this.profileImageUrl = user.getProfilePictureUrl();
-        this.isPublicProfile = user.isPublicProfile();
+        this.isPublicProfile = user.getIsPublicProfile();
         this.status = user.getStatus(); // 
         this.lastLogin = user.getLastLogin(); // 
     }

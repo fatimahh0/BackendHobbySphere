@@ -246,7 +246,7 @@ public class UserService {
         user.setFirstName(pending.getFirstName());
         user.setLastName(pending.getLastName());
         user.setProfilePictureUrl(pending.getProfilePictureUrl());
-        user.setPublicProfile(pending.getIsPublicProfile());
+        user.setIsPublicProfile(pending.getIsPublicProfile());
         user.setStatus(UserStatus.ACTIVE); 
         user.setCreatedAt(LocalDateTime.now());
 
@@ -275,7 +275,7 @@ public class UserService {
         user.setFirstName(pending.getFirstName());
         user.setLastName(pending.getLastName());
         user.setProfilePictureUrl(pending.getProfilePictureUrl());
-        user.setPublicProfile(pending.getIsPublicProfile());
+        user.setIsPublicProfile(pending.getIsPublicProfile());
         user.setStatus(UserStatus.ACTIVE); // ✅ Fix: use enum
         user.setCreatedAt(LocalDateTime.now());
 
@@ -551,7 +551,7 @@ public class UserService {
         Users user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        user.setPublicProfile(isPublicProfile);
+        user.setIsPublicProfile(isPublicProfile);
         user.setStatus(newStatus);
         user.setUpdatedAt(LocalDateTime.now());
 
@@ -590,5 +590,56 @@ public class UserService {
             System.out.println("Permanently deleted user: " + user.getEmail());
         }
     }
+
+    public Users handleGoogleUser(String email, String fullName, String pictureUrl) {
+        System.out.println("🔥 handleGoogleUser() called");
+        System.out.println("📩 Incoming Email: " + email);
+        System.out.println("👤 Incoming FullName: " + fullName);
+        System.out.println("🖼️ Incoming Picture URL: " + pictureUrl);
+
+        Users existingUser = userRepository.findByEmail(email);
+        if (existingUser != null) {
+            System.out.println("👀 User already exists: " + existingUser.getUsername());
+            existingUser.setLastLogin(LocalDateTime.now());
+            return userRepository.save(existingUser);
+        }
+
+        Users newUser = new Users();
+
+        // Safe fallback values
+        String firstName = "Google";
+        String lastName = "User";
+
+        if (fullName != null && !fullName.trim().isEmpty()) {
+            String[] parts = fullName.trim().split(" ", 2);
+            firstName = parts[0];
+            if (parts.length > 1) {
+                lastName = parts[1];
+            }
+        }
+
+        if (firstName == null || firstName.trim().isEmpty()) firstName = "Google";
+        if (lastName == null || lastName.trim().isEmpty()) lastName = "User";
+
+        // Logging parsed results
+        System.out.println("✅ Parsed First Name: " + firstName);
+        System.out.println("✅ Parsed Last Name: " + lastName);
+
+        newUser.setEmail(email);
+        newUser.setUsername(email.split("@")[0]);
+        newUser.setFirstName(firstName);
+        newUser.setLastName(lastName);
+        newUser.setProfilePictureUrl(pictureUrl);
+        newUser.setIsPublicProfile(true);
+        newUser.setStatus(UserStatus.ACTIVE);
+        newUser.setPasswordHash("");
+        newUser.setCreatedAt(LocalDateTime.now());
+        newUser.setLastLogin(LocalDateTime.now());
+
+        System.out.println("📥 Saving user: " + newUser.getUsername());
+
+        return userRepository.save(newUser);
+    }
+
 
 }
