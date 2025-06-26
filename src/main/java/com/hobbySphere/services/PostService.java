@@ -85,20 +85,23 @@ public class PostService {
                     try {
                         Users poster = post.getUser();
 
-                        // Skip if user is INACTIVE or DELETED
+                       
                         if (poster.getStatus() != UserStatus.ACTIVE) return false;
 
-                        // If poster profile is private, only allow friends or self
-                        if (!poster.getIsPublicProfile()
-                                && !poster.getId().equals(currentUserId)
-                                && !areFriends(currentUserId, poster.getId())) {
-                            return false;
+                      
+                        if (poster.getId().equals(currentUserId)) return true;
+
+                      
+                        if (post.getVisibility() == PostVisibility.PUBLIC) return true;
+
+                      
+                        if (post.getVisibility() == PostVisibility.FRIENDS_ONLY
+                                && areFriends(currentUserId, poster.getId())) {
+                            return true;
                         }
 
-                        // Post visibility rules
-                        if (post.getVisibility() == PostVisibility.PUBLIC) return true;
-                        if (poster.getId().equals(currentUserId)) return true;
-                        return areFriends(currentUserId, poster.getId());
+                     
+                        return false;
 
                     } catch (Exception e) {
                         System.err.println("❌ Error in filter logic: " + e.getMessage());
@@ -143,5 +146,5 @@ public class PostService {
         return posts.stream()
                 .map(post -> new PostDto(post, userId))
                 .collect(Collectors.toList());
-    }
+}
 }

@@ -18,9 +18,15 @@ public class Notifications {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Users user;
+    
+    @ManyToOne
+    @JoinColumn(name = "business_id",nullable = true)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private Businesses business;
+
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String message;
@@ -45,6 +51,13 @@ public class Notifications {
         this.message = message;
         this.notificationType = notificationType;
     }
+    
+    public Notifications(Businesses business, String message, NotificationType notificationType) {
+        this.business = business;
+        this.message = message;
+        this.notificationType = notificationType;
+    }
+
 
     @PrePersist
     protected void onCreate() {
@@ -78,4 +91,13 @@ public class Notifications {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    
+    public Businesses getBusiness() {
+        return business;
+    }
+
+    public void setBusiness(Businesses business) {
+        this.business = business;
+        }
+
 }

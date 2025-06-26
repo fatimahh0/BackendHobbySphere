@@ -14,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/notifications")
@@ -77,51 +78,60 @@ public class NotificationsController {
     // ✅ BUSINESS: Get notifications
     @GetMapping("/business")
     public List<Notifications> getBusinessNotifications(Principal principal) {
-        Businesses business = businessService.findByEmailOrThrow(principal.getName());
-        return notificationsService.getAllByUser1(getUserFromBusiness(business));
+        Businesses business = businessService.findByEmail(principal.getName())
+            .orElseThrow(() -> new RuntimeException("Business not found"));
+        return notificationsService.getAllByBusiness(business);
     }
+
 
     // ✅ BUSINESS: Count all
     @GetMapping("/business/count")
     public long getBusinessNotificationCount(Principal principal) {
-        Businesses business = businessService.findByEmailOrThrow(principal.getName());
-        return notificationsService.getAllByUser1(getUserFromBusiness(business)).size();
+        Businesses business = businessService.findByEmail(principal.getName())
+            .orElseThrow(() -> new RuntimeException("Business not found"));
+        return notificationsService.getAllByBusiness(business).size();
     }
 
     // ✅ BUSINESS: Count unread
     @GetMapping("/business/unread-count")
     public int getBusinessUnreadNotificationCount(Principal principal) {
-        Businesses business = businessService.findByEmailOrThrow(principal.getName());
-        return notificationsService.getUnreadByUser(getUserFromBusiness(business)).size();
+        Businesses business = businessService.findByEmail(principal.getName())
+            .orElseThrow(() -> new RuntimeException("Business not found"));
+        return notificationsService.getUnreadByBusiness(business).size();
     }
+
 
     // ✅ BUSINESS: Mark as read
     @PutMapping("/business/{id}/read")
     public void markBusinessNotificationAsRead(@PathVariable Long id, Principal principal) {
-        Businesses business = businessService.findByEmailOrThrow(principal.getName());
-        notificationsService.markAsRead(id, getUserFromBusiness(business));
+        Businesses business = businessService.findByEmail(principal.getName())
+            .orElseThrow(() -> new RuntimeException("Business not found"));
+        notificationsService.markAsReadForBusiness(id, business);
     }
 
+
     // ✅ BUSINESS: Delete notification
+  
     @DeleteMapping("/business/{id}")
     public void deleteBusinessNotification(@PathVariable Long id, Principal principal) {
-        Businesses business = businessService.findByEmailOrThrow(principal.getName());
-        Notifications notification = notificationsService.getById(id);
-        Users businessUser = getUserFromBusiness(business);
+        Businesses business = businessService.findByEmail(principal.getName())
+            .orElseThrow(() -> new RuntimeException("Business not found"));
 
-        if (!notification.getUser().getId().equals(businessUser.getId())) {
+        Notifications notification = notificationsService.getById(id);
+
+        if (!notification.getBusiness().getId().equals(business.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to delete this notification");
         }
 
         notificationsService.delete(notification);
     }
-
+    
     // ✅ Helper to get Users object from Businesses
-    private Users getUserFromBusiness(Businesses business) {
+    private Users getUserFromBusiness(Optional<Businesses> business) {
         try {
             return (Users) business.getClass().getMethod("getUser").invoke(business);
         } catch (Exception e) {
             throw new RuntimeException("Failed to extract user from business");
-        }
-    }
+            }
+}
 }

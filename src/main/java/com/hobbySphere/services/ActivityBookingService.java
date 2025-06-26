@@ -90,7 +90,11 @@ public class ActivityBookingService {
         activityBookingsRepository.save(booking);
 
         // ✅ Notify the business
-        String message = booking.getUser().getFirstName() + " cancelled their booking for: " + booking.getActivity().getActivityName();
+        Users user = booking.getUser();
+        String fullName = user.getFirstName() + " " + user.getLastName();
+
+        String message = fullName + " cancelled their booking for: " + booking.getActivity().getActivityName();
+
         notificationsService.notifyBusiness(
             booking.getActivity().getBusiness(),
             message,
@@ -111,7 +115,9 @@ public class ActivityBookingService {
         activityBookingsRepository.save(booking);
 
         // ✅ Notify the business
-        String message = booking.getUser().getFirstName() + " returned a booking to pending for: " + booking.getActivity().getActivityName();
+        String fullName = booking.getUser().getFirstName() + " " + booking.getUser().getLastName();
+        String message = fullName + " returned a booking to pending for: " + booking.getActivity().getActivityName();
+
         notificationsService.notifyBusiness(
             booking.getActivity().getBusiness(),
             message,
@@ -141,10 +147,12 @@ public class ActivityBookingService {
         ActivityBookings savedBooking = activityBookingsRepository.save(booking);
 
         Users user = savedBooking.getUser(); // the user who made the booking
-        String userName = user.getFirstName(); // or use getUsername()
-
+     
         String activityName = savedBooking.getActivity().getActivityName();
-        String message = userName + " booked your activity: " + activityName;
+    
+        String fullName = user.getFirstName() + " " + user.getLastName();
+
+        String message = fullName + " booked your activity: " + savedBooking.getActivity().getActivityName();
 
         notificationsService.notifyBusiness(
             savedBooking.getActivity().getBusiness(),
