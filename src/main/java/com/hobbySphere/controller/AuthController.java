@@ -277,6 +277,7 @@ public class AuthController {
     @PostMapping("/user/login")
     public ResponseEntity<?> userLogin(@RequestBody @Valid Users user) {
         Users existingUser = userService.findByEmail(user.getEmail());
+
         if (existingUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "User not found"));
@@ -292,15 +293,28 @@ public class AuthController {
                     .body(Map.of("message", "This account has been deleted and cannot be accessed."));
         }
 
-        boolean wasInactive = false;
+        // 🚫 If INACTIVE: do NOT activate. Ask user to confirm from frontend
         if (existingUser.getStatus() == UserStatus.INACTIVE) {
-            existingUser.setStatus(UserStatus.ACTIVE); // ✅ Reactivate
-            wasInactive = true;
+            String tempToken = jwtUtil.generateToken(existingUser); // Optional token if you want to use it
+            return ResponseEntity.ok(Map.of(
+                    "wasInactive", true,
+                    "message", "Your account is inactive. Confirm reactivation.",
+                    "token", tempToken,
+                    "user", Map.of(
+                            "id", existingUser.getId(),
+                            "username", existingUser.getUsername(),
+                            "firstName", existingUser.getFirstName(),
+                            "lastName", existingUser.getLastName(),
+                            "email", existingUser.getEmail(),
+                            "profilePictureUrl", existingUser.getProfilePictureUrl()
+                    )
+            ));
         }
 
-        existingUser.setLastLogin(LocalDateTime.now()); // Always update login
-        userService.save(existingUser); // ✅ Save changes
-
+        
+        // ✅ Normal login
+        existingUser.setLastLogin(LocalDateTime.now());
+        userService.save(existingUser);
 
         String token = jwtUtil.generateToken(existingUser);
 
@@ -312,16 +326,50 @@ public class AuthController {
         userData.put("email", existingUser.getEmail());
         userData.put("profilePictureUrl", existingUser.getProfilePictureUrl());
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("message", wasInactive ?
-            "User login successful. Your account is inactive. Confirm reactivation." :
-            "User login successful");
-        result.put("token", token);
-        result.put("user", userData);
-        result.put("wasInactive", wasInactive);
-
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(Map.of(
+                "message", "User login successful",
+                "token", token,
+                "user", userData,
+                "wasInactive", false
+        ));
     }
+    
+    @PostMapping("/reactivate")
+    public ResponseEntity<?> reactivateAccount(@RequestBody Map<String, Object> request) {
+        Long userId = Long.valueOf(request.get("id").toString());
+
+        Optional<Users> userOpt = userService.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+        }
+
+        Users user = userOpt.get();
+
+        if (user.getStatus() != UserStatus.INACTIVE) {
+            return ResponseEntity.badRequest().body(Map.of("error", "User is not inactive"));
+        }
+
+        user.setStatus(UserStatus.ACTIVE);
+        user.setLastLogin(LocalDateTime.now());
+        userService.save(user);
+
+        String token = jwtUtil.generateToken(user);
+
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("id", user.getId());
+        userData.put("username", user.getUsername());
+        userData.put("firstName", user.getFirstName());
+        userData.put("lastName", user.getLastName());
+        userData.put("email", user.getEmail());
+        userData.put("profilePictureUrl", user.getProfilePictureUrl());
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Account reactivated successfully",
+                "token", token,
+                "user", userData
+        ));
+    }
+
 
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -391,24 +439,29 @@ public class AuthController {
                     .body(Map.of("message", "Incorrect password"));
         }
 
-        // ❌ If DELETED, reject login
         if (existingUser.getStatus() == UserStatus.DELETED) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "This account has been deleted and cannot be accessed."));
         }
 
-        // 🔄 If INACTIVE, reactivate
-        boolean wasInactive = false;
+        // 👇 Skip login if INACTIVE
         if (existingUser.getStatus() == UserStatus.INACTIVE) {
-            existingUser.setStatus(UserStatus.ACTIVE); // ✅ Reactivate
-            wasInactive = true;
+            String tempToken = jwtUtil.generateToken(existingUser);
+            return ResponseEntity.ok(Map.of(
+                    "wasInactive", true,
+                    "message", "Your account is inactive. Confirm reactivation.",
+                    "token", tempToken,
+                    "user", Map.of(
+                            "id", existingUser.getId(),
+                            "username", existingUser.getUsername(),
+                            "phoneNumber", existingUser.getPhoneNumber(),
+                            "firstName", existingUser.getFirstName(),
+                            "lastName", existingUser.getLastName(),
+                            "profilePictureUrl", existingUser.getProfilePictureUrl()
+                    )
+            ));
         }
 
-        existingUser.setLastLogin(LocalDateTime.now()); // Always update login
-        userService.save(existingUser); // ✅ Save changes
-
-
-        // 🕒 Update last login
         existingUser.setLastLogin(LocalDateTime.now());
         userService.save(existingUser);
 
@@ -422,17 +475,14 @@ public class AuthController {
         userData.put("phoneNumber", existingUser.getPhoneNumber());
         userData.put("profilePictureUrl", existingUser.getProfilePictureUrl());
 
-        String message = wasInactive
-                ? "User login with phone successful. Your account has been reactivated."
-                : "User login with phone successful";
-
         return ResponseEntity.ok(Map.of(
-        	    "message", message,
-        	    "token", token,
-        	    "user", userData,
-        	    "wasInactive", wasInactive // ✅ Add this
-        	));
+                "message", "User login with phone successful",
+                "token", token,
+                "user", userData,
+                "wasInactive", false
+        ));
     }
+
 
     // Business Login
     @PostMapping("/business/login")
@@ -451,17 +501,27 @@ public class AuthController {
                     .body(Map.of("message", "Incorrect password"));
         }
 
-        //  If deleted, reject login
         if (business.getStatus() == BusinessStatus.DELETED) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "This account has been deleted and cannot be accessed."));
         }
 
-        //  Reactivate if inactive
-        boolean wasInactive = false;
         if (business.getStatus() == BusinessStatus.INACTIVE) {
-            business.setStatus(BusinessStatus.ACTIVE);
-            wasInactive = true;
+            String tempToken = jwtUtil.generateToken(business);
+            return ResponseEntity.ok(Map.of(
+                    "wasInactive", true,
+                    "token", tempToken,
+                    "business", Map.of(
+                            "id", business.getId(),
+                            "businessName", business.getBusinessName(),
+                            "email", business.getEmail(),
+                            "phoneNumber", business.getPhoneNumber(),
+                            "websiteUrl", business.getWebsiteUrl(),
+                            "description", business.getDescription(),
+                            "businessLogo", business.getBusinessLogoUrl(),
+                            "businessBanner", business.getBusinessBannerUrl()
+                    )
+            ));
         }
 
         business.setLastLoginAt(LocalDateTime.now());
@@ -469,29 +529,23 @@ public class AuthController {
 
         String token = jwtUtil.generateToken(business);
 
-        Map<String, Object> businessData = new HashMap<>();
-        businessData.put("id", business.getId());
-        businessData.put("businessName", business.getBusinessName());
-        businessData.put("email", business.getEmail());
-        businessData.put("businessLogo", business.getBusinessLogoUrl());
-        businessData.put("businessBanner", business.getBusinessBannerUrl());
-        businessData.put("phoneNumber", business.getPhoneNumber());
-        businessData.put("WebsiteUrl", business.getWebsiteUrl());
-        businessData.put("Description", business.getDescription());
-
-        // ✅ Send reactivation message if applicable
-        String message = wasInactive ? 
-            "Business login successful. Your account has been reactivated." :
-            "Business login successful";
-
         return ResponseEntity.ok(Map.of(
-        	    "message", message,
-        	    "token", token,
-        	    "business", businessData,
-        	    "wasInactive", wasInactive 
-        	));
-
+                "message", "Business login successful",
+                "token", token,
+                "business", Map.of(
+                        "id", business.getId(),
+                        "businessName", business.getBusinessName(),
+                        "email", business.getEmail(),
+                        "phoneNumber", business.getPhoneNumber(),
+                        "websiteUrl", business.getWebsiteUrl(),
+                        "description", business.getDescription(),
+                        "businessLogo", business.getBusinessLogoUrl(),
+                        "businessBanner", business.getBusinessBannerUrl()
+                ),
+                "wasInactive", false
+        ));
     }
+
 
 
     // business login with number
@@ -515,17 +569,27 @@ public class AuthController {
                     .body(Map.of("message", "Incorrect password"));
         }
 
-        // ❌ If account is deleted, reject login
         if (business.getStatus() == BusinessStatus.DELETED) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "This account has been deleted and cannot be accessed."));
         }
 
-        // ✅ If inactive, reactivate and show message
-        boolean wasInactive = false;
         if (business.getStatus() == BusinessStatus.INACTIVE) {
-            business.setStatus(BusinessStatus.ACTIVE);
-            wasInactive = true;
+            String tempToken = jwtUtil.generateToken(business);
+            return ResponseEntity.ok(Map.of(
+                    "wasInactive", true,
+                    "token", tempToken,
+                    "business", Map.of(
+                            "id", business.getId(),
+                            "businessName", business.getBusinessName(),
+                            "email", business.getEmail(),
+                            "phoneNumber", business.getPhoneNumber(),
+                            "websiteUrl", business.getWebsiteUrl(),
+                            "description", business.getDescription(),
+                            "businessLogo", business.getBusinessLogoUrl(),
+                            "businessBanner", business.getBusinessBannerUrl()
+                    )
+            ));
         }
 
         business.setLastLoginAt(LocalDateTime.now());
@@ -533,107 +597,24 @@ public class AuthController {
 
         String token = jwtUtil.generateToken(business);
 
-        Map<String, Object> businessData = new HashMap<>();
-        businessData.put("id", business.getId());
-        businessData.put("businessName", business.getBusinessName());
-        businessData.put("email", business.getEmail());
-        businessData.put("phoneNumber", business.getPhoneNumber());
-        businessData.put("websiteUrl", business.getWebsiteUrl());
-        businessData.put("description", business.getDescription());
-        businessData.put("businessLogo", business.getBusinessLogoUrl());
-        businessData.put("businessBanner", business.getBusinessBannerUrl());
-
-        String message = wasInactive
-                ? "Business login with phone successful. Your account has been reactivated."
-                : "Business login with phone successful";
-
         return ResponseEntity.ok(Map.of(
-        	    "message", message,
-        	    "token", token,
-        	    "business", businessData,
-        	    "wasInactive", wasInactive 
-        	));
+                "message", "Business login with phone successful",
+                "token", token,
+                "business", Map.of(
+                        "id", business.getId(),
+                        "businessName", business.getBusinessName(),
+                        "email", business.getEmail(),
+                        "phoneNumber", business.getPhoneNumber(),
+                        "websiteUrl", business.getWebsiteUrl(),
+                        "description", business.getDescription(),
+                        "businessLogo", business.getBusinessLogoUrl(),
+                        "businessBanner", business.getBusinessBannerUrl()
+                ),
+                "wasInactive", false
+        ));
     }
 
-
-    // Google Login
-    @PostMapping("/google-login")
-    public ResponseEntity<?> googleLogin(@RequestBody GoogleLoginRequest request, @RequestParam String userType) {
-        String idToken = request.getIdToken();
-
-        if (idToken == null || idToken.isBlank()) {
-            return ResponseEntity.badRequest().body("Missing idToken");
-        }
-
-        try {
-            GoogleIdToken.Payload payload = googleAuthService.verifyToken(idToken);
-
-            if (payload == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body("Invalid ID token.");
-            }
-
-            String email = payload.getEmail();
-            String name = (String) payload.get("name");
-
-            // 🏢 Business login flow
-            if ("business".equalsIgnoreCase(userType)) {
-                Optional<Businesses> optionalBusiness = businessService.findByEmail(email);
-                Businesses business = optionalBusiness.orElseGet(() -> {
-                    Businesses newBusiness = new Businesses();
-                    newBusiness.setEmail(email);
-                    newBusiness.setBusinessName(name != null ? name : email.split("@")[0]);
-                    newBusiness.setPasswordHash(passwordEncoder.encode("google_placeholder_password"));
-                    return businessService.save(newBusiness);
-                });
-
-                String token = jwtUtil.generateToken(business);
-                return ResponseEntity.ok(Map.of(
-                        "message", "Google business login successful",
-                        "token", token));
-            }
-
-            // 👤 User login flow
-            Users user = userService.findByEmail(email);
-            boolean wasInactive = false;
-
-            if (user != null) {
-                if (user.getStatus() == UserStatus.DELETED) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                            .body(Map.of("message", "This account has been deleted and cannot be accessed."));
-                }
-
-                if (user.getStatus() == UserStatus.INACTIVE) {
-                    user.setStatus(UserStatus.ACTIVE);
-                    wasInactive = true;
-                }
-
-                user.setLastLogin(LocalDateTime.now());
-                userService.save(user);
-            } else {
-                user = new Users();
-                user.setEmail(email);
-                user.setUsername(name != null ? name : email.split("@")[0]);
-                user.setPasswordHash(passwordEncoder.encode("google_placeholder_password"));
-                user.setLastLogin(LocalDateTime.now());
-                userService.save(user);
-            }
-
-            String token = jwtUtil.generateToken(user);
-            String message = wasInactive
-                    ? "Google login successful. Your account has been reactivated."
-                    : "Google login successful";
-
-            return ResponseEntity.ok(Map.of(
-                    "message", message,
-                    "token", token));
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid Google ID token: " + e.getMessage());
-        }
-    }
-
+   
 
     @PostMapping("/admin/promote-to-manager/{userId}/{businessId}")
     public ResponseEntity<?> promoteToManager(@PathVariable Long userId, @PathVariable Long businessId) {
@@ -808,5 +789,7 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Manager removed successfully"));
         
    }
+    
+   
 
 }

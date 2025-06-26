@@ -656,6 +656,11 @@ public class UserService {
 
         return user;
     }
+    
+    public Optional<Users> findById(Long id) {
+        return userRepository.findById(id);
+    }
+
 
 
 }
