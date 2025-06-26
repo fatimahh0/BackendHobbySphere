@@ -4,6 +4,7 @@ import com.hobbySphere.dto.ReviewDTO;
 import com.hobbySphere.entities.Activities;
 import com.hobbySphere.entities.Review;
 import com.hobbySphere.entities.Users;
+import com.hobbySphere.enums.NotificationType;
 import com.hobbySphere.repositories.ActivitiesRepository;
 import com.hobbySphere.repositories.ActivityBookingsRepository;
 import com.hobbySphere.repositories.ReviewRepository;
@@ -30,6 +31,10 @@ public class ReviewService {
     
     @Autowired
     private ActivityBookingsRepository activityBookingsRepository;
+    
+    @Autowired
+    private NotificationsService notificationsService;
+
 
 
     @Autowired
@@ -76,7 +81,18 @@ public class ReviewService {
         review.setFeedback(dto.getFeedback());
         review.setDate(LocalDateTime.now());
 
-        return reviewRepository.save(review);
+        // ✅ Save the review
+        Review savedReview = reviewRepository.save(review);
+
+        // ✅ Notify the business
+        String message = user.getFirstName() + " reviewed your activity: " + activity.getActivityName();
+        notificationsService.notifyBusiness(
+            activity.getBusiness(),
+            message,
+            NotificationType.NEW_REVIEW
+        );
+
+        return savedReview;
     }
    
     public boolean hasUserCompletedActivity(Long activityId, String token) {

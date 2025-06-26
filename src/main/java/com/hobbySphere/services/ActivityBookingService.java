@@ -88,6 +88,15 @@ public class ActivityBookingService {
 
         booking.setBookingStatus("Canceled");
         activityBookingsRepository.save(booking);
+
+        // ✅ Notify the business
+        String message = booking.getUser().getFirstName() + " cancelled their booking for: " + booking.getActivity().getActivityName();
+        notificationsService.notifyBusiness(
+            booking.getActivity().getBusiness(),
+            message,
+            NotificationType.BOOKING_CANCELLED
+        );
+
     }
 
     public void pendingBooking(Long bookingId, Long userId) {
@@ -100,6 +109,15 @@ public class ActivityBookingService {
 
         booking.setBookingStatus("Pending");
         activityBookingsRepository.save(booking);
+
+        // ✅ Notify the business
+        String message = booking.getUser().getFirstName() + " returned a booking to pending for: " + booking.getActivity().getActivityName();
+        notificationsService.notifyBusiness(
+            booking.getActivity().getBusiness(),
+            message,
+            NotificationType.BOOKING_PENDING
+        );
+
     }
 
     public boolean deleteCanceledBookingByIdAndUserId(Long bookingId, Long userId) {
@@ -120,8 +138,23 @@ public class ActivityBookingService {
 
     // Method to save a new booking
     public ActivityBookings saveBooking(ActivityBookings booking) {
-        return activityBookingsRepository.save(booking);  // Persist the booking to the database
+        ActivityBookings savedBooking = activityBookingsRepository.save(booking);
+
+        Users user = savedBooking.getUser(); // the user who made the booking
+        String userName = user.getFirstName(); // or use getUsername()
+
+        String activityName = savedBooking.getActivity().getActivityName();
+        String message = userName + " booked your activity: " + activityName;
+
+        notificationsService.notifyBusiness(
+            savedBooking.getActivity().getBusiness(),
+            message,
+            NotificationType.BOOKING_CREATED
+        );
+
+        return savedBooking;
     }
+
 
     // Count the number of participants for a specific activity
     public int countParticipantsByActivityId(Long activityId) {

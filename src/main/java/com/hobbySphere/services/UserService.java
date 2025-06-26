@@ -602,12 +602,16 @@ public class UserService {
         if (existingUser != null) {
             System.out.println("👀 User already exists: " + existingUser.getUsername());
 
-            // 🔁 If INACTIVE, mark but don't update in DB yet
+            // 🔁 If INACTIVE, mark it but DO NOT update the DB yet
             if (existingUser.getStatus() == UserStatus.INACTIVE) {
-                System.out.println("🟡 User is INACTIVE. Waiting for confirmation to reactivate.");
+                System.out.println("🟡 User is INACTIVE. Reactivating...");
+                existingUser.setStatus(UserStatus.ACTIVE); // ✅ Reactivate
+                existingUser.setUpdatedAt(LocalDateTime.now());
+                existingUser.setLastLogin(LocalDateTime.now());
                 wasInactive.set(true);
-                return existingUser;
+                return userRepository.save(existingUser); // ✅ Save updated user
             }
+
 
             existingUser.setLastLogin(LocalDateTime.now());
             return userRepository.save(existingUser);
@@ -628,7 +632,7 @@ public class UserService {
         newUser.setLastName(lastName);
         newUser.setProfilePictureUrl(pictureUrl);
         newUser.setIsPublicProfile(true);
-        newUser.setStatus(UserStatus.ACTIVE);
+        newUser.setStatus(UserStatus.ACTIVE); // ✅ new Google accounts are ACTIVE
         newUser.setPasswordHash("");
         newUser.setCreatedAt(LocalDateTime.now());
         newUser.setLastLogin(LocalDateTime.now());
@@ -636,6 +640,7 @@ public class UserService {
         System.out.println("📥 Saving new Google user: " + newUser.getUsername());
         return userRepository.save(newUser);
     }
+
 
     // ✅ Reactivate confirmed inactive user manually
     public Users confirmReactivation(Long userId) {

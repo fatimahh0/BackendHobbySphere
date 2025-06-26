@@ -526,5 +526,11 @@ public class BusinessService {
         }
     }
 
+    public Businesses findByEmailOrThrow(String email) {
+        return businessRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Business not found with email: " + email));
+    }
+
+
 
 }

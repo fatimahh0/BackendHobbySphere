@@ -73,6 +73,38 @@ public class NotificationsService {
     }
 
     
+    public void notifyBusiness(
+    	    com.hobbySphere.entities.Businesses business,
+    	    String message,
+    	    NotificationType type
+    	) {
+    	    try {
+    	        // Try to call getUser() dynamically in case it's not directly exposed
+    	        Users businessUser = (Users) business.getClass()
+    	            .getMethod("getUser")
+    	            .invoke(business);
+
+    	        if (businessUser == null) {
+    	            throw new RuntimeException("Business user is null. Cannot send notification.");
+    	        }
+
+    	        Notifications notification = new Notifications(businessUser, message, type);
+    	        notificationsRepo.save(notification);
+
+    	        System.out.println("✅ Notification sent to business user: " + businessUser.getFirstName());
+
+    	    } catch (Exception e) {
+    	        throw new RuntimeException("⚠️ Failed to notify business: " + e.getMessage());
+    	    }
+    	}
+    
+    public int countUnreadByUser(Users user) {
+        return notificationsRepo.countByUserAndIsReadFalse(user);
+    }
+
+    
+
+    
 
 
 

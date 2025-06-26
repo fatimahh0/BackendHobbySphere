@@ -294,11 +294,13 @@ public class AuthController {
 
         boolean wasInactive = false;
         if (existingUser.getStatus() == UserStatus.INACTIVE) {
+            existingUser.setStatus(UserStatus.ACTIVE); // ✅ Reactivate
             wasInactive = true;
-        } else {
-            existingUser.setLastLogin(LocalDateTime.now());
-            userService.save(existingUser);
         }
+
+        existingUser.setLastLogin(LocalDateTime.now()); // Always update login
+        userService.save(existingUser); // ✅ Save changes
+
 
         String token = jwtUtil.generateToken(existingUser);
 
@@ -398,9 +400,13 @@ public class AuthController {
         // 🔄 If INACTIVE, reactivate
         boolean wasInactive = false;
         if (existingUser.getStatus() == UserStatus.INACTIVE) {
-            existingUser.setStatus(UserStatus.ACTIVE);
+            existingUser.setStatus(UserStatus.ACTIVE); // ✅ Reactivate
             wasInactive = true;
         }
+
+        existingUser.setLastLogin(LocalDateTime.now()); // Always update login
+        userService.save(existingUser); // ✅ Save changes
+
 
         // 🕒 Update last login
         existingUser.setLastLogin(LocalDateTime.now());
