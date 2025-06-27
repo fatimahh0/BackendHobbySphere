@@ -235,20 +235,54 @@ public class UsersController {
         return userOpt.map(user -> ResponseEntity.ok(new UserDto(user)))
                       .orElse(ResponseEntity.status(404).build());
     }
-
     @PutMapping("/{id}/status")
     public ResponseEntity<String> updateStatus(
             @PathVariable Long id,
-            @RequestParam UserStatus status // ✅ safer enum
+            @RequestBody Map<String, String> requestBody,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String token
     ) {
-        Optional<Users> userOpt = usersRepository.findById(id);
-        if (userOpt.isEmpty()) return ResponseEntity.status(404).body("User not found");
+        // ✅ Step 1: Validate token
+        if (token == null || !token.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).body("Missing or invalid token");
+        }
 
-        Users user = userOpt.get();
-        user.setStatus(status);
+        String email = jwtUtil.extractUsername(token.substring(7).trim());
+        Users user = usersRepository.findByEmail(email);
+
+        if (user == null || !user.getId().equals(id)) {
+            return ResponseEntity.status(403).body("Access denied");
+        }
+
+        // ✅ Step 2: Extract and validate input
+        String password = requestBody.get("password");
+        String statusStr = requestBody.get("status");
+
+        if (password == null || password.isBlank()) {
+            return ResponseEntity.badRequest().body("Password is required");
+        }
+
+        if (statusStr == null || statusStr.isBlank()) {
+            return ResponseEntity.badRequest().body("Status is required");
+        }
+
+        UserStatus newStatus;
+        try {
+            newStatus = UserStatus.valueOf(statusStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Invalid status value");
+        }
+
+        // ✅ Step 3: Check password
+        if (!userService.checkPassword(user, password)) {
+            return ResponseEntity.status(401).body("Incorrect password");
+        }
+
+        // ✅ Step 4: Update status
+        user.setStatus(newStatus);
         user.setUpdatedAt(LocalDateTime.now());
         usersRepository.save(user);
-        return ResponseEntity.ok("User status updated to " + status.name());
+
+        return ResponseEntity.ok("User status updated to " + newStatus.name());
     }
 
 
@@ -268,8 +302,7 @@ public class UsersController {
     public ResponseEntity<String> updateVisibilityAndStatus(
             @PathVariable Long id,
             @RequestParam boolean isPublicProfile,
-            @RequestParam UserStatus status
-    ) {
+            @RequestParam UserStatus status){
         boolean updated = userService.updateVisibilityAndStatus(id, isPublicProfile, status);
         if (updated) {
             return ResponseEntity.ok("Visibility and status updated successfully.");
@@ -277,9 +310,5 @@ public class UsersController {
             return ResponseEntity.status(404).body("User not found.");
         }
     }
-
-
-
     
-
-    }
+}

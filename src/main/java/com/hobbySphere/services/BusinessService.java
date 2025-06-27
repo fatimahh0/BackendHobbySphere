@@ -1,6 +1,7 @@
 package com.hobbySphere.services;
 
 import com.hobbySphere.entities.Businesses;
+import com.hobbySphere.dto.LowRatedBusinessDTO;
 import com.hobbySphere.entities.Activities;
 import com.hobbySphere.repositories.*;
 import java.util.Random;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import com.hobbySphere.entities.PendingBusiness;
+import com.hobbySphere.entities.Review;
 import com.hobbySphere.enums.BusinessStatus;
 
 import java.io.IOException;
@@ -531,6 +533,30 @@ public class BusinessService {
                 .orElseThrow(() -> new RuntimeException("Business not found with email: " + email));
     }
 
+    public List<LowRatedBusinessDTO> getLowRatedBusinesses() {
+        List<Businesses> businesses = businessRepository.findAll();
+        List<LowRatedBusinessDTO> result = new ArrayList<>();
 
+        for (Businesses b : businesses) {
+            List<Review> reviews = reviewRepository.findByBusinessId(b.getId());
+            if (reviews.isEmpty()) continue;
+
+            double avg = reviews.stream()
+                    .mapToInt(Review::getRating)
+                    .average()
+                    .orElse(0.0);
+
+            if (avg <= 3.0) {
+                result.add(new LowRatedBusinessDTO(
+                    b.getId(),
+                    b.getBusinessName(),
+                    b.getStatus(),
+                    avg
+                ));
+            }
+        }
+
+        return result;
+    }
 
 }

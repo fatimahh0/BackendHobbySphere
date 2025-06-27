@@ -1,5 +1,6 @@
 package com.hobbySphere.services;
 import com.hobbySphere.enums.*;
+import com.hobbySphere.entities.AdminUsers;
 import com.hobbySphere.entities.Businesses;
 import com.hobbySphere.entities.Notifications;
 import com.hobbySphere.entities.Users;
@@ -120,4 +121,24 @@ public class NotificationsService {
             throw new RuntimeException("Unauthorized");
         }
     }
+    
+    public void notifyAdmin(AdminUsers admin, String message, NotificationType type) {
+        Notifications notification = new Notifications();
+        notification.setMessage(message);
+        notification.setNotificationType(type);
+        notification.setIsRead(false);
+        notification.setCreatedAt(java.time.LocalDateTime.now());
+
+        // We'll attach only the email and ID as a "user" notification
+        Users user = new Users();
+        user.setId(admin.getAdminId());
+        user.setUsername(admin.getUsername());
+        user.setEmail(admin.getEmail());
+
+        notification.setUser(user);
+
+        notificationsRepo.save(notification);
+        System.out.println("✅ Admin notification sent to: " + admin.getEmail());
+    }
+
 }

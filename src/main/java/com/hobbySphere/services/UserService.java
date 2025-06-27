@@ -661,6 +661,8 @@ public class UserService {
         return userRepository.findById(id);
     }
 
-
+    public boolean checkPassword(Users user, String rawPassword) {
+        return passwordEncoder.matches(rawPassword, user.getPasswordHash());
+        }
 
 }

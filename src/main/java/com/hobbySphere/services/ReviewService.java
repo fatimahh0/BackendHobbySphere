@@ -1,7 +1,9 @@
 package com.hobbySphere.services;
 
 import com.hobbySphere.dto.ReviewDTO;
+import com.hobbySphere.repositories.AdminUsersRepository;
 import com.hobbySphere.entities.Activities;
+import com.hobbySphere.entities.AdminUsers;
 import com.hobbySphere.entities.Review;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.enums.NotificationType;
@@ -34,8 +36,9 @@ public class ReviewService {
     
     @Autowired
     private NotificationsService notificationsService;
-
-
+    
+    @Autowired 
+    private AdminUsersRepository adminUsersRepository; 
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -160,6 +163,29 @@ public class ReviewService {
         return null; 
     }
 
+    public double checkAndNotifyIfLowRating(Long businessId) {
+        List<Review> reviews = reviewRepository.findByBusinessId(businessId);
+        if (reviews.isEmpty()) return -1;
+
+        double avg = reviews.stream().mapToInt(Review::getRating).average().orElse(0.0);
+
+        if (avg <= 3.0) {
+            List<AdminUsers> adminsToNotify = adminUsersRepository.findAll().stream()
+                .filter(a -> a.getRole().getName().equalsIgnoreCase("SUPER_ADMIN") &&
+                             Boolean.TRUE.equals(a.getNotifyUserFeedback()))
+                .toList();
+
+            for (AdminUsers admin : adminsToNotify) {
+                notificationsService.notifyAdmin(
+                    admin,
+                    "Alert: Business with ID " + businessId + " has an average rating of " + avg + ". Consider marking it as INACTIVE.",
+                    NotificationType.NEW_REVIEW
+                );
+            }
+        }
+
+        return avg;
+    }
 
 
 

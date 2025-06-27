@@ -293,25 +293,26 @@ public class AuthController {
                     .body(Map.of("message", "This account has been deleted and cannot be accessed."));
         }
 
-        // 🚫 If INACTIVE: do NOT activate. Ask user to confirm from frontend
         if (existingUser.getStatus() == UserStatus.INACTIVE) {
-            String tempToken = jwtUtil.generateToken(existingUser); // Optional token if you want to use it
-            return ResponseEntity.ok(Map.of(
-                    "wasInactive", true,
-                    "message", "Your account is inactive. Confirm reactivation.",
-                    "token", tempToken,
-                    "user", Map.of(
-                            "id", existingUser.getId(),
-                            "username", existingUser.getUsername(),
-                            "firstName", existingUser.getFirstName(),
-                            "lastName", existingUser.getLastName(),
-                            "email", existingUser.getEmail(),
-                            "profilePictureUrl", existingUser.getProfilePictureUrl()
-                    )
-            ));
+            String tempToken = jwtUtil.generateToken(existingUser);
+
+            Map<String, Object> inactiveUserData = new HashMap<>();
+            inactiveUserData.put("id", existingUser.getId());
+            inactiveUserData.put("username", existingUser.getUsername());
+            inactiveUserData.put("firstName", existingUser.getFirstName());
+            inactiveUserData.put("lastName", existingUser.getLastName());
+            inactiveUserData.put("email", existingUser.getEmail());
+            inactiveUserData.put("profilePictureUrl", existingUser.getProfilePictureUrl());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("wasInactive", true);
+            response.put("message", "Your account is inactive. Confirm reactivation.");
+            response.put("token", tempToken);
+            response.put("user", inactiveUserData);
+
+            return ResponseEntity.ok(response);
         }
 
-        
         // ✅ Normal login
         existingUser.setLastLogin(LocalDateTime.now());
         userService.save(existingUser);
@@ -326,13 +327,15 @@ public class AuthController {
         userData.put("email", existingUser.getEmail());
         userData.put("profilePictureUrl", existingUser.getProfilePictureUrl());
 
-        return ResponseEntity.ok(Map.of(
-                "message", "User login successful",
-                "token", token,
-                "user", userData,
-                "wasInactive", false
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "User login successful");
+        response.put("token", token);
+        response.put("user", userData);
+        response.put("wasInactive", false);
+
+        return ResponseEntity.ok(response);
     }
+
     
     @PostMapping("/reactivate")
     public ResponseEntity<?> reactivateAccount(@RequestBody Map<String, Object> request) {
@@ -444,24 +447,27 @@ public class AuthController {
                     .body(Map.of("message", "This account has been deleted and cannot be accessed."));
         }
 
-        // 👇 Skip login if INACTIVE
         if (existingUser.getStatus() == UserStatus.INACTIVE) {
             String tempToken = jwtUtil.generateToken(existingUser);
-            return ResponseEntity.ok(Map.of(
-                    "wasInactive", true,
-                    "message", "Your account is inactive. Confirm reactivation.",
-                    "token", tempToken,
-                    "user", Map.of(
-                            "id", existingUser.getId(),
-                            "username", existingUser.getUsername(),
-                            "phoneNumber", existingUser.getPhoneNumber(),
-                            "firstName", existingUser.getFirstName(),
-                            "lastName", existingUser.getLastName(),
-                            "profilePictureUrl", existingUser.getProfilePictureUrl()
-                    )
-            ));
+
+            Map<String, Object> inactiveUserData = new HashMap<>();
+            inactiveUserData.put("id", existingUser.getId());
+            inactiveUserData.put("username", existingUser.getUsername());
+            inactiveUserData.put("phoneNumber", existingUser.getPhoneNumber());
+            inactiveUserData.put("firstName", existingUser.getFirstName());
+            inactiveUserData.put("lastName", existingUser.getLastName());
+            inactiveUserData.put("profilePictureUrl", existingUser.getProfilePictureUrl());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("wasInactive", true);
+            response.put("message", "Your account is inactive. Confirm reactivation.");
+            response.put("token", tempToken);
+            response.put("user", inactiveUserData);
+
+            return ResponseEntity.ok(response);
         }
 
+        // ✅ Normal login
         existingUser.setLastLogin(LocalDateTime.now());
         userService.save(existingUser);
 
@@ -475,12 +481,13 @@ public class AuthController {
         userData.put("phoneNumber", existingUser.getPhoneNumber());
         userData.put("profilePictureUrl", existingUser.getProfilePictureUrl());
 
-        return ResponseEntity.ok(Map.of(
-                "message", "User login with phone successful",
-                "token", token,
-                "user", userData,
-                "wasInactive", false
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "User login with phone successful");
+        response.put("token", token);
+        response.put("user", userData);
+        response.put("wasInactive", false);
+
+        return ResponseEntity.ok(response);
     }
 
 
@@ -508,19 +515,21 @@ public class AuthController {
 
         if (business.getStatus() == BusinessStatus.INACTIVE) {
             String tempToken = jwtUtil.generateToken(business);
+
+            Map<String, Object> businessData = new HashMap<>();
+            businessData.put("id", business.getId());
+            businessData.put("businessName", business.getBusinessName());
+            businessData.put("email", business.getEmail());
+            businessData.put("phoneNumber", business.getPhoneNumber());
+            businessData.put("websiteUrl", business.getWebsiteUrl());
+            businessData.put("description", business.getDescription());
+            businessData.put("businessLogo", business.getBusinessLogoUrl());
+            businessData.put("businessBanner", business.getBusinessBannerUrl());
+
             return ResponseEntity.ok(Map.of(
                     "wasInactive", true,
                     "token", tempToken,
-                    "business", Map.of(
-                            "id", business.getId(),
-                            "businessName", business.getBusinessName(),
-                            "email", business.getEmail(),
-                            "phoneNumber", business.getPhoneNumber(),
-                            "websiteUrl", business.getWebsiteUrl(),
-                            "description", business.getDescription(),
-                            "businessLogo", business.getBusinessLogoUrl(),
-                            "businessBanner", business.getBusinessBannerUrl()
-                    )
+                    "business", businessData
             ));
         }
 
@@ -529,22 +538,24 @@ public class AuthController {
 
         String token = jwtUtil.generateToken(business);
 
+        Map<String, Object> businessData = new HashMap<>();
+        businessData.put("id", business.getId());
+        businessData.put("businessName", business.getBusinessName());
+        businessData.put("email", business.getEmail());
+        businessData.put("phoneNumber", business.getPhoneNumber());
+        businessData.put("websiteUrl", business.getWebsiteUrl());
+        businessData.put("description", business.getDescription());
+        businessData.put("businessLogo", business.getBusinessLogoUrl());
+        businessData.put("businessBanner", business.getBusinessBannerUrl());
+
         return ResponseEntity.ok(Map.of(
                 "message", "Business login successful",
                 "token", token,
-                "business", Map.of(
-                        "id", business.getId(),
-                        "businessName", business.getBusinessName(),
-                        "email", business.getEmail(),
-                        "phoneNumber", business.getPhoneNumber(),
-                        "websiteUrl", business.getWebsiteUrl(),
-                        "description", business.getDescription(),
-                        "businessLogo", business.getBusinessLogoUrl(),
-                        "businessBanner", business.getBusinessBannerUrl()
-                ),
+                "business", businessData,
                 "wasInactive", false
         ));
     }
+
 
 
 
@@ -576,19 +587,21 @@ public class AuthController {
 
         if (business.getStatus() == BusinessStatus.INACTIVE) {
             String tempToken = jwtUtil.generateToken(business);
+
+            Map<String, Object> businessData = new HashMap<>();
+            businessData.put("id", business.getId());
+            businessData.put("businessName", business.getBusinessName());
+            businessData.put("email", business.getEmail());
+            businessData.put("phoneNumber", business.getPhoneNumber());
+            businessData.put("websiteUrl", business.getWebsiteUrl());
+            businessData.put("description", business.getDescription());
+            businessData.put("businessLogo", business.getBusinessLogoUrl());
+            businessData.put("businessBanner", business.getBusinessBannerUrl());
+
             return ResponseEntity.ok(Map.of(
                     "wasInactive", true,
                     "token", tempToken,
-                    "business", Map.of(
-                            "id", business.getId(),
-                            "businessName", business.getBusinessName(),
-                            "email", business.getEmail(),
-                            "phoneNumber", business.getPhoneNumber(),
-                            "websiteUrl", business.getWebsiteUrl(),
-                            "description", business.getDescription(),
-                            "businessLogo", business.getBusinessLogoUrl(),
-                            "businessBanner", business.getBusinessBannerUrl()
-                    )
+                    "business", businessData
             ));
         }
 
@@ -597,19 +610,20 @@ public class AuthController {
 
         String token = jwtUtil.generateToken(business);
 
+        Map<String, Object> businessData = new HashMap<>();
+        businessData.put("id", business.getId());
+        businessData.put("businessName", business.getBusinessName());
+        businessData.put("email", business.getEmail());
+        businessData.put("phoneNumber", business.getPhoneNumber());
+        businessData.put("websiteUrl", business.getWebsiteUrl());
+        businessData.put("description", business.getDescription());
+        businessData.put("businessLogo", business.getBusinessLogoUrl());
+        businessData.put("businessBanner", business.getBusinessBannerUrl());
+
         return ResponseEntity.ok(Map.of(
                 "message", "Business login with phone successful",
                 "token", token,
-                "business", Map.of(
-                        "id", business.getId(),
-                        "businessName", business.getBusinessName(),
-                        "email", business.getEmail(),
-                        "phoneNumber", business.getPhoneNumber(),
-                        "websiteUrl", business.getWebsiteUrl(),
-                        "description", business.getDescription(),
-                        "businessLogo", business.getBusinessLogoUrl(),
-                        "businessBanner", business.getBusinessBannerUrl()
-                ),
+                "business", businessData,
                 "wasInactive", false
         ));
     }
@@ -776,8 +790,9 @@ public class AuthController {
     @Operation(summary = "Remove a manager", description = "Deletes a manager from AdminUsers and BusinessAdmins tables")
     @ApiResponse(responseCode = "200", description = "Manager removed successfully")
     @ApiResponse(responseCode = "404", description = "Manager not found")
+
     @DeleteMapping("/admin/remove-manager/{adminId}")
-    public ResponseEntity<?> removeManager(@PathVariable Long adminId) {
+    public ResponseEntity<?> removeManager(@PathVariable Long adminId){
         Optional<AdminUsers> optionalManager = adminUserService.findById(adminId);
 
         if (optionalManager.isEmpty()) {
@@ -787,9 +802,6 @@ public class AuthController {
         adminUserService.deleteManagerById(adminId);
 
         return ResponseEntity.ok(Map.of("message", "Manager removed successfully"));
-        
-   }
-    
-   
+    }
 
 }

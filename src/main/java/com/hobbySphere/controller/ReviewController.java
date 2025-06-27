@@ -192,6 +192,23 @@ public class ReviewController {
         Long activityId = reviewService.getFirstCompletedUnreviewedActivity(token);
         return ResponseEntity.ok(activityId);
         }
+    @GetMapping("/business/{businessId}/check-rating")
+    public ResponseEntity<?> checkRatingAndNotifyAdmins(
+            @PathVariable Long businessId,
+            @RequestHeader("Authorization") String token) {
+
+        if (!token.startsWith("Bearer ") || !jwtUtil.extractRole(token.substring(7)).equals("SUPER_ADMIN")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
+
+        double avgRating = reviewService.checkAndNotifyIfLowRating(businessId);
+
+        if (avgRating == -1) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No reviews found for this business.");
+        }
+
+        return ResponseEntity.ok("Average rating: " + avgRating);
+    }
 
 
 

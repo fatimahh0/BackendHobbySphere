@@ -2,7 +2,9 @@ package com.hobbySphere.controller;
 
 import com.hobbySphere.dto.*;
 import com.hobbySphere.entities.AdminUsers;
+import com.hobbySphere.entities.Businesses;
 import com.hobbySphere.entities.Users;
+import com.hobbySphere.enums.BusinessStatus;
 import com.hobbySphere.enums.UserStatus;
 import com.hobbySphere.services.AdminActivityService;
 import com.hobbySphere.services.AdminStatsService;
@@ -358,7 +360,28 @@ public class AdminController {
         }
     }
 
-    
-    
+    @PutMapping("/businesses/{businessId}/disable")
+    public ResponseEntity<?> disableBusiness(@PathVariable Long businessId,
+                                             @RequestHeader("Authorization") String token) {
+        if (!isSuperAdmin(token)) return ResponseEntity.status(401).body("Unauthorized");
+
+        try {
+            Businesses business = businessService.findById(businessId);
+            business.setStatus(BusinessStatus.INACTIVE);
+            businessService.save(business);
+            return ResponseEntity.ok("Business marked as INACTIVE due to low rating.");
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body("Business not found.");
+        }
+    }
+
+    @GetMapping("/businesses/low-rated")
+    @Operation(summary = "Get businesses with average rating ≤ 3", description = "Returns list of low-rated businesses for admin review")
+    public ResponseEntity<?> getLowRatedBusinesses(@RequestHeader("Authorization") String token) {
+        if (!isSuperAdmin(token)) return ResponseEntity.status(401).body("Unauthorized");
+
+        return ResponseEntity.ok(businessService.getLowRatedBusinesses());
+    }
+
 
 }
