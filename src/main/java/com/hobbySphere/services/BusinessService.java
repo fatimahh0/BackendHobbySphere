@@ -73,6 +73,8 @@ public class BusinessService {
     public Optional<Businesses> findByEmail(String email) {
         return businessRepository.findByEmail(email);
     }
+    
+    
 
     public Businesses save(Businesses business) {
         if (business.getId() != null) {
@@ -557,6 +559,16 @@ public class BusinessService {
         }
 
         return result;
+    }
+
+    public boolean checkPassword(Businesses business, String rawPassword) {
+        return passwordEncoder.matches(rawPassword, business.getPasswordHash());
+    }
+
+    public boolean verifyPassword(Long businessId, String rawPassword) {
+        Optional<Businesses> businessOpt = businessRepository.findById(businessId);
+        return businessOpt.isPresent() &&
+               passwordEncoder.matches(rawPassword, businessOpt.get().getPasswordHash());
     }
 
 }

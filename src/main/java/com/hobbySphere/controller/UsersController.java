@@ -91,8 +91,14 @@ public class UsersController {
             token = token.substring(7).trim();
 
             // ✅ DEBUG: print extracted email from token
-            String email = jwtUtil.extractUsername(token);
-            System.out.println("Extracted email from token: " + email);
+            String contact = jwtUtil.extractUsername(token);
+            Users user = usersRepository.findByEmail(contact);
+
+            if (user == null) {
+                user = usersRepository.findByPhoneNumber(contact);
+            }
+
+            System.out.println("Extracted email from token: " + user);
 
             String role = jwtUtil.extractRole(token);
 
@@ -104,7 +110,7 @@ public class UsersController {
                         : ResponseEntity.status(404).body("User not found");
             }
 
-            Users user = usersRepository.findByEmail(email);
+           
             if (user == null || (!user.getId().equals(id) && !"SUPER_ADMIN".equalsIgnoreCase(role))) {
                 return ResponseEntity.status(403).body("Access denied: user not found or not authorized");
             }
@@ -213,8 +219,12 @@ public class UsersController {
                 return ResponseEntity.status(401).body("Missing or invalid token");
             }
 
-            String email = jwtUtil.extractUsername(token.substring(7).trim());
-            Users user = usersRepository.findByEmail(email);
+            String contact = jwtUtil.extractUsername(token.substring(7).trim());
+            Users user = usersRepository.findByEmail(contact);
+            if (user == null) {
+                user = usersRepository.findByPhoneNumber(contact);
+            }
+
             if (user == null) {
                 return ResponseEntity.status(404).body("User not found");
             }
@@ -228,6 +238,7 @@ public class UsersController {
             return ResponseEntity.status(500).body("Unexpected error: " + e.getMessage());
         }
     }
+
     
     @GetMapping("/{id}")
     public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
@@ -241,26 +252,26 @@ public class UsersController {
             @RequestBody Map<String, String> requestBody,
             @RequestHeader(HttpHeaders.AUTHORIZATION) String token
     ) {
-        // ✅ Step 1: Validate token
         if (token == null || !token.startsWith("Bearer ")) {
             return ResponseEntity.status(401).body("Missing or invalid token");
         }
 
-        String email = jwtUtil.extractUsername(token.substring(7).trim());
-        Users user = usersRepository.findByEmail(email);
+        String contact = jwtUtil.extractUsername(token.substring(7).trim());
+        Users user = usersRepository.findByEmail(contact);
+        if (user == null) {
+            user = usersRepository.findByPhoneNumber(contact);
+        }
 
         if (user == null || !user.getId().equals(id)) {
             return ResponseEntity.status(403).body("Access denied");
         }
 
-        // ✅ Step 2: Extract and validate input
         String password = requestBody.get("password");
         String statusStr = requestBody.get("status");
 
         if (password == null || password.isBlank()) {
             return ResponseEntity.badRequest().body("Password is required");
         }
-
         if (statusStr == null || statusStr.isBlank()) {
             return ResponseEntity.badRequest().body("Status is required");
         }
@@ -272,19 +283,16 @@ public class UsersController {
             return ResponseEntity.badRequest().body("Invalid status value");
         }
 
-        // ✅ Step 3: Check password
         if (!userService.checkPassword(user, password)) {
             return ResponseEntity.status(401).body("Incorrect password");
         }
 
-        // ✅ Step 4: Update status
         user.setStatus(newStatus);
         user.setUpdatedAt(LocalDateTime.now());
         usersRepository.save(user);
 
         return ResponseEntity.ok("User status updated to " + newStatus.name());
     }
-
 
     
     @GetMapping("/{userId}/suggestions")

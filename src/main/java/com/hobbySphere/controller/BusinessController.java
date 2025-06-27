@@ -216,7 +216,6 @@ public class BusinessController {
         return ResponseEntity.ok(businesses);
     }
 
-    @Operation(summary = "Update business status (ACTIVE / INACTIVE)")
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateBusinessStatus(
             @PathVariable Long id,
@@ -228,8 +227,21 @@ public class BusinessController {
         }
 
         String newStatus = request.get("status");
+        String password = request.get("password");
+
         if (newStatus == null) {
             return ResponseEntity.badRequest().body("Missing status");
+        }
+
+        if ("INACTIVE".equalsIgnoreCase(newStatus)) {
+            if (password == null || password.isBlank()) {
+                return ResponseEntity.badRequest().body("Password is required to deactivate account.");
+            }
+
+            boolean isPasswordValid = businessService.verifyPassword(id, password);
+            if (!isPasswordValid) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Incorrect password. Status not changed.");
+            }
         }
 
         try {
@@ -240,7 +252,7 @@ public class BusinessController {
             return ResponseEntity.badRequest().body("Invalid status value");
         }
     }
-    
+
     @Operation(summary = "Toggle public profile visibility")
     @PutMapping("/{id}/visibility")
     public ResponseEntity<?> updateBusinessVisibility(

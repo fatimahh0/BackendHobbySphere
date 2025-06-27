@@ -87,16 +87,24 @@ public class NotificationsController {
     // ✅ BUSINESS: Count all
     @GetMapping("/business/count")
     public long getBusinessNotificationCount(Principal principal) {
-        Businesses business = businessService.findByEmail(principal.getName())
-            .orElseThrow(() -> new RuntimeException("Business not found"));
+    	Optional<Businesses> optionalBusiness = businessService.findByEmail(principal.getName());
+    	if (optionalBusiness.isEmpty()) {
+    	    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No business account found for this user");
+    	}
+    	Businesses business = optionalBusiness.get();
+
         return notificationsService.getAllByBusiness(business).size();
     }
 
     // ✅ BUSINESS: Count unread
     @GetMapping("/business/unread-count")
     public int getBusinessUnreadNotificationCount(Principal principal) {
-        Businesses business = businessService.findByEmail(principal.getName())
-            .orElseThrow(() -> new RuntimeException("Business not found"));
+    	Optional<Businesses> optionalBusiness = businessService.findByEmail(principal.getName());
+    	if (optionalBusiness.isEmpty()) {
+    	    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No business account found for this user");
+    	}
+    	Businesses business = optionalBusiness.get();
+
         return notificationsService.getUnreadByBusiness(business).size();
     }
 
@@ -104,8 +112,12 @@ public class NotificationsController {
     // ✅ BUSINESS: Mark as read
     @PutMapping("/business/{id}/read")
     public void markBusinessNotificationAsRead(@PathVariable Long id, Principal principal) {
-        Businesses business = businessService.findByEmail(principal.getName())
-            .orElseThrow(() -> new RuntimeException("Business not found"));
+    	Optional<Businesses> optionalBusiness = businessService.findByEmail(principal.getName());
+    	if (optionalBusiness.isEmpty()) {
+    	    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No business account found for this user");
+    	}
+    	Businesses business = optionalBusiness.get();
+
         notificationsService.markAsReadForBusiness(id, business);
     }
 
@@ -114,8 +126,11 @@ public class NotificationsController {
   
     @DeleteMapping("/business/{id}")
     public void deleteBusinessNotification(@PathVariable Long id, Principal principal) {
-        Businesses business = businessService.findByEmail(principal.getName())
-            .orElseThrow(() -> new RuntimeException("Business not found"));
+    	Optional<Businesses> optionalBusiness = businessService.findByEmail(principal.getName());
+    	if (optionalBusiness.isEmpty()) {
+    	    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No business account found for this user");
+    	}
+    	Businesses business = optionalBusiness.get();
 
         Notifications notification = notificationsService.getById(id);
 
