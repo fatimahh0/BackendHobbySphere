@@ -3,7 +3,6 @@ package com.hobbySphere.entities;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-
 @Entity
 @Table(name = "app_theme")
 public class Theme {
@@ -17,11 +16,12 @@ public class Theme {
     private String name;
 
     // JSON of the theme variables, stored as text
-    //@Lob
+    // @Lob
     @Column(name = "values", columnDefinition = "TEXT", nullable = false)
     private String values;
 
-  
+    @Column(name = "values_mobile", columnDefinition = "TEXT")
+    private String valuesMobile;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime created_at;
@@ -62,11 +62,19 @@ public class Theme {
         this.values = values;
     }
 
+    public String getValuesMobile() {
+        return valuesMobile;
+    }
+
+    public void setValuesMobile(String valuesMobile) {
+        this.valuesMobile = valuesMobile;
+    }
+
     public LocalDateTime getCreated_at() {
         return created_at;
     }
-    
+
     public LocalDateTime getUpdated_at() {
-    	return updated_at; 
-    }
+        return updated_at;
+        }
 }

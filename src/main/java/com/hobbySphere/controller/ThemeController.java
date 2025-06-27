@@ -163,5 +163,5 @@ public class ThemeController {
         e.printStackTrace();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Collections.singletonMap("message", "Server error: " + e.getMessage()));
-        }
+}
 }
