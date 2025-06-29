@@ -68,14 +68,10 @@ public class UserService {
         this.emailService = emailService;
     }
     
-    public boolean sendVerificationCodeForRegistration(Map<String, String> userData, MultipartFile profileImage) throws IOException {
+    public boolean sendVerificationCodeForRegistration(Map<String, String> userData) {
         String email = userData.get("email");
         String phone = userData.get("phoneNumber");
-        String username = userData.get("username");
         String password = userData.get("password");
-        String firstName = userData.get("firstName");
-        String lastName = userData.get("lastName");
-        String publicProfileStr = userData.get("isPublicProfile");
 
         // Default status = PENDING
         UserStatus statusEnum = UserStatus.PENDING;
@@ -98,85 +94,49 @@ public class UserService {
             throw new RuntimeException("Provide only one: email or phone, not both.");
         }
 
+        // ✅ Uniqueness checks
         if (emailProvided) {
             Users existing = userRepository.findByEmail(email);
-            if (existing != null) {
-                if (existing.getStatus() == UserStatus.DELETED) {
-                    userRepository.delete(existing); // ✅ remove old deleted record
-                } else {
-                    throw new RuntimeException("Email already in use.");
-                }
+            if (existing != null && existing.getStatus() != UserStatus.DELETED) {
+                throw new RuntimeException("Email already in use.");
             }
-
             if (pendingUserRepository.existsByEmail(email)) {
                 throw new RuntimeException("Email is already pending verification");
             }
         }
 
-
         if (phoneProvided) {
             Users existing = userRepository.findByPhoneNumber(phone);
-            if (existing != null) {
-                if (existing.getStatus() == UserStatus.DELETED) {
-                    userRepository.delete(existing); // ✅ remove old deleted record
-                } else {
-                    throw new RuntimeException("Phone number already in use.");
-                }
+            if (existing != null && existing.getStatus() != UserStatus.DELETED) {
+                throw new RuntimeException("Phone number already in use.");
             }
-
             if (pendingUserRepository.existsByPhoneNumber(phone)) {
                 throw new RuntimeException("Phone number is already pending verification");
             }
         }
 
-
-        if (pendingUserRepository.existsByUsername(username) || userRepository.findByUsername(username) != null) {
-            throw new RuntimeException("Username already in use.");
-        }
-
-        // Generate verification code
+        // 🔐 Generate verification code
         String code = phoneProvided ? "123456" : String.format("%06d", new Random().nextInt(999999));
 
-        // Upload profile image if present
-        String profileImageUrl = null;
-        if (profileImage != null && !profileImage.isEmpty()) {
-            String filename = UUID.randomUUID() + "_" + profileImage.getOriginalFilename();
-            Path path = Paths.get("uploads");
-            if (!Files.exists(path)) Files.createDirectories(path);
-            Path fullPath = path.resolve(filename);
-            Files.copy(profileImage.getInputStream(), fullPath, StandardCopyOption.REPLACE_EXISTING);
-            profileImageUrl = "/uploads/" + filename;
-        }
-
-        // Create and save pending user
+        // 📥 Create PendingUser
         PendingUser pending = new PendingUser();
         pending.setEmail(email);
         pending.setPhoneNumber(phone);
-        pending.setUsername(username);
         pending.setPasswordHash(passwordEncoder.encode(password));
-        pending.setFirstName(firstName);
-        pending.setLastName(lastName);
-        pending.setProfilePictureUrl(profileImageUrl);
         pending.setVerificationCode(code);
         pending.setCreatedAt(LocalDateTime.now());
-        pending.setStatus(statusEnum); 
-
-        if (publicProfileStr != null) {
-            pending.setIsPublicProfile(Boolean.parseBoolean(publicProfileStr));
-        } else {
-            pending.setIsPublicProfile(true);
-        }
+        pending.setStatus(statusEnum);
+        pending.setIsPublicProfile(true); // default
 
         pendingUserRepository.save(pending);
 
-        // Send verification email (if email)
+        // 📧 Send email code if needed
         if (emailProvided) {
             String htmlMessage = """
                 <html>
                 <body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
                     <h2 style="color: #4CAF50;">Welcome to HobbySphere!</h2>
-                    <p style="font-size: 16px;">Hello,</p>
-                    <p style="font-size: 16px;">Thank you for registering. Please use the code below to verify your email address:</p>
+                    <p style="font-size: 16px;">Please use the code below to verify your email address:</p>
                     <h1 style="color: #2196F3;">%s</h1>
                     <p style="font-size: 14px; color: #777;">This code will expire in 10 minutes.</p>
                 </body>
@@ -189,27 +149,30 @@ public class UserService {
         return true;
     }
 
-    public boolean resendVerificationCode(String emailOrPhone) throws IOException {
-        PendingUser pending = null;
 
-        if (emailOrPhone.contains("@")) {
+    public boolean resendVerificationCode(String emailOrPhone) {
+        PendingUser pending;
+
+        boolean isEmail = emailOrPhone.contains("@");
+
+        if (isEmail) {
             pending = pendingUserRepository.findByEmail(emailOrPhone);
-            if (pending == null) throw new RuntimeException("No pending user found with this email");
+            if (pending == null) {
+                throw new RuntimeException("No pending user found with this email");
+            }
 
-            String code;
-            
-                code = String.format("%06d", new Random().nextInt(999999)); // real for email
-            
-
+            // 🔁 Generate new email code
+            String code = String.format("%06d", new Random().nextInt(999999));
             pending.setVerificationCode(code);
-            pending.setCreatedAt(LocalDateTime.now()); // reset timestamp
+            pending.setCreatedAt(LocalDateTime.now());
             pendingUserRepository.save(pending);
 
+            // ✉️ Send email
             String html = """
                 <html>
-                <body>
+                <body style="font-family: Arial; padding: 20px;">
                     <h2>HobbySphere Verification</h2>
-                    <p>Your new email verification code is:</p>
+                    <p>Your new verification code is:</p>
                     <h1>%s</h1>
                 </body>
                 </html>
@@ -219,72 +182,106 @@ public class UserService {
             return true;
         } else {
             pending = pendingUserRepository.findByPhoneNumber(emailOrPhone);
-            if (pending == null) throw new RuntimeException("No pending user found with this phone");
+            if (pending == null) {
+                throw new RuntimeException("No pending user found with this phone");
+            }
 
-            pending.setVerificationCode("123456"); // static again
+            // 🔁 Static code for SMS testing
+            pending.setVerificationCode("123456");
             pending.setCreatedAt(LocalDateTime.now());
             pendingUserRepository.save(pending);
             return true;
         }
     }
 
+
     private final Map<String, String> resetCodes = new ConcurrentHashMap<>();
     
     
     //user register with email
-    public boolean verifyEmailCodeAndRegister(String email, String code) {
+    public Long verifyEmailCodeAndRegister(String email, String code) {
         PendingUser pending = pendingUserRepository.findByEmail(email);
 
         if (pending == null || !pending.getVerificationCode().equals(code)) {
-            return false;
+            throw new RuntimeException("Invalid code or email.");
         }
 
-        // Create actual user
+        // Create a basic user with only the essentials
         Users user = new Users();
         user.setEmail(pending.getEmail());
-        user.setUsername(pending.getUsername());
         user.setPasswordHash(pending.getPasswordHash());
-        user.setFirstName(pending.getFirstName());
-        user.setLastName(pending.getLastName());
-        user.setProfilePictureUrl(pending.getProfilePictureUrl());
         user.setIsPublicProfile(pending.getIsPublicProfile());
-        user.setStatus(UserStatus.ACTIVE); 
+        user.setStatus(UserStatus.ACTIVE);
         user.setCreatedAt(LocalDateTime.now());
 
-        userRepository.save(user);
-        pendingUserRepository.delete(pending); // Clean up
+        Users saved = userRepository.save(user);
 
-        return true;
+        // Clean up the pending record
+        pendingUserRepository.delete(pending);
+
+        return saved.getId(); // ✅ return user ID for next steps
     }
 
 
+
     //user register with number 
-    public boolean verifyPhoneCodeAndRegister(String phoneNumber, String code) {
+    public Long verifyPhoneCodeAndRegister(String phoneNumber, String code) {
         if (!"123456".equals(code)) {
-            return false;
+            throw new RuntimeException("Invalid verification code.");
         }
 
         PendingUser pending = pendingUserRepository.findByPhoneNumber(phoneNumber);
         if (pending == null) {
-            return false;
+            throw new RuntimeException("Pending user not found.");
         }
 
+        // Create base user with phone only
         Users user = new Users();
         user.setPhoneNumber(pending.getPhoneNumber());
-        user.setUsername(pending.getUsername());
         user.setPasswordHash(pending.getPasswordHash());
-        user.setFirstName(pending.getFirstName());
-        user.setLastName(pending.getLastName());
-        user.setProfilePictureUrl(pending.getProfilePictureUrl());
         user.setIsPublicProfile(pending.getIsPublicProfile());
-        user.setStatus(UserStatus.ACTIVE); // ✅ Fix: use enum
+        user.setStatus(UserStatus.ACTIVE);
         user.setCreatedAt(LocalDateTime.now());
 
-        userRepository.save(user);
+        Users saved = userRepository.save(user);
+
+        // Clean up
         pendingUserRepository.delete(pending);
 
+        return saved.getId(); // ✅ return userId to use in next steps
+    }
+    
+    public boolean completeUserProfile(Long userId, String username, String firstName, String lastName, MultipartFile profileImage) throws IOException {
+        Users user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found."));
+
+        // Check if username is already taken by someone else
+        Users existing = userRepository.findByUsername(username);
+        if (existing != null && !existing.getId().equals(userId)) {
+            throw new RuntimeException("Username already in use.");
+        }
+
+        user.setUsername(username);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+
+        // Upload profile image if provided
+        if (profileImage != null && !profileImage.isEmpty()) {
+            String filename = UUID.randomUUID() + "_" + profileImage.getOriginalFilename();
+            Path path = Paths.get("uploads");
+            if (!Files.exists(path)) Files.createDirectories(path);
+
+            Path fullPath = path.resolve(filename);
+            Files.copy(profileImage.getInputStream(), fullPath, StandardCopyOption.REPLACE_EXISTING);
+            user.setProfilePictureUrl("/uploads/" + filename);
+        }
+
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
         return true;
     }
+
+
 
 
    

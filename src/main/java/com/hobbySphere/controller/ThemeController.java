@@ -25,6 +25,35 @@ public class ThemeController {
 
     // === SUPERADMIN: CRUD THEMES ===
 
+    @PutMapping("/{id}/set-active")
+    public ResponseEntity<?> setActiveTheme(@PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> ignored) {
+        System.out.println("Endpoint hit: /api/themes/" + id + "/set-active");
+        try {
+            themeService.setActiveTheme(id);
+            return ResponseEntity.ok(Collections.singletonMap("message", "Theme set as active."));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("message", "Error setting active theme: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/active")
+    public ResponseEntity<?> getActiveTheme() {
+        try {
+            Optional<Theme> activeTheme = themeService.getActiveTheme();
+            if (activeTheme.isPresent()) {
+                return ResponseEntity.ok(new ThemeResponseDTO(activeTheme.get()));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Collections.singletonMap("message", "No active theme found."));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("message", "Error fetching active theme: " + e.getMessage()));
+        }
+    }
+
     // Get all themes
     @GetMapping("/all")
     public ResponseEntity<?> getAllThemes() {
@@ -53,6 +82,7 @@ public class ThemeController {
             response.put("message", "Theme created successfully.");
             response.put("theme", new ThemeResponseDTO(savedTheme));
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("message", "Error creating theme: " + e.getMessage()));
@@ -93,75 +123,10 @@ public class ThemeController {
         }
     }
 
-    // === BUSINESS THEME ASSIGNMENT ===
-
-    // Get assigned theme by business ID
-    @GetMapping("/business/{businessId}")
-    public ResponseEntity<?> getThemeByBusiness(@PathVariable Long businessId) {
-        try {
-            Theme theme = themeService.getThemeByBusinessId(businessId);
-            if (theme != null) {
-                return ResponseEntity.ok(new ThemeResponseDTO(theme));
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Collections.singletonMap("message", "No theme found for this business."));
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.singletonMap("message", "Error fetching business theme: " + e.getMessage()));
-        }
-    }
-
-    // Assign theme to business (expects { "themeId": 3 } in JSON)
-    @PostMapping("/business/{businessId}")
-    public ResponseEntity<?> assignThemeToBusiness(@PathVariable Long businessId,
-            @RequestBody Map<String, Object> payload) {
-        try {
-            Long themeId = Long.valueOf(payload.get("themeId").toString());
-            themeService.assignThemeToBusiness(businessId, themeId);
-            return ResponseEntity.ok(Collections.singletonMap("message", "Theme assigned to business."));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Collections.singletonMap("message", "Error assigning theme to business: " + e.getMessage()));
-        }
-    }
-
-    // === USER THEME ASSIGNMENT ===
-
-    // Get assigned theme by user ID
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getThemeByUser(@PathVariable Long userId) {
-        try {
-            Theme theme = themeService.getThemeByUserId(userId);
-            if (theme != null) {
-                return ResponseEntity.ok(new ThemeResponseDTO(theme));
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Collections.singletonMap("message", "No theme found for this user."));
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.singletonMap("message", "Error fetching user theme: " + e.getMessage()));
-        }
-    }
-
-    // Assign theme to user (expects { "themeId": 3 } in JSON)
-    @PostMapping("/user/{userId}")
-    public ResponseEntity<?> assignThemeToUser(@PathVariable Long userId, @RequestBody Map<String, Object> payload) {
-        try {
-            Long themeId = Long.valueOf(payload.get("themeId").toString());
-            themeService.assignThemeToUser(userId, themeId);
-            return ResponseEntity.ok(Collections.singletonMap("message", "Theme assigned to user."));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Collections.singletonMap("message", "Error assigning theme to user: " + e.getMessage()));
-        }
-    }
-
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleAllExceptions(Exception e) {
         e.printStackTrace();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Collections.singletonMap("message", "Server error: " + e.getMessage()));
-}
+    }
 }

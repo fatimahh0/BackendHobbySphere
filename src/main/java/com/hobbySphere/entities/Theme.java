@@ -23,6 +23,10 @@ public class Theme {
     @Column(name = "values_mobile", columnDefinition = "TEXT")
     private String valuesMobile;
 
+    @Column(name = "is_active")
+private Boolean isActive = false;
+
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime created_at;
 
@@ -70,11 +74,20 @@ public class Theme {
         this.valuesMobile = valuesMobile;
     }
 
+    public Boolean getIsActive() {
+    return isActive;
+}
+
+public void setIsActive(Boolean isActive) {
+    this.isActive = isActive;
+}
+
+
     public LocalDateTime getCreated_at() {
         return created_at;
     }
 
     public LocalDateTime getUpdated_at() {
         return updated_at;
-        }
+    }
 }

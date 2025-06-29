@@ -61,118 +61,124 @@ public class AuthController {
     @Autowired
     private UsersRepository UserRepository;
 
-    @PostMapping(value = "/send-verification", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/send-verification")
     public ResponseEntity<?> sendVerification(
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String phoneNumber,
-            @RequestParam("username") String username,
-            @RequestParam("firstName") String firstName,
-            @RequestParam("lastName") String lastName,
-            @RequestParam("password") String password,
-            @RequestParam(required = false, defaultValue = "true") Boolean isPublicProfile,
-            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
+            @RequestParam("password") String password) {
         try {
-            Map<String, String> userData = new HashMap<>();
-            if (email != null) userData.put("email", email);
-            if (phoneNumber != null) userData.put("phoneNumber", phoneNumber);
-            userData.put("username", username);
-            userData.put("firstName", firstName);
-            userData.put("lastName", lastName);
-            userData.put("password", password);
-            userData.put("isPublicProfile", String.valueOf(isPublicProfile)); // ✅ Include visibility
+            // Prepare basic data (email/phone + password only)
+            Map<String, String> data = new HashMap<>();
+            if (email != null) data.put("email", email);
+            if (phoneNumber != null) data.put("phoneNumber", phoneNumber);
+            data.put("password", password);
 
-            boolean sent = userService.sendVerificationCodeForRegistration(userData, profileImage);
+            // Send verification
+            userService.sendVerificationCodeForRegistration(data); // No profile image here
+
             return ResponseEntity.ok(Map.of("message", "Verification code sent"));
-        } catch (RuntimeException | IOException e) {
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
     @PostMapping("/verify-email-code")
     public ResponseEntity<?> verifyEmailCode(@RequestBody Map<String, String> request) {
-        String email = request.get("email");
-        String code = request.get("code");
+        try {
+            String email = request.get("email");
+            String code = request.get("code");
 
-        boolean verified = userService.verifyEmailCodeAndRegister(email, code);
+            // Step 2: Verify email and create user with minimal data
+            Long userId = userService.verifyEmailCodeAndRegister(email, code);
 
-        if (verified) {
-            Users user = userService.findByEmail(email);
-            if (user != null) {
+            return ResponseEntity.ok(Map.of(
+                    "message", "Verification successful. Continue with profile setup.",
+                    "userId", userId
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+
+    /// user register with number
+    @PostMapping("/user/verify-phone-code")
+    public ResponseEntity<?> verifyUserPhoneCode(@RequestBody Map<String, String> request) {
+        try {
+            String phone = request.get("phoneNumber");
+            String code = request.get("code");
+
+            Long userId = userService.verifyPhoneCodeAndRegister(phone, code);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Phone verification successful. Continue with profile setup.",
+                    "userId", userId
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping(value = "/complete-profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> completeProfile(
+            @RequestParam Long userId,
+            @RequestParam String username,
+            @RequestParam String firstName,
+            @RequestParam String lastName,
+            @RequestPart(required = false) MultipartFile profileImage) {
+        try {
+            boolean updated = userService.completeUserProfile(userId, username, firstName, lastName, profileImage);
+
+            if (updated) {
+                Users user = userService.getUserById(userId);
+
                 Map<String, Object> userData = new HashMap<>();
                 userData.put("id", user.getId());
                 userData.put("username", user.getUsername());
                 userData.put("firstName", user.getFirstName());
                 userData.put("lastName", user.getLastName());
                 userData.put("email", user.getEmail());
-                userData.put("profilePictureUrl", user.getProfilePictureUrl());
-                userData.put("status", user.getStatus()); // ✅ Add status
-                userData.put("isPublicProfile", user.isPublicProfile()); // ✅ Add visibility
-
-                return ResponseEntity.ok(Map.of(
-                        "message", "User verified and account created successfully",
-                        "user", userData));
-            }
-        }
-
-        return ResponseEntity.status(400).body(Map.of("error", "Invalid code or email"));
-    }
-
-    /// user register with number
-    @PostMapping("/user/verify-phone-code")
-    public ResponseEntity<?> verifyUserPhoneCode(@RequestBody Map<String, String> request) {
-        String phone = request.get("phoneNumber");
-        String code = request.get("code");
-
-        boolean verified = userService.verifyPhoneCodeAndRegister(phone, code);
-
-        if (verified) {
-            Users user = userService.findByPhoneNumber(phone);
-            if (user != null) {
-                Map<String, Object> userData = new HashMap<>();
-                userData.put("id", user.getId());
-                userData.put("username", user.getUsername());
-                userData.put("firstName", user.getFirstName());
-                userData.put("lastName", user.getLastName());
                 userData.put("phoneNumber", user.getPhoneNumber());
                 userData.put("profilePictureUrl", user.getProfilePictureUrl());
-                userData.put("status", user.getStatus()); // ✅ Add status
-                userData.put("isPublicProfile", user.isPublicProfile()); // ✅ Add visibility
+                userData.put("status", user.getStatus());
+                userData.put("isPublicProfile", user.isPublicProfile());
 
                 return ResponseEntity.ok(Map.of(
-                        "message", "User phone verified and account created successfully",
-                        "user", userData));
+                        "message", "Profile completed successfully.",
+                        "user", userData
+                ));
             }
-        }
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", "Invalid phone number or verification code"));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Profile update failed"));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
 
-    @PostMapping(value = "/business/send-verification", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping("/business/send-verification")
     public ResponseEntity<?> sendBusinessVerification(
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String phoneNumber,
-            @RequestParam String businessName,
             @RequestParam String password,
-            @RequestParam String description,
-            @RequestParam String websiteUrl,
-            @RequestParam(required = false, defaultValue = "true") boolean isPublicProfile,
-            @RequestPart(value = "businessLogo", required = false) MultipartFile logo,
-            @RequestPart(value = "businessBanner", required = false) MultipartFile banner) {
+            @RequestParam(defaultValue = "true") boolean isPublicProfile) {
         try {
             Map<String, String> businessData = new HashMap<>();
+
             if (email != null) businessData.put("email", email);
             if (phoneNumber != null) businessData.put("phoneNumber", phoneNumber);
-            businessData.put("businessName", businessName);
             businessData.put("password", password);
-            businessData.put("description", description);
-            businessData.put("websiteUrl", websiteUrl);
-            businessData.put("isPublicProfile", String.valueOf(isPublicProfile)); // ✅ Set visibility
+            businessData.put("isPublicProfile", String.valueOf(isPublicProfile));
+            businessData.put("status", "ACTIVE"); // Optional: always start as active
 
-            businessService.sendBusinessVerificationCode(businessData, logo, banner);
+            Long pendingId = businessService.sendBusinessVerificationCode(businessData);
 
             return ResponseEntity.ok(Map.of(
+                    "pendingId", pendingId,
                     "message", phoneNumber != null
                             ? "Static code 123456 set for phone verification"
                             : "Verification code sent to email"));
@@ -183,70 +189,80 @@ public class AuthController {
 
 
     @PostMapping("/business/verify-code")
-    public ResponseEntity<?> verifyBusinessCode(@RequestBody Map<String, String> payload) {
-        String email = payload.get("email");
-        String code = payload.get("code");
+    public ResponseEntity<?> verifyBusinessCode(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            String code = request.get("code");
 
-        boolean verified = businessService.verifyBusinessEmailCode(email, code);
+            // Step 2: Verify and create minimal business account
+            Long businessId = businessService.verifyBusinessEmailCode(email, code);
 
-        if (verified) {
-            Optional<Businesses> businessOpt = businessService.findByEmail(email);
-            if (businessOpt.isPresent()) {
-                Businesses business = businessOpt.get();
-
-                Map<String, Object> businessData = new HashMap<>();
-                businessData.put("id", business.getId());
-                businessData.put("businessName", business.getBusinessName());
-                businessData.put("email", business.getEmail());
-                businessData.put("phoneNumber", business.getPhoneNumber());
-                businessData.put("websiteUrl", business.getWebsiteUrl());
-                businessData.put("description", business.getDescription());
-                businessData.put("businessLogo", business.getBusinessLogoUrl());
-                businessData.put("businessBanner", business.getBusinessBannerUrl());
-                businessData.put("status", business.getStatus().name()); // ✅ Add status
-                businessData.put("isPublicProfile", business.getIsPublicProfile()); // ✅ Add visibility
-
-                return ResponseEntity.ok(Map.of(
-                        "message", "Business email verified and account created successfully",
-                        "business", businessData));
-            }
+            return ResponseEntity.ok(Map.of(
+                    "message", "Email verification successful. Continue with profile setup.",
+                    "businessId", businessId
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", "Invalid verification code or email"));
     }
 
 
     @PostMapping("/business/verify-phone-code")
     public ResponseEntity<?> verifyBusinessPhoneCode(@RequestBody Map<String, String> request) {
-        String phone = request.get("phoneNumber");
-        String code = request.get("code");
+        try {
+            String phone = request.get("phoneNumber");
+            String code = request.get("code");
 
-        boolean verified = businessService.verifyBusinessPhoneCode(phone, code);
+            // Step 2: Verify and create minimal business account
+            Long businessId = businessService.verifyBusinessPhoneCode(phone, code);
 
-        if (verified) {
-            Businesses business = businessService.findByPhoneNumber(phone);
-            if (business != null) {
-                Map<String, Object> businessData = new HashMap<>();
-                businessData.put("id", business.getId());
-                businessData.put("businessName", business.getBusinessName());
-                businessData.put("email", business.getEmail());
-                businessData.put("phoneNumber", business.getPhoneNumber());
-                businessData.put("websiteUrl", business.getWebsiteUrl());
-                businessData.put("description", business.getDescription());
-                businessData.put("businessLogo", business.getBusinessLogoUrl());
-                businessData.put("businessBanner", business.getBusinessBannerUrl());
-                businessData.put("status", business.getStatus().name()); // ✅ Add status
-                businessData.put("isPublicProfile", business.getIsPublicProfile()); // ✅ Add visibility
-
-                return ResponseEntity.ok(Map.of(
-                        "message", "Business phone verified and account created successfully",
-                        "business", businessData));
-            }
+            return ResponseEntity.ok(Map.of(
+                    "message", "Phone verification successful. Continue with profile setup.",
+                    "businessId", businessId
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+    
+    
+    @PostMapping(value = "/business/complete-profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> completeBusinessProfile(
+            @RequestParam Long businessId,
+            @RequestParam String businessName,
+            @RequestParam String description,
+            @RequestParam(required = false) String websiteUrl,
+            @RequestPart(required = false) MultipartFile logo,
+            @RequestPart(required = false) MultipartFile banner
+    ) {
+        try {
+            // 🔧 Complete the profile
+            Businesses updatedBusiness = businessService.completeBusinessProfile(
+                    businessId, businessName, description, websiteUrl, logo, banner
+            );
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", "Invalid phone number or verification code"));
+            // ✅ Build business response
+            Map<String, Object> businessData = new HashMap<>();
+            businessData.put("id", updatedBusiness.getId());
+            businessData.put("businessName", updatedBusiness.getBusinessName());
+            businessData.put("email", updatedBusiness.getEmail());
+            businessData.put("phoneNumber", updatedBusiness.getPhoneNumber());
+            businessData.put("websiteUrl", updatedBusiness.getWebsiteUrl());
+            businessData.put("description", updatedBusiness.getDescription());
+            businessData.put("businessLogo", updatedBusiness.getBusinessLogoUrl());
+            businessData.put("businessBanner", updatedBusiness.getBusinessBannerUrl());
+            businessData.put("status", updatedBusiness.getStatus());
+            businessData.put("isPublicProfile", updatedBusiness.getIsPublicProfile());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Business profile completed successfully.",
+                    "business", businessData
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/resend-user-code")

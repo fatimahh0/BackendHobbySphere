@@ -131,156 +131,159 @@ public class BusinessService {
     }
 
     //  Step 1: Send verification code and save to PendingBusiness
-    public boolean sendBusinessVerificationCode(
-            Map<String, String> businessData,
-            MultipartFile logo,
-            MultipartFile banner) throws IOException {
-
+    public Long sendBusinessVerificationCode(Map<String, String> businessData) {
         String email = businessData.get("email");
         String phone = businessData.get("phoneNumber");
-        String businessName = businessData.get("businessName");
         String password = businessData.get("password");
-        String description = businessData.get("description");
-        String websiteUrl = businessData.get("websiteUrl");
 
-        // ✅ new fields
-        String isPublicProfileStr = businessData.get("isPublicProfile");
         String statusStr = businessData.get("status");
+        String isPublicProfileStr = businessData.get("isPublicProfile");
 
-        if (email == null || phone == null) {
-            throw new RuntimeException("Both email and phone number are required for business registration");
+        if ((email == null || email.isBlank()) && (phone == null || phone.isBlank())) {
+            throw new RuntimeException("Provide either email or phone.");
         }
 
-     
-        businessRepository.findByEmail(email).ifPresent(existing -> {
-            if (existing.getStatus() == BusinessStatus.DELETED) {
-                businessRepository.delete(existing); // delete old DELETED entry
-            } else {
-                throw new RuntimeException("Email is already in use");
-            }
-        });
-
-        if (pendingBusinessRepository.existsByEmail(email)) {
-            throw new RuntimeException("Email is already pending verification");
+        if (email != null && phone != null) {
+            throw new RuntimeException("Only one of email or phone should be provided.");
         }
 
+        // Status default
+        BusinessStatus status = BusinessStatus.ACTIVE;
+        if (statusStr != null) {
+            status = BusinessStatus.valueOf(statusStr.toUpperCase());
+        }
 
-        businessRepository.findByPhoneNumber(phone).ifPresent(existing -> {
-            if (existing.getStatus() == BusinessStatus.DELETED) {
-                businessRepository.delete(existing);
-            } else {
-                throw new RuntimeException("Phone number is already in use");
+        // Check duplicates
+        if (email != null) {
+            businessRepository.findByEmail(email).ifPresent(existing -> {
+                if (existing.getStatus() != BusinessStatus.DELETED) {
+                    throw new RuntimeException("Email already in use.");
+                } else {
+                    businessRepository.delete(existing);
+                }
+            });
+            if (pendingBusinessRepository.existsByEmail(email)) {
+                throw new RuntimeException("Email is already pending verification");
             }
-        });
+        }
 
+        if (phone != null) {
+            businessRepository.findByPhoneNumber(phone).ifPresent(existing -> {
+                if (existing.getStatus() != BusinessStatus.DELETED) {
+                    throw new RuntimeException("Phone already in use.");
+                } else {
+                    businessRepository.delete(existing);
+                }
+            });
+            if (pendingBusinessRepository.existsByPhoneNumber(phone)) {
+                throw new RuntimeException("Phone is already pending verification");
+            }
+        }
 
-        String code = (phone != null && email == null)
-                ? "123456"
-                : String.format("%06d", new Random().nextInt(999999));
+        // Generate code
+        String code = (phone != null)
+            ? "123456"
+            : String.format("%06d", new Random().nextInt(999999));
 
-        String logoUrl = saveFile(logo);
-        String bannerUrl = saveFile(banner);
-
+        // Create pending business
         PendingBusiness pending = new PendingBusiness();
         pending.setEmail(email);
         pending.setPhoneNumber(phone);
-        pending.setBusinessName(businessName);
         pending.setPasswordHash(passwordEncoder.encode(password));
-        pending.setDescription(description);
-        pending.setWebsiteUrl(websiteUrl);
-        pending.setBusinessLogoUrl(logoUrl);
-        pending.setBusinessBannerUrl(bannerUrl);
         pending.setVerificationCode(code);
         pending.setCreatedAt(LocalDateTime.now());
+        pending.setStatus(status);
+        pending.setIsPublicProfile(isPublicProfileStr == null || Boolean.parseBoolean(isPublicProfileStr));
 
-        // ✅ set new values safely
-        if (isPublicProfileStr != null)
-            pending.setIsPublicProfile(Boolean.parseBoolean(isPublicProfileStr));
-        if (statusStr != null)
-            pending.setStatus(BusinessStatus.valueOf(statusStr.toUpperCase()));
+        PendingBusiness saved = pendingBusinessRepository.save(pending);
 
-        pendingBusinessRepository.save(pending);
+        if (email != null) {
+            String html = """
+                <html>
+                <body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+                    <h2 style="color: #4CAF50;">Welcome to HobbySphere Business!</h2>
+                    <p>Please use the code below to verify your business email:</p>
+                    <h1 style="color: #2196F3;">%s</h1>
+                    <p>This code will expire in 10 minutes.</p>
+                </body>
+                </html>
+            """.formatted(code);
+            emailService.sendHtmlEmail(email, "Business Verification Code", html);
+        } else {
+            System.out.println("📱 Sending SMS to " + phone + ": Your verification code is " + code);
+        }
 
-        // Send email
-        String html = """
-                    <html>
-                    <body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-                        <h2 style="color: #4CAF50;">Welcome to HobbySphere Business!</h2>
-                        <p>Please use the code below to verify your business:</p>
-                        <h1 style="color: #2196F3;">%s</h1>
-                        <p>This code will expire in 10 minutes.</p>
-                    </body>
-                    </html>
-                """.formatted(code);
-        emailService.sendHtmlEmail(email, "Business Verification Code", html);
-
-        // Simulate SMS
-        System.out.println("Sending SMS to " + phone + ": Your verification code is: " + code);
-
-        return true;
+        return saved.getId(); // To use in next step
     }
 
+
     // ✅ Step 2: Verify code and create actual Businesses entry
-    public boolean verifyBusinessEmailCode(String email, String code) {
+    public Long verifyBusinessEmailCode(String email, String code) {
         PendingBusiness pending = pendingBusinessRepository.findByEmail(email);
+
         if (pending == null || !pending.getVerificationCode().equals(code)) {
-            return false;
+            return null; // or throw exception if preferred
         }
 
         Businesses business = new Businesses();
         business.setEmail(pending.getEmail());
-        business.setBusinessName(pending.getBusinessName());
-        business.setPasswordHash(pending.getPasswordHash());
-        business.setDescription(pending.getDescription());
         business.setPhoneNumber(pending.getPhoneNumber());
-        business.setWebsiteUrl(pending.getWebsiteUrl());
-        business.setBusinessLogoUrl(pending.getBusinessLogoUrl());
-        business.setBusinessBannerUrl(pending.getBusinessBannerUrl());
+        business.setPasswordHash(pending.getPasswordHash());
+        business.setStatus(pending.getStatus() != null ? pending.getStatus() : BusinessStatus.ACTIVE);
+        business.setIsPublicProfile(pending.getIsPublicProfile());
         business.setCreatedAt(LocalDateTime.now());
-        business.setStatus(BusinessStatus.ACTIVE);       
         business.setUpdatedAt(LocalDateTime.now());
 
-        businessRepository.save(business);
+        Businesses saved = businessRepository.save(business);
         pendingBusinessRepository.delete(pending);
-        return true;
+
+        return saved.getId(); // ✅ Return businessId for next step
     }
 
-    public boolean resendBusinessVerificationCode(String emailOrPhone) throws IOException {
+
+    public boolean resendBusinessVerificationCode(String emailOrPhone) {
         PendingBusiness pending;
 
-        if (emailOrPhone.contains("@")) {
+        // 🔍 Determine whether it's email or phone
+        boolean isEmail = emailOrPhone.contains("@");
+
+        if (isEmail) {
             pending = pendingBusinessRepository.findByEmail(emailOrPhone);
             if (pending == null)
                 throw new RuntimeException("No pending business found with this email");
 
-            String code;
-
-            code = String.format("%06d", new Random().nextInt(999999)); // real for email
-
+            String code = String.format("%06d", new Random().nextInt(999999));
             pending.setVerificationCode(code);
             pending.setCreatedAt(LocalDateTime.now());
             pendingBusinessRepository.save(pending);
 
+            // 📧 Send email
             String html = """
-                        <html>
-                        <body>
-                            <h2>HobbySphere Business Verification</h2>
-                            <p>Your new email verification code is:</p>
-                            <h1>%s</h1>
-                        </body>
-                        </html>
-                    """.formatted(code);
+                <html>
+                <body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+                    <h2 style="color: #4CAF50;">Verification Code Resent</h2>
+                    <p>Use the code below to complete your business email verification:</p>
+                    <h1 style="color: #2196F3;">%s</h1>
+                    <p>This code will expire in 10 minutes.</p>
+                </body>
+                </html>
+            """.formatted(code);
+            emailService.sendHtmlEmail(emailOrPhone, "Resend Business Verification Code", html);
 
-            emailService.sendHtmlEmail(emailOrPhone, "New Business Verification Code", html);
             return true;
+
         } else {
             pending = pendingBusinessRepository.findByPhoneNumber(emailOrPhone);
             if (pending == null)
                 throw new RuntimeException("No pending business found with this phone");
 
-            pending.setVerificationCode("123456");
+            String code = "123456"; // Simulated SMS code
+            pending.setVerificationCode(code);
             pending.setCreatedAt(LocalDateTime.now());
             pendingBusinessRepository.save(pending);
+
+            // 🧾 Simulate SMS
+            System.out.println("📱 Resending SMS to " + emailOrPhone + ": Your code is " + code);
             return true;
         }
     }
@@ -298,28 +301,69 @@ public class BusinessService {
         return "/uploads/" + fileName;
     }
 
-    public boolean verifyBusinessPhoneCode(String phone, String code) {
+    public Long verifyBusinessPhoneCode(String phone, String code) {
         PendingBusiness pending = pendingBusinessRepository.findByPhoneNumber(phone);
+
         if (pending == null || !pending.getVerificationCode().equals(code)) {
-            return false;
+            return null; // or throw new RuntimeException("Invalid code");
         }
 
         Businesses business = new Businesses();
         business.setPhoneNumber(pending.getPhoneNumber());
         business.setEmail(pending.getEmail());
-        business.setBusinessName(pending.getBusinessName());
         business.setPasswordHash(pending.getPasswordHash());
-        business.setDescription(pending.getDescription());
-        business.setWebsiteUrl(pending.getWebsiteUrl());
-        business.setBusinessLogoUrl(pending.getBusinessLogoUrl());
-        business.setBusinessBannerUrl(pending.getBusinessBannerUrl());
+        business.setStatus(pending.getStatus() != null ? pending.getStatus() : BusinessStatus.ACTIVE);
+        business.setIsPublicProfile(pending.getIsPublicProfile());
         business.setCreatedAt(LocalDateTime.now());
-        business.setStatus(BusinessStatus.ACTIVE);       
         business.setUpdatedAt(LocalDateTime.now());
 
-        businessRepository.save(business);
+        Businesses saved = businessRepository.save(business);
         pendingBusinessRepository.delete(pending);
-        return true;
+
+        return saved.getId(); // To pass to profile completion step
+    }
+
+    public Businesses completeBusinessProfile(
+            Long businessId,
+            String businessName,
+            String description,
+            String websiteUrl,
+            MultipartFile logo,
+            MultipartFile banner
+    ) throws IOException {
+
+        // 🔍 Fetch business by ID
+        Businesses business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new RuntimeException("Business not found."));
+
+        // 📝 Update profile fields
+        business.setBusinessName(businessName);
+        business.setDescription(description);
+        business.setWebsiteUrl(websiteUrl);
+
+        // 📤 Upload logo if provided
+        if (logo != null && !logo.isEmpty()) {
+            String logoFileName = UUID.randomUUID() + "_" + logo.getOriginalFilename();
+            Path logoPath = Paths.get("uploads").resolve(logoFileName);
+            Files.createDirectories(logoPath.getParent());
+            Files.copy(logo.getInputStream(), logoPath, StandardCopyOption.REPLACE_EXISTING);
+            business.setBusinessLogoUrl("/uploads/" + logoFileName);
+        }
+
+        // 📤 Upload banner if provided
+        if (banner != null && !banner.isEmpty()) {
+            String bannerFileName = UUID.randomUUID() + "_" + banner.getOriginalFilename();
+            Path bannerPath = Paths.get("uploads").resolve(bannerFileName);
+            Files.createDirectories(bannerPath.getParent());
+            Files.copy(banner.getInputStream(), bannerPath, StandardCopyOption.REPLACE_EXISTING);
+            business.setBusinessBannerUrl("/uploads/" + bannerFileName);
+        }
+
+        // 🕓 Update timestamp
+        business.setUpdatedAt(LocalDateTime.now());
+
+        // 💾 Save and return
+        return businessRepository.save(business);
     }
 
     public Businesses updateBusinessWithImages(
