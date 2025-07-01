@@ -21,7 +21,7 @@ public class PostDto {
     public String lastName;
     public String profilePictureUrl;
 
-    //  field for visibility (e.g., "PUBLIC" or "FRIENDS_ONLY")
+    // ✅ Correct field for visibility (e.g., "PUBLIC" or "FRIENDS_ONLY")
     public String visibility;
 
     public PostDto(Posts post, Long currentUserId) {
@@ -36,7 +36,10 @@ public class PostDto {
         this.isLiked = post.getLikedUsers().stream()
                 .anyMatch(user -> user.getId().equals(currentUserId));
 
-        this.visibility = post.getVisibility().toString(); // 🔹 Include visibility value
+        // ✅ Fixed: Read visibility name from entity
+        this.visibility = post.getVisibility() != null
+                ? post.getVisibility().getName()
+                : "PUBLIC";
 
         Users user = post.getUser();
         if (user != null) {

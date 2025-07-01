@@ -6,7 +6,6 @@ import com.hobbySphere.entities.BusinessStatus;
 import com.hobbySphere.entities.Businesses;
 import com.hobbySphere.entities.Users;
 
-import com.hobbySphere.enums.UserStatus;
 import com.hobbySphere.services.AdminActivityService;
 import com.hobbySphere.services.AdminStatsService;
 import com.hobbySphere.services.AdminUserService;
@@ -44,6 +43,10 @@ public class AdminController {
     @Autowired private JwtUtil jwtUtil;
     @Autowired
     private com.hobbySphere.services.BusinessService businessService;
+    
+    @Autowired
+    private UserStatusRepository userStatusRepository;
+
 
     @Autowired private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
@@ -166,17 +169,22 @@ public class AdminController {
         }
 
         Users user = optionalUser.get();
-        UserStatus currentStatus = user.getStatus();
+        String currentStatus = user.getStatus().getName();
 
-        // Toggle between ACTIVE and INACTIVE
-        if (currentStatus == UserStatus.ACTIVE) {
-            user.setStatus(UserStatus.INACTIVE);
-        } else {
-            user.setStatus(UserStatus.ACTIVE);
+        try {
+            if ("ACTIVE".equalsIgnoreCase(currentStatus)) {
+                user.setStatus(userStatusRepository.findByName("INACTIVE")
+                    .orElseThrow(() -> new RuntimeException("INACTIVE status not found")));
+            } else {
+                user.setStatus(userStatusRepository.findByName("ACTIVE")
+                    .orElseThrow(() -> new RuntimeException("ACTIVE status not found")));
+            }
+
+            usersRepository.save(user);
+            return ResponseEntity.ok("User status updated to: " + user.getStatus().getName());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Failed to toggle user status: " + e.getMessage());
         }
-
-        usersRepository.save(user);
-        return ResponseEntity.ok("User status updated to: " + user.getStatus().name());
     }
 
 

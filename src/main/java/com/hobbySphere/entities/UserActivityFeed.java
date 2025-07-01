@@ -6,10 +6,8 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
-import com.hobbySphere.enums.FeedType;
-
 @Entity
-@Table(name = "UserActivityFeed")
+@Table(name = "user_activity_feed")
 public class UserActivityFeed {
 
     @Id
@@ -27,21 +25,20 @@ public class UserActivityFeed {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Activities activity;
 
-    @Column(name = "feed_type", nullable = false)
-    @Enumerated(EnumType.STRING)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "feed_type_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private FeedType feedType;
 
     @Column(name = "feed_datetime", updatable = false)
     private LocalDateTime feedDatetime;
 
-    // ✅ Add created_at and updated_at as the last two columns
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Constructors
     public UserActivityFeed() {}
 
     public UserActivityFeed(Users user, Activities activity, FeedType feedType) {
@@ -62,6 +59,7 @@ public class UserActivityFeed {
     }
 
     // Getters and Setters
+
     public Long getId() {
         return id;
     }

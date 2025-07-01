@@ -1,6 +1,5 @@
 package com.hobbySphere.services;
 
-import com.hobbySphere.enums.NotificationType;
 import com.hobbySphere.entities.ChatMessages;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.repositories.ChatMessagesRepository;
@@ -50,12 +49,11 @@ public class ChatMessagesService {
             notificationsService.createNotification(
                 receiver,
                 sender.getUsername() + " sent you a message.",
-                NotificationType.MESSAGE
+                "MESSAGE"
             );
         }
         return saved;
     }
-
 
     @Transactional
     public ChatMessages sendMessageWithImage(Users sender, Users receiver, String message, String imageUrl) {
@@ -80,12 +78,11 @@ public class ChatMessagesService {
             notificationsService.createNotification(
                 receiver,
                 sender.getUsername() + " sent you a message.",
-                NotificationType.MESSAGE
+                "MESSAGE"
             );
         }
         return saved;
     }
-
 
     @Transactional
     public String uploadImage(MultipartFile file) {

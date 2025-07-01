@@ -1,7 +1,7 @@
 package com.hobbySphere.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.hobbySphere.enums.PostVisibility; // Import the enum
+import com.hobbySphere.entities.PostVisibility;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -42,10 +42,9 @@ public class Posts {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // 🔹 New field: post visibility (public or friends only)
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = true)
-    private PostVisibility visibility = PostVisibility.PUBLIC;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "visibility_id", nullable = false)
+    private PostVisibility visibility;
 
     // Users who liked the post
     @ManyToMany
@@ -174,7 +173,6 @@ public class Posts {
         return comments != null ? comments.size() : 0;
     }
 
-    // 🔹 Getter/Setter for visibility
     public PostVisibility getVisibility() {
         return visibility;
     }
@@ -182,4 +180,5 @@ public class Posts {
     public void setVisibility(PostVisibility visibility) {
         this.visibility = visibility;
     }
+
 }

@@ -1,7 +1,7 @@
 package com.hobbySphere.dto;
 
 import com.hobbySphere.entities.Users;
-import com.hobbySphere.enums.UserStatus;
+import com.hobbySphere.entities.UserStatus;
 
 import java.time.LocalDateTime;
 

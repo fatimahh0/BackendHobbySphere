@@ -1,11 +1,10 @@
 package com.hobbySphere.services;
-import com.hobbySphere.enums.*;
+
 import com.hobbySphere.entities.PostLikes;
 import com.hobbySphere.entities.Posts;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.repositories.PostLikesRepository;
 import com.hobbySphere.repositories.PostsRepository;
-import com.hobbySphere.services.NotificationsService;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -35,12 +34,12 @@ public class PostLikesService {
                 .orElseGet(() -> {
                     likesRepository.save(new PostLikes(user, post));
 
-                   
+                    // Notify post owner (if not self)
                     if (!user.getId().equals(post.getUser().getId())) {
                         notificationsService.createNotification(
                                 post.getUser(),
                                 user.getUsername() + " liked your post",
-                                NotificationType.ACTIVITY_UPDATE
+                                "ACTIVITY_UPDATE" // <-- using code string instead of enum
                         );
                     }
 

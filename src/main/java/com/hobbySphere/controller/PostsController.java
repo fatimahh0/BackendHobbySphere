@@ -3,9 +3,10 @@ package com.hobbySphere.controller;
 import com.hobbySphere.dto.PostDto;
 import com.hobbySphere.entities.Posts;
 import com.hobbySphere.entities.Users;
-import com.hobbySphere.enums.PostVisibility;
+import com.hobbySphere.entities.PostVisibility;
 import com.hobbySphere.services.PostService;
 import com.hobbySphere.services.UserService;
+import com.hobbySphere.repositories.PostVisibilityRepository;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,35 +22,37 @@ public class PostsController {
 
     private final PostService postsService;
     private final UserService usersService;
+    private final PostVisibilityRepository postVisibilityRepository;
 
-    public PostsController(PostService postsService, UserService usersService) {
+    public PostsController(PostService postsService, UserService usersService, PostVisibilityRepository postVisibilityRepository) {
         this.postsService = postsService;
         this.usersService = usersService;
+        this.postVisibilityRepository = postVisibilityRepository;
     }
 
     /**
      * Create a new post with optional image, hashtags, and visibility (public or friends_only).
      */
     @PostMapping(consumes = {"multipart/form-data"})
-    public PostDto createPost(@RequestParam String content,
-                              @RequestParam(required = false) MultipartFile image,
-                              @RequestParam(required = false) String hashtags,
-                              @RequestParam(required = false, defaultValue = "PUBLIC") String visibility,
-                              Principal principal) {
+    public ResponseEntity<?> createPost(@RequestParam String content,
+                                        @RequestParam(required = false) MultipartFile image,
+                                        @RequestParam(required = false) String hashtags,
+                                        @RequestParam(required = false, defaultValue = "PUBLIC") String visibility,
+                                        Principal principal) {
 
         Users user = usersService.getUserByEmaill(principal.getName());
 
-        PostVisibility postVisibility;
-        try {
-            postVisibility = PostVisibility.valueOf(visibility.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            postVisibility = PostVisibility.PUBLIC;
+        // ✅ Convert visibility string to PostVisibility entity
+        PostVisibility postVisibility = postVisibilityRepository.findByName(visibility.toUpperCase())
+                .orElseGet(() -> postVisibilityRepository.findByName("PUBLIC").orElse(null));
+
+        if (postVisibility == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Visibility setting error");
         }
 
         Posts created = postsService.createPost(content, image, hashtags, user, postVisibility);
 
-        // 🔄 Return PostDto for cleaner frontend response
-        return new PostDto(created, user.getId());
+        return ResponseEntity.ok(new PostDto(created, user.getId()));
     }
 
     /**

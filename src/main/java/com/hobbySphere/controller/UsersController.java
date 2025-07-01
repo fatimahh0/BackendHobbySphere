@@ -3,7 +3,8 @@ package com.hobbySphere.controller;
 import com.hobbySphere.dto.UserDto;
 import com.hobbySphere.entities.AdminUsers;
 import com.hobbySphere.entities.Users;
-import com.hobbySphere.enums.UserStatus;
+import com.hobbySphere.entities.UserStatus; 
+
 import com.hobbySphere.services.AdminUserService;
 import com.hobbySphere.services.UserService;
 import org.springframework.web.bind.annotation.*;
@@ -38,6 +39,10 @@ public class UsersController {
 	
 	@Autowired
 	private AdminUserService adminUserService;
+	
+	@Autowired
+	private UserStatusRepository userStatusRepository;
+
 
     private final UserService userService;
 
@@ -276,12 +281,12 @@ public class UsersController {
             return ResponseEntity.badRequest().body("Status is required");
         }
 
-        UserStatus newStatus;
-        try {
-            newStatus = UserStatus.valueOf(statusStr.toUpperCase());
-        } catch (IllegalArgumentException e) {
+        // ✅ Fetch status from UserStatusRepository instead of enum
+        Optional<UserStatus> newStatusOpt = userStatusRepository.findByNameIgnoreCase(statusStr);
+        if (newStatusOpt.isEmpty()) {
             return ResponseEntity.badRequest().body("Invalid status value");
         }
+        UserStatus newStatus = newStatusOpt.get();
 
         if (!userService.checkPassword(user, password)) {
             return ResponseEntity.status(401).body("Incorrect password");
@@ -291,10 +296,9 @@ public class UsersController {
         user.setUpdatedAt(LocalDateTime.now());
         usersRepository.save(user);
 
-        return ResponseEntity.ok("User status updated to " + newStatus.name());
+        return ResponseEntity.ok("User status updated to " + newStatus.getName());
     }
 
-    
     @GetMapping("/{userId}/suggestions")
     public ResponseEntity<?> getFriendSuggestions(@PathVariable Long userId) {
         try {

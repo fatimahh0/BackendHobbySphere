@@ -3,9 +3,12 @@ package com.hobbySphere.services;
 import com.hobbySphere.dto.PostDto;
 import com.hobbySphere.entities.Posts;
 import com.hobbySphere.entities.Users;
-import com.hobbySphere.enums.PostVisibility;
-import com.hobbySphere.enums.UserStatus;
+import com.hobbySphere.entities.PostVisibility;
+import com.hobbySphere.entities.UserStatus;
+
 import com.hobbySphere.repositories.PostsRepository;
+import com.hobbySphere.repositories.PostVisibilityRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,19 +17,21 @@ import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.*;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 public class PostService {
 
     private final PostsRepository postsRepository;
+    private final PostVisibilityRepository postVisibilityRepository;
 
     @Autowired
     private FriendshipService friendshipService;
 
-    public PostService(PostsRepository postsRepository) {
+    @Autowired
+    public PostService(PostsRepository postsRepository, PostVisibilityRepository postVisibilityRepository) {
         this.postsRepository = postsRepository;
+        this.postVisibilityRepository = postVisibilityRepository;
     }
 
     /**
@@ -81,35 +86,39 @@ public class PostService {
         List<Posts> posts = postsRepository.findAll();
 
         return posts.stream()
-                .filter(post -> {
-                    try {
-                        Users poster = post.getUser();
+            .filter(post -> {
+                try {
+                    Users poster = post.getUser();
 
-                       
-                        if (poster.getStatus() != UserStatus.ACTIVE) return false;
-
-                      
-                        if (poster.getId().equals(currentUserId)) return true;
-
-                      
-                        if (post.getVisibility() == PostVisibility.PUBLIC) return true;
-
-                      
-                        if (post.getVisibility() == PostVisibility.FRIENDS_ONLY
-                                && areFriends(currentUserId, poster.getId())) {
-                            return true;
-                        }
-
-                     
+                    // ✅ Skip if user is not active
+                    if (poster.getStatus() == null || !"ACTIVE".equals(poster.getStatus().getName()))
                         return false;
 
-                    } catch (Exception e) {
-                        System.err.println("❌ Error in filter logic: " + e.getMessage());
-                        return false;
+                    // ✅ Show own posts
+                    if (poster.getId().equals(currentUserId))
+                        return true;
+
+                    String visibilityName = post.getVisibility() != null ? post.getVisibility().getName() : "PUBLIC";
+
+                    // ✅ Show public posts
+                    if ("PUBLIC".equalsIgnoreCase(visibilityName))
+                        return true;
+
+                    // ✅ Show FRIENDS_ONLY posts if they are friends
+                    if ("FRIENDS_ONLY".equalsIgnoreCase(visibilityName)
+                            && areFriends(currentUserId, poster.getId())) {
+                        return true;
                     }
-                })
-                .map(post -> new PostDto(post, currentUserId))
-                .collect(Collectors.toList());
+
+                    return false;
+
+                } catch (Exception e) {
+                    System.err.println("❌ Error in filter logic: " + e.getMessage());
+                    return false;
+                }
+            })
+            .map(post -> new PostDto(post, currentUserId))
+            .collect(Collectors.toList());
     }
 
     /**
@@ -146,5 +155,5 @@ public class PostService {
         return posts.stream()
                 .map(post -> new PostDto(post, userId))
                 .collect(Collectors.toList());
-}
+    }
 }

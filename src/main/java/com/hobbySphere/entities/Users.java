@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import com.hobbySphere.enums.UserStatus;
+import com.hobbySphere.entities.UserStatus; 
+
 
 @Entity
 @Table(name = "Users")
@@ -36,10 +37,10 @@ public class Users {
     @Column(name = "profile_picture_url", nullable = true)
     private String profilePictureUrl;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = true)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "status") 
     private UserStatus status;
-
+   
 
     @Column(name = "is_public_profile", nullable = true)
     private Boolean isPublicProfile = true;
@@ -69,10 +70,8 @@ public class Users {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
-        if (this.status == null) {
-            this.status = UserStatus.ACTIVE;
-        }
     }
+
 
     @PreUpdate
     protected void onUpdate() {

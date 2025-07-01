@@ -1,5 +1,8 @@
 package com.hobbySphere.controller;
 
+import com.hobbySphere.repositories.*;
+import com.hobbySphere.entities.*;
+
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
@@ -30,6 +33,10 @@ public class GoogleAuthController {
 
     @Autowired
     private UserService userService;
+    
+    @Autowired
+    private UserStatusRepository userStatusRepository;
+
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -56,27 +63,57 @@ public class GoogleAuthController {
             String fullName = (String) payload.get("name");
             String pictureUrl = (String) payload.get("picture");
 
-            // 🟡 Track reactivation without modifying logic
             AtomicBoolean wasInactive = new AtomicBoolean(false);
             Users user = userService.handleGoogleUser(email, fullName, pictureUrl, wasInactive);
 
+            // 🔍 Handle status checks like in AuthController
+            String currentStatus = user.getStatus().getName();
+
+            if ("DELETED".equalsIgnoreCase(currentStatus)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "This account has been deleted and cannot be accessed."));
+            }
+
+            if ("INACTIVE".equalsIgnoreCase(currentStatus)) {
+                String tempToken = jwtUtil.generateToken(user);
+
+                Map<String, Object> inactiveUserData = Map.of(
+                        "id", user.getId(),
+                        "email", user.getEmail(),
+                        "firstName", user.getFirstName(),
+                        "lastName", user.getLastName(),
+                        "username", user.getUsername(),
+                        "profilePictureUrl", user.getProfilePictureUrl()
+                );
+
+                return ResponseEntity.ok(Map.of(
+                        "wasInactive", true,
+                        "message", "Your account is inactive. Confirm reactivation.",
+                        "token", tempToken,
+                        "user", inactiveUserData
+                ));
+            }
+
+            // ✅ Normal login
+            user.setLastLogin(java.time.LocalDateTime.now());
+            userService.save(user);
+
             String token = jwtUtil.generateToken(user);
-            UserDto userDto = new UserDto(user);
 
             return ResponseEntity.ok(Map.of(
-                "token", token,
-                "wasInactive", wasInactive.get(), // ✅ added
-                "user", Map.of(
-                    "id", user.getId(),
-                    "firstName", user.getFirstName(),
-                    "lastName", user.getLastName(),
-                    "email", user.getEmail(),
-                    "profileImageUrl", user.getProfilePictureUrl(),
-                    "username", user.getUsername(),
-                    "status", user.getStatus().name(),
-                    "lastLogin", user.getLastLogin(),
-                    "publicProfile", user.isPublicProfile()
-                )
+                    "token", token,
+                    "wasInactive", false,
+                    "user", Map.of(
+                            "id", user.getId(),
+                            "firstName", user.getFirstName(),
+                            "lastName", user.getLastName(),
+                            "email", user.getEmail(),
+                            "profileImageUrl", user.getProfilePictureUrl(),
+                            "username", user.getUsername(),
+                            "status", user.getStatus().getName(),
+                            "lastLogin", user.getLastLogin(),
+                            "publicProfile", user.isPublicProfile()
+                    )
             ));
 
         } catch (Exception e) {
@@ -84,4 +121,5 @@ public class GoogleAuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Google login failed.");
         }
     }
+
 }

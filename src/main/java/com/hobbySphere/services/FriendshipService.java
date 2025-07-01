@@ -2,9 +2,8 @@ package com.hobbySphere.services;
 
 import com.hobbySphere.entities.Friendship;
 import com.hobbySphere.entities.Users;
-import com.hobbySphere.enums.NotificationType;
-import com.hobbySphere.enums.UserStatus;
 import com.hobbySphere.repositories.FriendshipRepository;
+import com.hobbySphere.repositories.NotificationTypeRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,11 +15,14 @@ public class FriendshipService {
 
     private final FriendshipRepository friendshipRepo;
     private final NotificationsService notificationsService;
+    private final NotificationTypeRepository notificationTypeRepo;
 
     public FriendshipService(FriendshipRepository friendshipRepo,
-                             NotificationsService notificationsService) {
+                             NotificationsService notificationsService,
+                             NotificationTypeRepository notificationTypeRepo) {
         this.friendshipRepo = friendshipRepo;
         this.notificationsService = notificationsService;
+        this.notificationTypeRepo = notificationTypeRepo;
     }
 
     public Friendship sendFriendRequest(Users sender, Users receiver) {
@@ -43,7 +45,7 @@ public class FriendshipService {
         notificationsService.createNotification(
             receiver,
             sender.getUsername() + " sent you a friend request.",
-            NotificationType.FRIEND_REQUEST_SENT
+            "FRIEND_REQUEST_SENT"
         );
 
         return saved;
@@ -63,7 +65,7 @@ public class FriendshipService {
         notificationsService.createNotification(
             request.getUser(),
             receiver.getUsername() + " accepted your friend request.",
-            NotificationType.FRIEND_REQUEST_ACCEPTED
+            "FRIEND_REQUEST_ACCEPTED"
         );
 
         return accepted;
@@ -83,7 +85,7 @@ public class FriendshipService {
         notificationsService.createNotification(
             request.getUser(),
             receiver.getUsername() + " rejected your friend request.",
-            NotificationType.FRIEND_REQUEST_REJECTED
+            "FRIEND_REQUEST_REJECTED"
         );
     }
 
@@ -97,7 +99,7 @@ public class FriendshipService {
         notificationsService.createNotification(
             receiver,
             sender.getUsername() + " canceled the friend request.",
-            NotificationType.FRIEND_REQUEST_REJECTED
+            "FRIEND_REQUEST_CANCELLED"
         );
     }
 
@@ -112,7 +114,7 @@ public class FriendshipService {
         notificationsService.createNotification(
             blocked,
             "You have been blocked by " + blocker.getUsername(),
-            NotificationType.FRIEND_BLOCKED
+            "FRIEND_BLOCKED"
         );
     }
 
@@ -131,7 +133,7 @@ public class FriendshipService {
                 notificationsService.createNotification(
                     other,
                     user1.getUsername() + " removed you from their friends.",
-                    NotificationType.FRIEND_REQUEST_REJECTED
+                    "FRIEND_REMOVED"
                 );
             });
     }
@@ -150,8 +152,9 @@ public class FriendshipService {
         return friendships.stream()
                 .map(f -> f.getUser().getId().equals(user.getId()) ? f.getFriend() : f.getUser())
                 .filter(friend ->
-                        friend.getStatus() == UserStatus.ACTIVE &&
-                        (friend.getIsPublicProfile() || areFriends(user, friend))
+                    friend.getStatus() != null &&
+                    "ACTIVE".equals(friend.getStatus().getName()) &&
+                    (friend.getIsPublicProfile() || areFriends(user, friend))
                 )
                 .collect(Collectors.toList());
     }
@@ -183,4 +186,4 @@ public class FriendshipService {
         return friendshipRepo.findByUserIdAndFriendIdAndStatus(currentUser.getId(), otherUser.getId(), "PENDING").isPresent()
             || friendshipRepo.findByUserIdAndFriendIdAndStatus(otherUser.getId(), currentUser.getId(), "PENDING").isPresent();
     }
-} 
+}

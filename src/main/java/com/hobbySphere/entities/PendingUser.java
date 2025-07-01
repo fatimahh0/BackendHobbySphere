@@ -1,6 +1,7 @@
 package com.hobbySphere.entities;
 
-import com.hobbySphere.enums.UserStatus;
+import com.hobbySphere.entities.UserStatus;
+
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -37,9 +38,10 @@ public class PendingUser {
     @Column(name = "verification_code")
     private String verificationCode;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status")
-    private UserStatus status = UserStatus.PENDING;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "status")
+    private UserStatus status;
+
 
     @Column(name = "is_public_profile")
     private Boolean isPublicProfile = true;
@@ -51,9 +53,10 @@ public class PendingUser {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
-        if (this.status == null) this.status = UserStatus.PENDING;
         if (this.isPublicProfile == null) this.isPublicProfile = true;
+        // ❗ DO NOT set status here — set it in the service with userStatusRepository
     }
+
 
     // Getters and Setters
 

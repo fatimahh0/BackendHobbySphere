@@ -1,38 +1,44 @@
 package com.hobbySphere.services;
-import com.hobbySphere.enums.*;
+
+import com.hobbySphere.entities.NotificationTypeEntity;
+import com.hobbySphere.repositories.NotificationTypeRepository;
 import com.hobbySphere.entities.AdminUsers;
 import com.hobbySphere.entities.Businesses;
 import com.hobbySphere.entities.Notifications;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.repositories.NotificationsRepository;
+import com.hobbySphere.repositories.UsersRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.hobbySphere.repositories.UsersRepository;
 
 import java.util.List;
-import java.util.Objects;
 
 @Service
 public class NotificationsService {
 
-	
     private final NotificationsRepository notificationsRepo;
     private final UsersRepository usersRepo;
-    
-    public NotificationsService(NotificationsRepository notificationsRepo, UsersRepository usersRepo) {
+    private final NotificationTypeRepository notificationTypeRepo;
+
+    public NotificationsService(
+            NotificationsRepository notificationsRepo,
+            UsersRepository usersRepo,
+            NotificationTypeRepository notificationTypeRepo
+    ) {
         this.notificationsRepo = notificationsRepo;
         this.usersRepo = usersRepo;
+        this.notificationTypeRepo = notificationTypeRepo;
     }
 
-
-    public void createNotification(Users receiver, String message, NotificationType type) {
+    public void createNotification(Users receiver, String message, String typeCode) {
         System.out.println(" Create notification : " + message + " to " + receiver.getUsername());
+
+        NotificationTypeEntity type = notificationTypeRepo.findByCode(typeCode)
+                .orElseThrow(() -> new RuntimeException("NotificationType not found: " + typeCode));
+
         Notifications notification = new Notifications(receiver, message, type);
         notificationsRepo.save(notification);
     }
-    
-    
-
 
     public List<Notifications> getAllByUser(Users user) {
         return notificationsRepo.findAll().stream()
@@ -44,46 +50,42 @@ public class NotificationsService {
     @Transactional
     public void markAsRead(Long notificationId, Users user) {
         Notifications notif = notificationsRepo.findById(notificationId)
-            .orElseThrow(() -> new RuntimeException("Notification not found"));
-
-        System.out.println("Notification user ID = " + notif.getUser().getId());
-        System.out.println("Logged-in user ID = " + user.getId());
+                .orElseThrow(() -> new RuntimeException("Notification not found"));
 
         if (notif.getUser().getId().equals(user.getId())) {
-            notif.setIsRead(true); 
-
+            notif.setIsRead(true);
+            notificationsRepo.save(notif);
             System.out.println("✔ Notification ID " + notif.getId() + " marked as read.");
-            notificationsRepo.save(notif); // 
         } else {
             throw new RuntimeException("Non autorisé");
         }
     }
 
-
-   
-
     public List<Notifications> getAllByUser1(Users user) {
         return notificationsRepo.findByUserOrderByCreatedAtDesc(user);
     }
+
     public List<Notifications> getUnreadByUser(Users user) {
         return notificationsRepo.findByUserAndIsReadFalse(user);
     }
 
     public Notifications getById(Long id) {
         return notificationsRepo.findById(id)
-            .orElseThrow(() -> new RuntimeException("Notification not found"));
+                .orElseThrow(() -> new RuntimeException("Notification not found"));
     }
 
     public void delete(Notifications notification) {
         notificationsRepo.delete(notification);
     }
 
-    
-    public void notifyBusiness(Businesses business, String message, NotificationType type) {
+    public void notifyBusiness(Businesses business, String message, String typeCode) {
         try {
             if (business == null || business.getId() == null) {
                 throw new RuntimeException("Business is null or invalid");
             }
+
+            NotificationTypeEntity type = notificationTypeRepo.findByCode(typeCode)
+                    .orElseThrow(() -> new RuntimeException("NotificationType not found: " + typeCode));
 
             Notifications notification = new Notifications(business, message, type);
             notificationsRepo.save(notification);
@@ -95,12 +97,10 @@ public class NotificationsService {
         }
     }
 
-
-
     public int countUnreadByUser(Users user) {
         return notificationsRepo.countByUserAndIsReadFalse(user);
     }
-    
+
     public List<Notifications> getAllByBusiness(Businesses business) {
         return notificationsRepo.findByBusinessOrderByCreatedAtDesc(business);
     }
@@ -110,9 +110,9 @@ public class NotificationsService {
     }
 
     @Transactional
-    public void markAsReadForBusiness(Long notificationId, Businesses business){
+    public void markAsReadForBusiness(Long notificationId, Businesses business) {
         Notifications notif = notificationsRepo.findById(notificationId)
-            .orElseThrow(() -> new RuntimeException("Notification not found"));
+                .orElseThrow(() -> new RuntimeException("Notification not found"));
 
         if (notif.getBusiness() != null && notif.getBusiness().getId().equals(business.getId())) {
             notif.setIsRead(true);
@@ -121,15 +121,17 @@ public class NotificationsService {
             throw new RuntimeException("Unauthorized");
         }
     }
-    
-    public void notifyAdmin(AdminUsers admin, String message, NotificationType type) {
+
+    public void notifyAdmin(AdminUsers admin, String message, String typeCode) {
+        NotificationTypeEntity type = notificationTypeRepo.findByCode(typeCode)
+                .orElseThrow(() -> new RuntimeException("NotificationType not found: " + typeCode));
+
         Notifications notification = new Notifications();
         notification.setMessage(message);
         notification.setNotificationType(type);
         notification.setIsRead(false);
         notification.setCreatedAt(java.time.LocalDateTime.now());
 
-        // We'll attach only the email and ID as a "user" notification
         Users user = new Users();
         user.setId(admin.getAdminId());
         user.setUsername(admin.getUsername());
@@ -140,5 +142,4 @@ public class NotificationsService {
         notificationsRepo.save(notification);
         System.out.println("✅ Admin notification sent to: " + admin.getEmail());
     }
-
 }

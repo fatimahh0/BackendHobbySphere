@@ -1,12 +1,10 @@
 package com.hobbySphere.entities;
 
-import com.hobbySphere.enums.NotificationType;
 import jakarta.persistence.*;
-
-import java.time.LocalDateTime;
-
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "notifications")
@@ -21,19 +19,18 @@ public class Notifications {
     @JoinColumn(name = "user_id", nullable = true)
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Users user;
-    
+
     @ManyToOne
-    @JoinColumn(name = "business_id",nullable = true)
+    @JoinColumn(name = "business_id", nullable = true)
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Businesses business;
-
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String message;
 
-    @Enumerated(EnumType.STRING) 
-    @Column(name = "notification_type", nullable = false)
-    private NotificationType notificationType;
+    @ManyToOne
+    @JoinColumn(name = "notification_type_id", nullable = false)
+    private NotificationTypeEntity notificationType;
 
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
@@ -46,18 +43,17 @@ public class Notifications {
 
     public Notifications() {}
 
-    public Notifications(Users user, String message, NotificationType notificationType) {
+    public Notifications(Users user, String message, NotificationTypeEntity notificationType) {
         this.user = user;
         this.message = message;
         this.notificationType = notificationType;
     }
-    
-    public Notifications(Businesses business, String message, NotificationType notificationType) {
+
+    public Notifications(Businesses business, String message, NotificationTypeEntity notificationType) {
         this.business = business;
         this.message = message;
         this.notificationType = notificationType;
     }
-
 
     @PrePersist
     protected void onCreate() {
@@ -69,7 +65,7 @@ public class Notifications {
         this.updatedAt = LocalDateTime.now();
     }
 
-    // Getters & Setters...
+    // Getters and Setters
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -77,11 +73,14 @@ public class Notifications {
     public Users getUser() { return user; }
     public void setUser(Users user) { this.user = user; }
 
+    public Businesses getBusiness() { return business; }
+    public void setBusiness(Businesses business) { this.business = business; }
+
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
 
-    public NotificationType getNotificationType() { return notificationType; }
-    public void setNotificationType(NotificationType notificationType) { this.notificationType = notificationType; }
+    public NotificationTypeEntity getNotificationType() { return notificationType; }
+    public void setNotificationType(NotificationTypeEntity notificationType) { this.notificationType = notificationType; }
 
     public Boolean getRead() { return isRead; }
     public void setIsRead(Boolean isRead) { this.isRead = isRead; }
@@ -91,13 +90,4 @@ public class Notifications {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
-    
-    public Businesses getBusiness() {
-        return business;
-    }
-
-    public void setBusiness(Businesses business) {
-        this.business = business;
-        }
-
 }

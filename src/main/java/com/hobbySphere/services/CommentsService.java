@@ -1,7 +1,6 @@
 package com.hobbySphere.services;
 
 import com.hobbySphere.entities.Comments;
-import com.hobbySphere.enums.*;
 import com.hobbySphere.entities.Posts;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.repositories.CommentsRepository;
@@ -32,12 +31,12 @@ public class CommentsService {
         Comments comment = new Comments(post, user, content);
         Comments savedComment = commentsRepo.save(comment);
 
-        // 🔔 Ajouter notification au propriétaire du post
+        // 🔔 Add notification for the post owner
         if (!user.getId().equals(post.getUser().getId())) {
             notificationsService.createNotification(
                     post.getUser(),
-                    user.getUsername() + " comment in your post",
-                    NotificationType.ACTIVITY_UPDATE
+                    user.getUsername() + " commented on your post",
+                    "ACTIVITY_UPDATE"
             );
         }
 
@@ -54,14 +53,11 @@ public class CommentsService {
         Comments comment = commentsRepo.findById(commentId)
             .orElseThrow(() -> new RuntimeException("Comment not found"));
 
-        // Optional: autoriser seulement l'auteur du commentaire à le supprimer
+        // Only allow the author to delete their comment
         if (!comment.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("You are not authorized to delete this comment");
         }
 
         commentsRepo.delete(comment);
     }
-
-    
-    
 }

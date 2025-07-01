@@ -6,8 +6,10 @@ import com.hobbySphere.entities.Interests;
 import com.hobbySphere.entities.PendingUser;
 import com.hobbySphere.entities.UserInterests;
 import com.hobbySphere.entities.Users;
-import com.hobbySphere.enums.UserStatus;
+import com.hobbySphere.entities.UserStatus;
+
 import com.hobbySphere.repositories.InterestsRepository;
+import com.hobbySphere.repositories.UserStatusRepository;
 import com.hobbySphere.repositories.PendingUserRepository;
 import com.hobbySphere.repositories.UserInterestsRepository;
 import com.hobbySphere.repositories.UsersRepository;
@@ -59,6 +61,10 @@ public class UserService {
     
     @Autowired
     private AdminUserService adminUserService;
+    
+    @Autowired
+    private UserStatusRepository userStatusRepository;
+
 
     @Autowired
     private final EmailService emailService;
@@ -68,18 +74,25 @@ public class UserService {
         this.emailService = emailService;
     }
     
+    private UserStatus getStatus(String name) {
+        return userStatusRepository.findByName(name.toUpperCase())
+            .orElseThrow(() -> new RuntimeException("UserStatus " + name + " not found"));
+    }
+
+    
     public boolean sendVerificationCodeForRegistration(Map<String, String> userData) {
         String email = userData.get("email");
         String phone = userData.get("phoneNumber");
         String password = userData.get("password");
 
         // Default status = PENDING
-        UserStatus statusEnum = UserStatus.PENDING;
+        UserStatus statusEnum = getStatus("PENDING");
+
         String statusStr = userData.get("status");
         if (statusStr != null) {
             try {
-                statusEnum = UserStatus.valueOf(statusStr.toUpperCase());
-            } catch (IllegalArgumentException e) {
+                statusEnum = getStatus(statusStr.toUpperCase());
+            } catch (Exception e) {
                 throw new RuntimeException("Invalid status value: " + statusStr);
             }
         }
@@ -97,7 +110,7 @@ public class UserService {
         // ✅ Uniqueness checks
         if (emailProvided) {
             Users existing = userRepository.findByEmail(email);
-            if (existing != null && existing.getStatus() != UserStatus.DELETED) {
+            if (existing != null && !"DELETED".equals(existing.getStatus().getName())) {
                 throw new RuntimeException("Email already in use.");
             }
             if (pendingUserRepository.existsByEmail(email)) {
@@ -107,7 +120,7 @@ public class UserService {
 
         if (phoneProvided) {
             Users existing = userRepository.findByPhoneNumber(phone);
-            if (existing != null && existing.getStatus() != UserStatus.DELETED) {
+            if (existing != null && !"DELETED".equals(existing.getStatus().getName())) {
                 throw new RuntimeException("Phone number already in use.");
             }
             if (pendingUserRepository.existsByPhoneNumber(phone)) {
@@ -148,7 +161,6 @@ public class UserService {
 
         return true;
     }
-
 
     public boolean resendVerificationCode(String emailOrPhone) {
         PendingUser pending;
@@ -211,7 +223,7 @@ public class UserService {
         user.setEmail(pending.getEmail());
         user.setPasswordHash(pending.getPasswordHash());
         user.setIsPublicProfile(pending.getIsPublicProfile());
-        user.setStatus(UserStatus.ACTIVE);
+        user.setStatus(getStatus("ACTIVE")); // ✅ entity version
         user.setCreatedAt(LocalDateTime.now());
 
         Users saved = userRepository.save(user);
@@ -221,6 +233,7 @@ public class UserService {
 
         return saved.getId(); // ✅ return user ID for next steps
     }
+
 
 
 
@@ -240,7 +253,7 @@ public class UserService {
         user.setPhoneNumber(pending.getPhoneNumber());
         user.setPasswordHash(pending.getPasswordHash());
         user.setIsPublicProfile(pending.getIsPublicProfile());
-        user.setStatus(UserStatus.ACTIVE);
+        user.setStatus(getStatus("ACTIVE")); // ✅ using entity
         user.setCreatedAt(LocalDateTime.now());
 
         Users saved = userRepository.save(user);
@@ -250,6 +263,7 @@ public class UserService {
 
         return saved.getId(); // ✅ return userId to use in next steps
     }
+
     
     public boolean completeUserProfile(Long userId, String username, String firstName, String lastName, MultipartFile profileImage) throws IOException {
         Users user = userRepository.findById(userId)
@@ -345,7 +359,7 @@ public class UserService {
 
 	public List<UserDto> getAllUserDtos() {
 	    return userRepository.findAll().stream()
-	            .filter(user -> user.getStatus() == UserStatus.ACTIVE)
+	            .filter(user -> "ACTIVE".equals(user.getStatus().getName()))
 	            .filter(Users::isPublicProfile)
 	            .map(UserDto::new)
 	            .toList();
@@ -481,10 +495,11 @@ public class UserService {
     
     public List<Users> getAllUsers() {
         return userRepository.findAll().stream()
-                .filter(user -> user.getStatus() == UserStatus.ACTIVE)
+                .filter(user -> "ACTIVE".equals(user.getStatus().getName()))
                 .filter(Users::isPublicProfile)
                 .toList();
     }
+
 
 
     public Users findByPhoneNumber(String phoneNumber) {
@@ -536,7 +551,7 @@ public class UserService {
 
         // ✅ Apply all filters together
         return potentialFriends.stream()
-            .filter(user -> user.getStatus() == UserStatus.ACTIVE)
+            .filter(user -> "ACTIVE".equals(user.getStatus().getName()))
             .filter(Users::isPublicProfile)
             .filter(user -> !currentFriends.contains(user))
             .filter(user -> !friendshipService.didBlock(currentUser, user))
@@ -562,12 +577,12 @@ public class UserService {
         LocalDateTime cutoff = LocalDateTime.now().minusDays(30);
 
         List<Users> inactiveUsers = userRepository.findAll().stream()
-                .filter(u -> u.getStatus() == UserStatus.INACTIVE)
+                .filter(u -> "INACTIVE".equals(u.getStatus().getName()))
                 .filter(u -> u.getUpdatedAt() != null && u.getUpdatedAt().isBefore(cutoff))
                 .toList();
 
         for (Users user : inactiveUsers) {
-            user.setStatus(UserStatus.DELETED);
+            user.setStatus(getStatus("DELETED")); // ✅ set via entity
             user.setUpdatedAt(LocalDateTime.now());
             userRepository.save(user);
             System.out.println("Soft-deleted user: " + user.getEmail());
@@ -579,7 +594,7 @@ public class UserService {
         LocalDateTime cutoff = LocalDateTime.now().minusDays(90);
 
         List<Users> toDelete = userRepository.findAll().stream()
-                .filter(u -> u.getStatus() == UserStatus.DELETED)
+                .filter(u -> "DELETED".equals(u.getStatus().getName()))
                 .filter(u -> u.getUpdatedAt() != null && u.getUpdatedAt().isBefore(cutoff))
                 .toList();
 
@@ -588,6 +603,7 @@ public class UserService {
             System.out.println("Permanently deleted user: " + user.getEmail());
         }
     }
+
 
     public Users handleGoogleUser(String email, String fullName, String pictureUrl, AtomicBoolean wasInactive) {
         System.out.println("🔥 handleGoogleUser() called");
@@ -600,15 +616,14 @@ public class UserService {
             System.out.println("👀 User already exists: " + existingUser.getUsername());
 
             // 🔁 If INACTIVE, mark it but DO NOT update the DB yet
-            if (existingUser.getStatus() == UserStatus.INACTIVE) {
+            if ("INACTIVE".equals(existingUser.getStatus().getName())) {
                 System.out.println("🟡 User is INACTIVE. Reactivating...");
-                existingUser.setStatus(UserStatus.ACTIVE); // ✅ Reactivate
+                existingUser.setStatus(getStatus("ACTIVE")); // ✅ Reactivate using entity
                 existingUser.setUpdatedAt(LocalDateTime.now());
                 existingUser.setLastLogin(LocalDateTime.now());
                 wasInactive.set(true);
-                return userRepository.save(existingUser); // ✅ Save updated user
+                return userRepository.save(existingUser);
             }
-
 
             existingUser.setLastLogin(LocalDateTime.now());
             return userRepository.save(existingUser);
@@ -629,7 +644,7 @@ public class UserService {
         newUser.setLastName(lastName);
         newUser.setProfilePictureUrl(pictureUrl);
         newUser.setIsPublicProfile(true);
-        newUser.setStatus(UserStatus.ACTIVE); // ✅ new Google accounts are ACTIVE
+        newUser.setStatus(getStatus("ACTIVE")); // ✅ set via DB entity
         newUser.setPasswordHash("");
         newUser.setCreatedAt(LocalDateTime.now());
         newUser.setLastLogin(LocalDateTime.now());
@@ -644,8 +659,8 @@ public class UserService {
         Users user = userRepository.findById(userId)
             .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (user.getStatus() == UserStatus.INACTIVE) {
-            user.setStatus(UserStatus.ACTIVE);
+        if ("INACTIVE".equals(user.getStatus().getName())) {
+            user.setStatus(getStatus("ACTIVE")); // ✅ use entity
             user.setUpdatedAt(LocalDateTime.now());
             user.setLastLogin(LocalDateTime.now());
             return userRepository.save(user);
@@ -653,6 +668,7 @@ public class UserService {
 
         return user;
     }
+
     
     public Optional<Users> findById(Long id) {
         return userRepository.findById(id);

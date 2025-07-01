@@ -3,7 +3,7 @@ package com.hobbySphere.controller;
 import com.hobbySphere.repositories.*;
 import com.hobbySphere.entities.*;
 
-import com.hobbySphere.enums.UserStatus;
+
 import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.*;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
@@ -60,6 +60,10 @@ public class AuthController {
 
     @Autowired
     private UsersRepository UserRepository;
+    
+    @Autowired
+    private UserStatusRepository userStatusRepository;
+
 
     @PostMapping(value = "/send-verification")
     public ResponseEntity<?> sendVerification(
@@ -304,12 +308,14 @@ public class AuthController {
                     .body(Map.of("message", "Incorrect password"));
         }
 
-        if (existingUser.getStatus() == UserStatus.DELETED) {
+        String status = existingUser.getStatus().getName();
+
+        if ("DELETED".equalsIgnoreCase(status)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "This account has been deleted and cannot be accessed."));
         }
 
-        if (existingUser.getStatus() == UserStatus.INACTIVE) {
+        if ("INACTIVE".equalsIgnoreCase(status)) {
             String tempToken = jwtUtil.generateToken(existingUser);
 
             Map<String, Object> inactiveUserData = new HashMap<>();
@@ -364,11 +370,15 @@ public class AuthController {
 
         Users user = userOpt.get();
 
-        if (user.getStatus() != UserStatus.INACTIVE) {
+        String currentStatus = user.getStatus().getName();
+        if (!"INACTIVE".equalsIgnoreCase(currentStatus)) {
             return ResponseEntity.badRequest().body(Map.of("error", "User is not inactive"));
         }
 
-        user.setStatus(UserStatus.ACTIVE);
+        UserStatus activeStatus = userStatusRepository.findByNameIgnoreCase("ACTIVE")
+        	    .orElseThrow(() -> new RuntimeException("Status 'ACTIVE' not found"));
+
+        user.setStatus(activeStatus);
         user.setLastLogin(LocalDateTime.now());
         userService.save(user);
 
@@ -458,12 +468,14 @@ public class AuthController {
                     .body(Map.of("message", "Incorrect password"));
         }
 
-        if (existingUser.getStatus() == UserStatus.DELETED) {
+        String currentStatus = existingUser.getStatus().getName();
+
+        if ("DELETED".equalsIgnoreCase(currentStatus)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "This account has been deleted and cannot be accessed."));
         }
 
-        if (existingUser.getStatus() == UserStatus.INACTIVE) {
+        if ("INACTIVE".equalsIgnoreCase(currentStatus)) {
             String tempToken = jwtUtil.generateToken(existingUser);
 
             Map<String, Object> inactiveUserData = new HashMap<>();

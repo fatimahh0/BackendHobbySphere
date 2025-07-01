@@ -6,6 +6,7 @@ import com.hobbySphere.repositories.AppSettingsRepository;
 import com.hobbySphere.repositories.CurrencyRepository;
 import com.hobbySphere.repositories.UsersRepository;
 
+
 import jakarta.transaction.Transactional;
 
 import com.hobbySphere.dto.BookingDTO;
@@ -15,6 +16,8 @@ import com.hobbySphere.entities.ActivityBookings;
 import com.hobbySphere.entities.AppSettings;
 import com.hobbySphere.entities.Currency;
 import com.hobbySphere.entities.Users;
+import com.hobbySphere.entities.UserStatus; 
+
 import com.hobbySphere.enums.CurrencyType;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -96,10 +99,10 @@ public class ActivityBookingService {
         String message = fullName + " cancelled their booking for: " + booking.getActivity().getActivityName();
 
         notificationsService.notifyBusiness(
-            booking.getActivity().getBusiness(),
-            message,
-            NotificationType.BOOKING_CANCELLED
-        );
+        	    booking.getActivity().getBusiness(),
+        	    message,
+        	    "BOOKING_CANCELLED"
+        	);
 
     }
 
@@ -119,10 +122,11 @@ public class ActivityBookingService {
         String message = fullName + " returned a booking to pending for: " + booking.getActivity().getActivityName();
 
         notificationsService.notifyBusiness(
-            booking.getActivity().getBusiness(),
-            message,
-            NotificationType.BOOKING_PENDING
-        );
+        	    booking.getActivity().getBusiness(),
+        	    message,
+        	    "BOOKING_PENDING"
+        	);
+
 
     }
 
@@ -155,10 +159,11 @@ public class ActivityBookingService {
         String message = fullName + " booked your activity: " + savedBooking.getActivity().getActivityName();
 
         notificationsService.notifyBusiness(
-            savedBooking.getActivity().getBusiness(),
-            message,
-            NotificationType.BOOKING_CREATED
-        );
+        	    savedBooking.getActivity().getBusiness(),
+        	    message,
+        	    "BOOKING_CREATED"
+        	);
+
 
         return savedBooking;
     }
@@ -182,7 +187,7 @@ public class ActivityBookingService {
         notificationsService.createNotification(
         	    booking.getUser(),
         	    "Your booking for activity '" + booking.getActivity().getActivityName() + "' has been rejected.",
-        	    NotificationType.ACTIVITY_UPDATE
+        	    "ACTIVITY_UPDATE"
         	);
 
     }
@@ -206,10 +211,11 @@ public class ActivityBookingService {
 
 	    // ✅ Send notification to user
 	    notificationsService.createNotification(
-	        booking.getUser(),
-	        "Your booking for activity '" + booking.getActivity().getActivityName() + "' is now pending again.",
-	        NotificationType.ACTIVITY_UPDATE
-	    );
+	    	    booking.getUser(),
+	    	    "Your booking for activity '" + booking.getActivity().getActivityName() + "' is now pending again.",
+	    	    "ACTIVITY_UPDATE"
+	    	);
+
 	}
 	
 	@Autowired
@@ -284,5 +290,6 @@ public class ActivityBookingService {
 	    userRepository.save(user);
 	    return true;
 	}
+
 
 }
