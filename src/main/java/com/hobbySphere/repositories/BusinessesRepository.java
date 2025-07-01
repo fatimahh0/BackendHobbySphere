@@ -1,9 +1,7 @@
 package com.hobbySphere.repositories;
 
-import com.hobbySphere.entities.BusinessAdmins;
+import com.hobbySphere.entities.BusinessStatus; // ✅ updated import
 import com.hobbySphere.entities.Businesses;
-import com.hobbySphere.enums.BusinessStatus;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -19,9 +17,8 @@ public interface BusinessesRepository extends JpaRepository<Businesses, Long> {
 
     Optional<Businesses> findByEmail(String email);
 
-    Optional<Businesses> findByPhoneNumber(String phoneNumber); 
-    
- 
-    List<Businesses> findByIsPublicProfileTrueAndStatus(BusinessStatus status);
+    Optional<Businesses> findByPhoneNumber(String phoneNumber);
 
+    // ✅ Use BusinessStatus entity as foreign key
+    List<Businesses> findByIsPublicProfileTrueAndStatus(BusinessStatus status);
 }

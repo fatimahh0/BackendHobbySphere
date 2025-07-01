@@ -63,7 +63,7 @@ public class ActivityBookingService {
 
     // Method to get bookings by user email and statuses (e.g., Pending, Completed, Canceled)
     public List<ActivityBookings> getBookingsByUserIdAndStatuses(Long userId, List<String> statuses) {
-        List<ActivityBookings> bookings = activityBookingsRepository.findByUserIdAndStatusesAndActiveBusiness(userId, statuses);
+        List<ActivityBookings> bookings = activityBookingsRepository.findByUserIdAndStatusesAndAsctiveBusiness(userId, statuses);
         LocalDateTime now = LocalDateTime.now();
 
         for (ActivityBookings booking : bookings) {

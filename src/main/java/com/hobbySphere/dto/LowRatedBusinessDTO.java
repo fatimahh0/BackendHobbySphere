@@ -1,14 +1,12 @@
 package com.hobbySphere.dto;
 
-import com.hobbySphere.enums.BusinessStatus;
-
 public class LowRatedBusinessDTO {
     private Long id;
     private String name;
-    private BusinessStatus status;
+    private String status; // ✅ just store the status name
     private double averageRating;
 
-    public LowRatedBusinessDTO(Long id, String name, BusinessStatus status, double averageRating) {
+    public LowRatedBusinessDTO(Long id, String name, String status, double averageRating) {
         this.id = id;
         this.name = name;
         this.status = status;
@@ -23,7 +21,7 @@ public class LowRatedBusinessDTO {
         return name;
     }
 
-    public BusinessStatus getStatus() {
+    public String getStatus() {
         return status;
     }
 

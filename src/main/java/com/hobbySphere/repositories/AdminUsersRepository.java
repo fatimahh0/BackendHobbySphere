@@ -2,6 +2,7 @@ package com.hobbySphere.repositories;
 
 import com.hobbySphere.entities.AdminUsers;
 import com.hobbySphere.entities.Businesses;
+import com.hobbySphere.entities.Role;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -29,6 +30,8 @@ public interface AdminUsersRepository extends JpaRepository<AdminUsers, Long> {
     List<AdminUsers> findByEmailAndBusiness(String email, Businesses business);
 
 	List<AdminUsers> findAllByEmail(String email);
+
+
 
 
 }

@@ -2,9 +2,10 @@ package com.hobbySphere.controller;
 
 import com.hobbySphere.dto.*;
 import com.hobbySphere.entities.AdminUsers;
+import com.hobbySphere.entities.BusinessStatus;
 import com.hobbySphere.entities.Businesses;
 import com.hobbySphere.entities.Users;
-import com.hobbySphere.enums.BusinessStatus;
+
 import com.hobbySphere.enums.UserStatus;
 import com.hobbySphere.services.AdminActivityService;
 import com.hobbySphere.services.AdminStatsService;
@@ -39,6 +40,7 @@ public class AdminController {
     @Autowired private UsersRepository usersRepository;
     @Autowired private AdminUsersRepository adminUsersRepository;
     @Autowired private ReviewRepository reviewRepository;
+    @Autowired private BusinessStatusRepository businessStatusRepository;
     @Autowired private JwtUtil jwtUtil;
     @Autowired
     private com.hobbySphere.services.BusinessService businessService;
@@ -367,20 +369,18 @@ public class AdminController {
 
         try {
             Businesses business = businessService.findById(businessId);
-            business.setStatus(BusinessStatus.INACTIVE);
+
+          
+            BusinessStatus inactiveStatus = businessStatusRepository.findByNameIgnoreCase("INACTIVEBYBUSINESS")
+                .orElseThrow(() -> new RuntimeException("INACTIVE status not found in DB"));
+
+            business.setStatus(inactiveStatus); 
             businessService.save(business);
+
             return ResponseEntity.ok("Business marked as INACTIVE due to low rating.");
         } catch (Exception e) {
-            return ResponseEntity.status(404).body("Business not found.");
+            return ResponseEntity.status(404).body("Business not found or status issue.");
         }
-    }
-
-    @GetMapping("/businesses/low-rated")
-    @Operation(summary = "Get businesses with average rating ≤ 3", description = "Returns list of low-rated businesses for admin review")
-    public ResponseEntity<?> getLowRatedBusinesses(@RequestHeader("Authorization") String token) {
-        if (!isSuperAdmin(token)) return ResponseEntity.status(401).body("Unauthorized");
-
-        return ResponseEntity.ok(businessService.getLowRatedBusinesses());
     }
 
 

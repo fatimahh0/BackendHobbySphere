@@ -2,7 +2,7 @@ package com.hobbySphere.controller;
 
 import com.hobbySphere.repositories.*;
 import com.hobbySphere.entities.*;
-import com.hobbySphere.enums.BusinessStatus;
+
 import com.hobbySphere.enums.UserStatus;
 import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.*;
@@ -507,7 +507,6 @@ public class AuthController {
     }
 
 
-    // Business Login
     @PostMapping("/business/login")
     public ResponseEntity<?> businessLogin(@RequestBody @Valid Users user) {
         Optional<Businesses> optionalBusiness = businessService.findByEmail(user.getEmail());
@@ -524,12 +523,14 @@ public class AuthController {
                     .body(Map.of("message", "Incorrect password"));
         }
 
-        if (business.getStatus() == BusinessStatus.DELETED) {
+        String statusName = business.getStatus() != null ? business.getStatus().getName() : "";
+
+        if ("DELETED".equalsIgnoreCase(statusName)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "This account has been deleted and cannot be accessed."));
         }
 
-        if (business.getStatus() == BusinessStatus.INACTIVE) {
+        if ("INACTIVE".equalsIgnoreCase(statusName)) {
             String tempToken = jwtUtil.generateToken(business);
 
             Map<String, Object> businessData = new HashMap<>();
@@ -596,12 +597,14 @@ public class AuthController {
                     .body(Map.of("message", "Incorrect password"));
         }
 
-        if (business.getStatus() == BusinessStatus.DELETED) {
+        String statusName = business.getStatus() != null ? business.getStatus().getName() : "";
+
+        if ("DELETED".equalsIgnoreCase(statusName)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "This account has been deleted and cannot be accessed."));
         }
 
-        if (business.getStatus() == BusinessStatus.INACTIVE) {
+        if ("INACTIVE".equalsIgnoreCase(statusName)) {
             String tempToken = jwtUtil.generateToken(business);
 
             Map<String, Object> businessData = new HashMap<>();

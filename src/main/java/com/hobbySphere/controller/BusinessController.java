@@ -1,7 +1,8 @@
 package com.hobbySphere.controller;
 
+import com.hobbySphere.entities.BusinessStatus;
 import com.hobbySphere.entities.Businesses;
-import com.hobbySphere.enums.BusinessStatus;
+import com.hobbySphere.repositories.BusinessStatusRepository;
 import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.BusinessService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,6 +36,9 @@ public class BusinessController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private BusinessStatusRepository businessStatusRepository;
+    
     private boolean isAuthorized(String token, Long targetBusinessId) {
         if (token == null || !token.startsWith("Bearer ")) return false;
         String jwt = token.substring(7);
@@ -216,6 +220,8 @@ public class BusinessController {
         return ResponseEntity.ok(businesses);
     }
 
+  
+
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateBusinessStatus(
             @PathVariable Long id,
@@ -246,12 +252,16 @@ public class BusinessController {
 
         try {
             Businesses business = businessService.findById(id);
-            business.setStatus(BusinessStatus.valueOf(newStatus.toUpperCase()));
+            BusinessStatus statusEntity = businessStatusRepository.findByName(newStatus.toUpperCase())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid status value"));
+            
+            business.setStatus(statusEntity);
             return ResponseEntity.ok(businessService.save(business));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("Invalid status value");
         }
     }
+
 
     @Operation(summary = "Toggle public profile visibility")
     @PutMapping("/{id}/visibility")
@@ -272,6 +282,68 @@ public class BusinessController {
         Businesses business = businessService.findById(id);
         business.setIsPublicProfile(isPublic);
         return ResponseEntity.ok(businessService.save(business));
+    }
+
+    
+    @Operation(summary = "Send Manager Invitation Email")
+    @PostMapping("/{id}/send-manager-invite")
+    public ResponseEntity<?> sendManagerInvite(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> request) {
+
+        if (!isAuthorized(authHeader, id)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
+
+        String email = request.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body("Email is required");
+        }
+
+        Businesses business = businessService.findById(id);
+        if (business == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Business not found");
+        }
+
+        try {
+            businessService.sendManagerInvite(email, business);
+            return ResponseEntity.ok(Map.of("message", "Invitation sent successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to send invite: " + e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "Register new manager from invite")
+    @PostMapping("/register-manager")
+    public ResponseEntity<?> registerManagerFromInvite(@RequestBody Map<String, String> request) {
+        try {
+            String token = request.get("token");
+            String username = request.get("username");
+            String firstName = request.get("firstName");
+            String lastName = request.get("lastName");
+            String password = request.get("password");
+
+            if (token == null || username == null || firstName == null || lastName == null || password == null) {
+                return ResponseEntity.badRequest().body("Missing required fields");
+            }
+
+            boolean success = businessService.registerManagerFromInvite(
+                token, username, firstName, lastName, password
+            );
+
+            if (success) {
+                return ResponseEntity.ok(Map.of("message", "Manager registered successfully"));
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                     .body(Map.of("error", "Invalid token or already used"));
+            }
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body(Map.of("error", "Failed to register manager: " + e.getMessage()));
+        }
     }
 
 

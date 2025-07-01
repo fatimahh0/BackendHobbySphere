@@ -3,6 +3,7 @@ package com.hobbySphere.services;
 import com.hobbySphere.entities.Businesses;
 import com.hobbySphere.dto.LowRatedBusinessDTO;
 import com.hobbySphere.entities.Activities;
+import com.hobbySphere.entities.AdminUsers;
 import com.hobbySphere.repositories.*;
 import java.util.Random;
 
@@ -13,8 +14,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import com.hobbySphere.entities.PendingBusiness;
+import com.hobbySphere.entities.PendingManager;
 import com.hobbySphere.entities.Review;
-import com.hobbySphere.enums.BusinessStatus;
+import com.hobbySphere.entities.Role;
+import com.hobbySphere.entities.BusinessStatus; 
+
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -61,7 +65,18 @@ public class BusinessService {
 
     @Autowired
     private PendingBusinessRepository pendingBusinessRepository;
+    
+    @Autowired
+    private PendingManagerRepository pendingManagerRepository;
 
+    @Autowired
+    private RoleRepository roleRepository;
+    
+    @Autowired
+    private BusinessStatusRepository businessStatusRepository;
+
+
+    
     private final EmailService emailService;
 
     public BusinessService(EmailService emailService) {
@@ -147,16 +162,15 @@ public class BusinessService {
             throw new RuntimeException("Only one of email or phone should be provided.");
         }
 
-        // Status default
-        BusinessStatus status = BusinessStatus.ACTIVE;
-        if (statusStr != null) {
-            status = BusinessStatus.valueOf(statusStr.toUpperCase());
-        }
+        // ✅ Convert status string to BusinessStatus entity
+        BusinessStatus status = businessStatusRepository.findByName(
+            statusStr != null ? statusStr.toUpperCase() : "ACTIVE"
+        ).orElseThrow(() -> new RuntimeException("Invalid or missing status"));
 
-        // Check duplicates
+        // ✅ Check duplicates
         if (email != null) {
             businessRepository.findByEmail(email).ifPresent(existing -> {
-                if (existing.getStatus() != BusinessStatus.DELETED) {
+                if (!existing.getStatus().getName().equals("DELETED")) {
                     throw new RuntimeException("Email already in use.");
                 } else {
                     businessRepository.delete(existing);
@@ -169,7 +183,7 @@ public class BusinessService {
 
         if (phone != null) {
             businessRepository.findByPhoneNumber(phone).ifPresent(existing -> {
-                if (existing.getStatus() != BusinessStatus.DELETED) {
+                if (!existing.getStatus().getName().equals("DELETED")) {
                     throw new RuntimeException("Phone already in use.");
                 } else {
                     businessRepository.delete(existing);
@@ -180,12 +194,12 @@ public class BusinessService {
             }
         }
 
-        // Generate code
+        // ✅ Generate code
         String code = (phone != null)
             ? "123456"
             : String.format("%06d", new Random().nextInt(999999));
 
-        // Create pending business
+        // ✅ Create pending business
         PendingBusiness pending = new PendingBusiness();
         pending.setEmail(email);
         pending.setPhoneNumber(phone);
@@ -197,6 +211,7 @@ public class BusinessService {
 
         PendingBusiness saved = pendingBusinessRepository.save(pending);
 
+        // ✅ Send email or simulate SMS
         if (email != null) {
             String html = """
                 <html>
@@ -213,7 +228,7 @@ public class BusinessService {
             System.out.println("📱 Sending SMS to " + phone + ": Your verification code is " + code);
         }
 
-        return saved.getId(); // To use in next step
+        return saved.getId(); // ✅ Return ID for next step
     }
 
 
@@ -225,11 +240,18 @@ public class BusinessService {
             return null; // or throw exception if preferred
         }
 
+        // ✅ Fallback to "ACTIVE" status entity if pending.getStatus() is null
+        BusinessStatus status = pending.getStatus();
+        if (status == null) {
+            status = businessStatusRepository.findByName("ACTIVE")
+                .orElseThrow(() -> new RuntimeException("Default status 'ACTIVE' not found"));
+        }
+
         Businesses business = new Businesses();
         business.setEmail(pending.getEmail());
         business.setPhoneNumber(pending.getPhoneNumber());
         business.setPasswordHash(pending.getPasswordHash());
-        business.setStatus(pending.getStatus() != null ? pending.getStatus() : BusinessStatus.ACTIVE);
+        business.setStatus(status);
         business.setIsPublicProfile(pending.getIsPublicProfile());
         business.setCreatedAt(LocalDateTime.now());
         business.setUpdatedAt(LocalDateTime.now());
@@ -239,6 +261,7 @@ public class BusinessService {
 
         return saved.getId(); // ✅ Return businessId for next step
     }
+
 
 
     public boolean resendBusinessVerificationCode(String emailOrPhone) {
@@ -308,11 +331,18 @@ public class BusinessService {
             return null; // or throw new RuntimeException("Invalid code");
         }
 
+        // ✅ If status is null, fetch "ACTIVE" status from DB
+        BusinessStatus status = pending.getStatus();
+        if (status == null) {
+            status = businessStatusRepository.findByName("ACTIVE")
+                .orElseThrow(() -> new RuntimeException("Default status 'ACTIVE' not found"));
+        }
+
         Businesses business = new Businesses();
         business.setPhoneNumber(pending.getPhoneNumber());
         business.setEmail(pending.getEmail());
         business.setPasswordHash(pending.getPasswordHash());
-        business.setStatus(pending.getStatus() != null ? pending.getStatus() : BusinessStatus.ACTIVE);
+        business.setStatus(status);
         business.setIsPublicProfile(pending.getIsPublicProfile());
         business.setCreatedAt(LocalDateTime.now());
         business.setUpdatedAt(LocalDateTime.now());
@@ -322,6 +352,7 @@ public class BusinessService {
 
         return saved.getId(); // To pass to profile completion step
     }
+
 
     public Businesses completeBusinessProfile(
             Long businessId,
@@ -536,34 +567,43 @@ public class BusinessService {
     }
 
     public List<Businesses> getAllPublicActiveBusinesses() {
-        return businessRepository.findByIsPublicProfileTrueAndStatus(BusinessStatus.ACTIVE);
+        BusinessStatus activeStatus = businessStatusRepository.findByName("ACTIVE")
+            .orElseThrow(() -> new RuntimeException("ACTIVE status not found"));
+
+        return businessRepository.findByIsPublicProfileTrueAndStatus(activeStatus);
     }
+
     
     @Scheduled(cron = "0 0 2 * * *")
     public void deleteInactiveBusinessesOlderThan30Days() {
+        BusinessStatus inactiveStatus = businessStatusRepository.findByName("INACTIVE")
+            .orElseThrow(() -> new RuntimeException("INACTIVE status not found"));
+
+        BusinessStatus deletedStatus = businessStatusRepository.findByName("DELETED")
+            .orElseThrow(() -> new RuntimeException("DELETED status not found"));
+
         LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30);
 
         List<Businesses> toSoftDelete = businessRepository.findAll().stream()
-                .filter(b -> b.getStatus() == BusinessStatus.INACTIVE
+                .filter(b -> b.getStatus().getName().equals("INACTIVE")
                         && b.getUpdatedAt() != null
                         && b.getUpdatedAt().isBefore(cutoffDate))
                 .toList();
 
         for (Businesses b : toSoftDelete) {
-            b.setStatus(BusinessStatus.DELETED);
+            b.setStatus(deletedStatus);
             b.setUpdatedAt(LocalDateTime.now());
             businessRepository.save(b);
             System.out.println("Soft-deleted business: " + b.getEmail());
         }
     }
 
-    
-    @Scheduled(cron = "0 0 3 * * *") // every day at 3 AM
+    @Scheduled(cron = "0 0 3 * * *")
     public void permanentlyDeleteBusinessesAfter90Days() {
         LocalDateTime cutoff = LocalDateTime.now().minusDays(90);
 
         List<Businesses> toDelete = businessRepository.findAll().stream()
-                .filter(b -> b.getStatus() == BusinessStatus.DELETED
+                .filter(b -> b.getStatus().getName().equals("DELETED")
                         && b.getUpdatedAt() != null
                         && b.getUpdatedAt().isBefore(cutoff))
                 .toList();
@@ -573,6 +613,7 @@ public class BusinessService {
             System.out.println("Permanently deleted business: " + b.getEmail());
         }
     }
+
 
     public Businesses findByEmailOrThrow(String email) {
         return businessRepository.findByEmail(email)
@@ -593,12 +634,13 @@ public class BusinessService {
                     .orElse(0.0);
 
             if (avg <= 3.0) {
-                result.add(new LowRatedBusinessDTO(
-                    b.getId(),
-                    b.getBusinessName(),
-                    b.getStatus(),
-                    avg
-                ));
+            	result.add(new LowRatedBusinessDTO(
+            		    b.getId(),
+            		    b.getBusinessName(),
+            		    b.getStatus().getName(), 
+            		    avg
+            		));
+
             }
         }
 
@@ -613,6 +655,76 @@ public class BusinessService {
         Optional<Businesses> businessOpt = businessRepository.findById(businessId);
         return businessOpt.isPresent() &&
                passwordEncoder.matches(rawPassword, businessOpt.get().getPasswordHash());
+    }
+
+    public void sendManagerInvite(String email, Businesses business) {
+        // Generate unique token
+        String token = UUID.randomUUID().toString();
+
+        // Save to PendingManager table
+        PendingManager pending = new PendingManager(email, business, token);
+        pendingManagerRepository.save(pending);
+
+        // Email content
+        String inviteLink = "http://localhost:5173/assign-manager?token=" + token;
+
+        String html = """
+            <html>
+            <body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+                <h2 style="color: #4CAF50;">You're Invited to Be a Manager!</h2>
+                <p>You have been invited to become a manager at HobbySphere.</p>
+                <p><a href="%s" style="display: inline-block; padding: 10px 20px; background-color: #2196F3; color: white; text-decoration: none; border-radius: 5px;">Complete Registration</a></p>
+                <p>This link will expire in a few days.</p>
+            </body>
+            </html>
+        """.formatted(inviteLink);
+
+        // Send email
+        emailService.sendHtmlEmail(email, "Manager Invitation", html);
+    }
+
+
+    @Transactional
+    public boolean registerManagerFromInvite(String token, String username, String firstName, String lastName, String password) {
+        // 1. Check if token exists
+        Optional<PendingManager> pendingOpt = pendingManagerRepository.findByToken(token);
+        if (pendingOpt.isEmpty()) {
+            return false;
+        }
+
+        PendingManager pending = pendingOpt.get();
+        Businesses business = pending.getBusiness();
+
+        // ✅ 2. Get MANAGER Role using RoleRepository
+        Role managerRole = roleRepository.findByName("MANAGER")
+                .orElseThrow(() -> new RuntimeException("Manager role not found"));
+
+
+        // 3. Check for duplicates (optional good practice)
+        if (adminUsersRepository.findByEmail(pending.getEmail()).isPresent()) {
+            throw new RuntimeException("User already exists as admin");
+        }
+
+        // ✅ 4. Save AdminUser (Manager)
+        AdminUsers newManager = new AdminUsers();
+        newManager.setUsername(username);
+        newManager.setFirstName(firstName);
+        newManager.setLastName(lastName);
+        newManager.setEmail(pending.getEmail());
+        newManager.setPasswordHash(passwordEncoder.encode(password));
+        newManager.setRole(managerRole);
+        newManager.setBusiness(business);
+        newManager.setNotifyActivityUpdates(true);
+        newManager.setNotifyUserFeedback(true);
+        newManager.setCreatedAt(LocalDateTime.now());
+        newManager.setUpdatedAt(LocalDateTime.now());
+
+        adminUsersRepository.save(newManager);
+
+        // 5. Delete the used token
+        pendingManagerRepository.delete(pending);
+
+        return true;
     }
 
 }
