@@ -1,11 +1,11 @@
 package com.hobbySphere.services;
 
 import com.hobbySphere.entities.AdminUsers;
+
 import com.hobbySphere.entities.Interests;
 import com.hobbySphere.entities.PendingUser;
 import com.hobbySphere.entities.UserInterests;
 import com.hobbySphere.entities.Users;
-import com.hobbySphere.enums.LanguageType;
 import com.hobbySphere.enums.UserStatus;
 import com.hobbySphere.repositories.InterestsRepository;
 import com.hobbySphere.repositories.PendingUserRepository;

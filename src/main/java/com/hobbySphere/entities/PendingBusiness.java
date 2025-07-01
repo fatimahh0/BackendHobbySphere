@@ -38,10 +38,9 @@ public class PendingBusiness {
 
     @Column(name = "is_public_profile")
     private Boolean isPublicProfile = true;
-
-    // ✅ Use foreign key instead of enum
+    
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "status")
+    @JoinColumn(name = "status", referencedColumnName = "id")
     private BusinessStatus status;
 
     @Column(name = "created_at")

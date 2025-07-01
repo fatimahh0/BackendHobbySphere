@@ -1,6 +1,5 @@
 package com.hobbySphere.entities;
 
-import com.hobbySphere.enums.LanguageType;
 import com.hobbySphere.enums.UserStatus;
 import jakarta.persistence.*;
 

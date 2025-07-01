@@ -1,10 +1,9 @@
 package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 import java.util.List;
-
-import com.hobbySphere.enums.LanguageType;
 
 @Entity
 @Table(name = "Businesses")
@@ -38,10 +37,6 @@ public class Businesses {
 
     @Column(name = "website_url")
     private String websiteUrl;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "preferred_language")
-    private LanguageType preferredLanguage;
 
     // ✅ FOREIGN KEY version of BusinessStatus
     @ManyToOne(fetch = FetchType.EAGER)
@@ -107,9 +102,6 @@ public class Businesses {
 
     public String getWebsiteUrl() { return websiteUrl; }
     public void setWebsiteUrl(String websiteUrl) { this.websiteUrl = websiteUrl; }
-
-    public LanguageType getPreferredLanguage() { return preferredLanguage; }
-    public void setPreferredLanguage(LanguageType preferredLanguage) { this.preferredLanguage = preferredLanguage; }
 
     public BusinessStatus getStatus() { return status; }
     public void setStatus(BusinessStatus status) { this.status = status; }

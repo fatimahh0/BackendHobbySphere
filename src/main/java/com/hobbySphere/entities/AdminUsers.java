@@ -2,13 +2,13 @@ package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
 
+
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.hobbySphere.enums.LanguageType;
 
 @Entity
 @Table(name = "AdminUsers")
@@ -45,10 +45,6 @@ public class AdminUsers {
 
     @Column(name = "notify_user_feedback")
     private Boolean notifyUserFeedback = true;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "preferred_language")
-    private LanguageType preferredLanguage;
 
     @ManyToOne
     @JoinColumn(name = "business_id", nullable = true)
@@ -180,11 +176,5 @@ public class AdminUsers {
         this.business = business;
     }
 
-    public LanguageType getPreferredLanguage() {
-        return preferredLanguage;
-    }
-
-    public void setPreferredLanguage(LanguageType preferredLanguage) {
-        this.preferredLanguage = preferredLanguage;
-    }
+    
 }

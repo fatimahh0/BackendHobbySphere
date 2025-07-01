@@ -2,13 +2,14 @@ package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
 
+
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import com.hobbySphere.entities.*;
-import com.hobbySphere.enums.LanguageType;
+
 
 @Entity
 @Table(name = "BusinessAdmins")

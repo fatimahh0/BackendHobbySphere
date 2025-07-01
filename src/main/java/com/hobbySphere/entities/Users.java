@@ -1,10 +1,9 @@
 package com.hobbySphere.entities;
 
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 import java.util.List;
-
-import com.hobbySphere.enums.LanguageType;
 import com.hobbySphere.enums.UserStatus;
 
 @Entity
@@ -62,18 +61,6 @@ public class Users {
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
-    }
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "preferred_language")
-    private LanguageType preferredLanguage;
-
-    public LanguageType getPreferredLanguage() {
-        return preferredLanguage;
-    }
-
-    public void setPreferredLanguage(LanguageType preferredLanguage) {
-        this.preferredLanguage = preferredLanguage;
     }
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)

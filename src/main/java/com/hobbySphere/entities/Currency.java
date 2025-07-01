@@ -13,9 +13,9 @@ public class Currency {
     @Column(name = "currency_id")
     private Long id;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "currency_type", nullable = false, unique = true)
-    private CurrencyType currencyType;
+    @Column(name = "currency_type", nullable = false, unique = true, length = 20)
+    private String currencyType;
+
 
     @Column(name = "symbol", length = 5)
     private String symbol;
@@ -38,22 +38,14 @@ public class Currency {
 
     // Default constructor (required by JPA)
     public Currency() {}
-
-    // Constructor with enum
-    public Currency(CurrencyType currencyType) {
-        this.currencyType = currencyType;
-    }
-
-    // Constructor with string type
-    public Currency(String currencyTypeString) {
-        this.currencyType = CurrencyType.valueOf(currencyTypeString.toUpperCase());
-    }
-
+    
     // Constructor with type and symbol
-    public Currency(CurrencyType currencyType, String symbol) {
+ // Keep only this constructor
+    public Currency(String currencyType, String symbol) {
         this.currencyType = currencyType;
         this.symbol = symbol;
     }
+
 
     // Getters and Setters
     public Long getId() {
@@ -64,11 +56,11 @@ public class Currency {
         this.id = id;
     }
 
-    public CurrencyType getCurrencyType() {
+    public String getCurrencyType() {
         return currencyType;
     }
 
-    public void setCurrencyType(CurrencyType currencyType) {
+    public void setCurrencyType(String currencyType) {
         this.currencyType = currencyType;
     }
 

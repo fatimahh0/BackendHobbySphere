@@ -5,6 +5,8 @@ import org.hibernate.annotations.OnDeleteAction;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.hobbySphere.enums.InterestEnum;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -36,6 +38,12 @@ public class ActivityType {
         this.name = name;
         this.interest = interest;
     }
+    
+    public ActivityType(String name, Interests interest) {
+        this.name = name;
+        this.interest = interest;
+    }
+
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

@@ -63,44 +63,40 @@ public ResponseEntity<?> getCurrentCurrency() {
     if (settings == null || settings.getCurrency() == null) {
         return ResponseEntity.ok("CAD"); // or your default
     }
-    return ResponseEntity.ok(settings.getCurrency().getCurrencyType().name());
+    return ResponseEntity.ok(settings.getCurrency().getCurrencyType());
+
 }
 
+@PostMapping("/chooseCurrency")
+public ResponseEntity<?> chooseCurrency(
+        @RequestHeader("Authorization") String token,
+        @RequestBody CurrencyRequest request) {
 
-
-    @PostMapping("/chooseCurrency")
-    public ResponseEntity<?> chooseCurrency(
-            @RequestHeader("Authorization") String token,
-            @RequestBody CurrencyRequest request) {
-
-        if (!isAuthorized(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied.");
-        }
-        
-        currencyService.ensureDefaultCurrencies();
-
-
-        String type = request.getCurrencyType() != null ? request.getCurrencyType().toUpperCase() : "CAD";
-
-        try {
-            CurrencyType currencyType = CurrencyType.valueOf(type);
-            Optional<Currency> selectedCurrency = currencyRepository.findByCurrencyType(currencyType);
-
-            if (selectedCurrency.isPresent()) {
-                // ✅ Update global setting
-                AppSettings settings = appSettingsRepository.findById(1L)
-                    .orElse(new AppSettings());
-                settings.setCurrency(selectedCurrency.get());
-                appSettingsRepository.save(settings);
-
-                return ResponseEntity.ok(selectedCurrency.get());
-            } else {
-                return ResponseEntity.badRequest().body("Currency type not found in the database.");
-            }
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("Invalid currency type. Choose: DOLLAR, EURO, or CAD.");
-        }
+    if (!isAuthorized(token)) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied.");
     }
+
+    // Ensure default currencies exist (e.g., CAD, DOLLAR, EURO)
+    currencyService.ensureDefaultCurrencies();
+
+    // Get requested currency type or fallback to "CAD"
+    String type = request.getCurrencyType() != null ? request.getCurrencyType().toUpperCase() : "CAD";
+
+    // Look up currency by string type
+    Optional<Currency> selectedCurrency = currencyRepository.findByCurrencyType(type);
+
+    if (selectedCurrency.isPresent()) {
+        // Load or create AppSettings
+        AppSettings settings = appSettingsRepository.findById(1L)
+                .orElse(new AppSettings());
+
+        settings.setCurrency(selectedCurrency.get());
+        appSettingsRepository.save(settings);
+
+        return ResponseEntity.ok(selectedCurrency.get());
+    } else {
+        return ResponseEntity.badRequest().body("Currency type not found in the database.");
+    }
+}
 
 }
