@@ -214,24 +214,15 @@ public class UserService {
     public Long verifyEmailCodeAndRegister(String email, String code) {
         PendingUser pending = pendingUserRepository.findByEmail(email);
 
-        if (pending == null || !pending.getVerificationCode().equals(code)) {
-            throw new RuntimeException("Invalid code or email.");
+        if (pending == null) {
+            throw new RuntimeException("No pending user found for this email.");
         }
 
-        // Create a basic user with only the essentials
-        Users user = new Users();
-        user.setEmail(pending.getEmail());
-        user.setPasswordHash(pending.getPasswordHash());
-        user.setIsPublicProfile(pending.getIsPublicProfile());
-        user.setStatus(getStatus("ACTIVE")); // ✅ entity version
-        user.setCreatedAt(LocalDateTime.now());
+        if (!pending.getVerificationCode().equals(code)) {
+            throw new RuntimeException("Invalid verification code.");
+        }
 
-        Users saved = userRepository.save(user);
-
-        // Clean up the pending record
-        pendingUserRepository.delete(pending);
-
-        return saved.getId(); // ✅ return user ID for next steps
+        return pending.getId(); // ✅ Return pending user ID for next step (complete profile)
     }
 
 
@@ -248,53 +239,53 @@ public class UserService {
             throw new RuntimeException("Pending user not found.");
         }
 
-        // Create base user with phone only
-        Users user = new Users();
-        user.setPhoneNumber(pending.getPhoneNumber());
-        user.setPasswordHash(pending.getPasswordHash());
-        user.setIsPublicProfile(pending.getIsPublicProfile());
-        user.setStatus(getStatus("ACTIVE")); // ✅ using entity
-        user.setCreatedAt(LocalDateTime.now());
-
-        Users saved = userRepository.save(user);
-
-        // Clean up
-        pendingUserRepository.delete(pending);
-
-        return saved.getId(); // ✅ return userId to use in next steps
+        return pending.getId(); // ✅ Return pending user ID for profile completion step
     }
 
     
-    public boolean completeUserProfile(Long userId, String username, String firstName, String lastName, MultipartFile profileImage) throws IOException {
-        Users user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found."));
+    public boolean completeUserProfile(
+    	    Long pendingId,
+    	    String username,
+    	    String firstName,
+    	    String lastName,
+    	    MultipartFile profileImage,
+    	    Boolean isPublicProfile 
+    	) throws IOException {
+    	    PendingUser pending = pendingUserRepository.findById(pendingId)
+    	        .orElseThrow(() -> new RuntimeException("Pending user not found."));
 
-        // Check if username is already taken by someone else
-        Users existing = userRepository.findByUsername(username);
-        if (existing != null && !existing.getId().equals(userId)) {
-            throw new RuntimeException("Username already in use.");
-        }
+    	    if (userRepository.findByUsername(username) != null) {
+    	        throw new RuntimeException("Username already in use.");
+    	    }
 
-        user.setUsername(username);
-        user.setFirstName(firstName);
-        user.setLastName(lastName);
+    	    Users user = new Users();
+    	    user.setUsername(username);
+    	    user.setFirstName(firstName);
+    	    user.setLastName(lastName);
+    	    user.setPasswordHash(pending.getPasswordHash());
+    	    user.setStatus(getStatus("ACTIVE"));
+    	    user.setCreatedAt(LocalDateTime.now());
 
-        // Upload profile image if provided
-        if (profileImage != null && !profileImage.isEmpty()) {
-            String filename = UUID.randomUUID() + "_" + profileImage.getOriginalFilename();
-            Path path = Paths.get("uploads");
-            if (!Files.exists(path)) Files.createDirectories(path);
+    	    if (pending.getEmail() != null) user.setEmail(pending.getEmail());
+    	    if (pending.getPhoneNumber() != null) user.setPhoneNumber(pending.getPhoneNumber());
 
-            Path fullPath = path.resolve(filename);
-            Files.copy(profileImage.getInputStream(), fullPath, StandardCopyOption.REPLACE_EXISTING);
-            user.setProfilePictureUrl("/uploads/" + filename);
-        }
+    	   
+    	    user.setIsPublicProfile(isPublicProfile != null ? isPublicProfile : true);
 
-        user.setUpdatedAt(LocalDateTime.now());
-        userRepository.save(user);
-        return true;
-    }
+    	    if (profileImage != null && !profileImage.isEmpty()) {
+    	        String filename = UUID.randomUUID() + "_" + profileImage.getOriginalFilename();
+    	        Path path = Paths.get("uploads");
+    	        if (!Files.exists(path)) Files.createDirectories(path);
+    	        Files.copy(profileImage.getInputStream(), path.resolve(filename), StandardCopyOption.REPLACE_EXISTING);
+    	        user.setProfilePictureUrl("/uploads/" + filename);
+    	    }
 
+    	    user.setUpdatedAt(LocalDateTime.now());
+    	    userRepository.save(user);
+    	    pendingUserRepository.delete(pending);
+
+    	    return true;
+    	}
 
 
 

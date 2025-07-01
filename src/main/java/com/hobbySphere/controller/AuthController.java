@@ -92,17 +92,17 @@ public class AuthController {
             String email = request.get("email");
             String code = request.get("code");
 
-            // Step 2: Verify email and create user with minimal data
             Long userId = userService.verifyEmailCodeAndRegister(email, code);
 
             return ResponseEntity.ok(Map.of(
                     "message", "Verification successful. Continue with profile setup.",
-                    "userId", userId
+                    "user", Map.of("id", userId) // ✅ fix here as well
             ));
         } catch (RuntimeException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
         }
     }
+
 
 
     /// user register with number
@@ -114,9 +114,10 @@ public class AuthController {
 
             Long userId = userService.verifyPhoneCodeAndRegister(phone, code);
 
+            // ✅ Wrap in "user" object as expected by frontend
             return ResponseEntity.ok(Map.of(
                     "message", "Phone verification successful. Continue with profile setup.",
-                    "userId", userId
+                    "user", Map.of("id", userId)
             ));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -126,16 +127,19 @@ public class AuthController {
 
     @PostMapping(value = "/complete-profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> completeProfile(
-            @RequestParam Long userId,
+            @RequestParam Long pendingId,
             @RequestParam String username,
             @RequestParam String firstName,
             @RequestParam String lastName,
+            @RequestParam Boolean isPublicProfile, // ✅ Add this
             @RequestPart(required = false) MultipartFile profileImage) {
         try {
-            boolean updated = userService.completeUserProfile(userId, username, firstName, lastName, profileImage);
+            boolean updated = userService.completeUserProfile(
+                pendingId, username, firstName, lastName, profileImage, isPublicProfile // ✅ Include isPublicProfile
+            );
 
             if (updated) {
-                Users user = userService.getUserById(userId);
+                Users user = userService.findByUsername(username);
 
                 Map<String, Object> userData = new HashMap<>();
                 userData.put("id", user.getId());

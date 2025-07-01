@@ -17,22 +17,22 @@ public class PendingUser {
     @Column(unique = true)
     private String email;
 
-    @Column(unique = true)
+    @Column(unique = true,nullable = true)
     private String username;
 
-    @Column(unique = true)
+    @Column(unique = true,nullable = true)
     private String phoneNumber;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String firstName;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String lastName;
 
     @Column(nullable = false)
     private String passwordHash;
 
-    @Column(name = "profile_picture_url")
+    @Column(name = "profile_picture_url",nullable = true)
     private String profilePictureUrl;
 
     @Column(name = "verification_code")

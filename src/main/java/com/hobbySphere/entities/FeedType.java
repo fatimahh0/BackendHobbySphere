@@ -14,6 +14,10 @@ public class FeedType {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
+    public FeedType() {
+        // Required by Hibernate
+    }
 
     @Column(nullable = false, unique = true)
     private String name;  // Values like "Post", "Event", etc.
