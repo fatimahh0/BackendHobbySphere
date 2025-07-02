@@ -1,7 +1,6 @@
 package com.hobbySphere.config;
 
 import com.hobbySphere.entities.Currency;
-import com.hobbySphere.enums.DefaultCurrencies;
 import com.hobbySphere.repositories.CurrencyRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;

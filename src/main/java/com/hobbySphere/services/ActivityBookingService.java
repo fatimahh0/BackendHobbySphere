@@ -1,6 +1,7 @@
 package com.hobbySphere.services;
 import com.hobbySphere.enums.*;
 
+
 import com.hobbySphere.repositories.ActivityBookingsRepository;
 import com.hobbySphere.repositories.AppSettingsRepository;
 import com.hobbySphere.repositories.CurrencyRepository;
@@ -17,8 +18,6 @@ import com.hobbySphere.entities.AppSettings;
 import com.hobbySphere.entities.Currency;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.entities.UserStatus; 
-
-import com.hobbySphere.enums.CurrencyType;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -223,7 +222,7 @@ public class ActivityBookingService {
 
 	private Currency getDefaultCurrencyIfNull(Currency currency) {
 	    if (currency != null) return currency;
-	    return currencyRepository.findByCurrencyType(CurrencyType.CAD)
+	    return currencyRepository.findByCurrencyType("CAD")
 	            .orElseThrow(() -> new RuntimeException("Default currency not found"));
 	}
 

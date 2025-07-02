@@ -1,11 +1,10 @@
 package com.hobbySphere.controller;
 
 import com.hobbySphere.dto.CurrencyRequest;
+
 import com.hobbySphere.services.CurrencyService;
 import com.hobbySphere.entities.AppSettings;
 import com.hobbySphere.entities.Currency;
-import com.hobbySphere.enums.CurrencyType;
-import com.hobbySphere.enums.DefaultCurrencies;
 import com.hobbySphere.repositories.AppSettingsRepository;
 import com.hobbySphere.repositories.CurrencyRepository;
 import com.hobbySphere.security.JwtUtil;

@@ -1,6 +1,4 @@
 package com.hobbySphere.entities;
-
-import com.hobbySphere.enums.CurrencyType;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 

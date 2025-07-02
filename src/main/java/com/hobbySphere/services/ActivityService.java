@@ -1,7 +1,7 @@
 package com.hobbySphere.services;
 
 import com.hobbySphere.entities.*;
-import com.hobbySphere.enums.CurrencyType;
+
 import com.hobbySphere.dto.ActivityPriceResponse;
 import com.hobbySphere.dto.ActivitySummaryDTO;
 import com.hobbySphere.repositories.*;
@@ -78,7 +78,7 @@ public class ActivityService {
         ActivityType type = activityTypeRepository.findById(activityTypeId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid activity type"));
 
-        Currency defaultCurrency = currencyRepository.findByCurrencyType(CurrencyType.CAD).orElseThrow();
+        Currency defaultCurrency = currencyRepository.findByCurrencyType("CAD").orElseThrow();
 
         Activities activity = new Activities();
         activity.setActivityName(activityName);
@@ -221,7 +221,7 @@ public class ActivityService {
 
     private Currency getDefaultCurrencyIfNull(Currency currency) {
         if (currency != null) return currency;
-        return currencyRepository.findByCurrencyType(CurrencyType.CAD)
+        return currencyRepository.findByCurrencyType("CAD")
                 .orElseThrow(() -> new RuntimeException("Default currency not found"));
     }
 
