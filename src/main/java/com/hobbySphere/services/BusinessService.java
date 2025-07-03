@@ -237,30 +237,13 @@ public class BusinessService {
         PendingBusiness pending = pendingBusinessRepository.findByEmail(email);
 
         if (pending == null || !pending.getVerificationCode().equals(code)) {
-            return null; // or throw exception if preferred
+            throw new RuntimeException("Invalid verification code");
         }
 
-        // ✅ Fallback to "ACTIVE" status entity if pending.getStatus() is null
-        BusinessStatus status = pending.getStatus();
-        if (status == null) {
-            status = businessStatusRepository.findByName("ACTIVE")
-                .orElseThrow(() -> new RuntimeException("Default status 'ACTIVE' not found"));
-        }
-
-        Businesses business = new Businesses();
-        business.setEmail(pending.getEmail());
-        business.setPhoneNumber(pending.getPhoneNumber());
-        business.setPasswordHash(pending.getPasswordHash());
-        business.setStatus(status);
-        business.setIsPublicProfile(pending.getIsPublicProfile());
-        business.setCreatedAt(LocalDateTime.now());
-        business.setUpdatedAt(LocalDateTime.now());
-
-        Businesses saved = businessRepository.save(business);
-        pendingBusinessRepository.delete(pending);
-
-        return saved.getId(); // ✅ Return businessId for next step
+      
+        return pending.getId();  
     }
+
 
 
 
@@ -328,34 +311,14 @@ public class BusinessService {
         PendingBusiness pending = pendingBusinessRepository.findByPhoneNumber(phone);
 
         if (pending == null || !pending.getVerificationCode().equals(code)) {
-            return null; // or throw new RuntimeException("Invalid code");
+            throw new RuntimeException("Invalid verification code");
         }
 
-        // ✅ If status is null, fetch "ACTIVE" status from DB
-        BusinessStatus status = pending.getStatus();
-        if (status == null) {
-            status = businessStatusRepository.findByName("ACTIVE")
-                .orElseThrow(() -> new RuntimeException("Default status 'ACTIVE' not found"));
-        }
-
-        Businesses business = new Businesses();
-        business.setPhoneNumber(pending.getPhoneNumber());
-        business.setEmail(pending.getEmail());
-        business.setPasswordHash(pending.getPasswordHash());
-        business.setStatus(status);
-        business.setIsPublicProfile(pending.getIsPublicProfile());
-        business.setCreatedAt(LocalDateTime.now());
-        business.setUpdatedAt(LocalDateTime.now());
-
-        Businesses saved = businessRepository.save(business);
-        pendingBusinessRepository.delete(pending);
-
-        return saved.getId(); // To pass to profile completion step
+        return pending.getId();
     }
 
-
     public Businesses completeBusinessProfile(
-            Long businessId,
+            Long pendingId,
             String businessName,
             String description,
             String websiteUrl,
@@ -363,16 +326,22 @@ public class BusinessService {
             MultipartFile banner
     ) throws IOException {
 
-        // 🔍 Fetch business by ID
-        Businesses business = businessRepository.findById(businessId)
-                .orElseThrow(() -> new RuntimeException("Business not found."));
+        PendingBusiness pending = pendingBusinessRepository.findById(pendingId)
+                .orElseThrow(() -> new RuntimeException("Pending business not found."));
 
-        // 📝 Update profile fields
+        Businesses business = new Businesses();
+        business.setEmail(pending.getEmail());
+        business.setPhoneNumber(pending.getPhoneNumber());
+        business.setPasswordHash(pending.getPasswordHash());
+        business.setStatus(pending.getStatus());
+        business.setIsPublicProfile(pending.getIsPublicProfile());
         business.setBusinessName(businessName);
         business.setDescription(description);
         business.setWebsiteUrl(websiteUrl);
+        business.setCreatedAt(LocalDateTime.now());
+        business.setUpdatedAt(LocalDateTime.now());
 
-        // 📤 Upload logo if provided
+        // Upload logo
         if (logo != null && !logo.isEmpty()) {
             String logoFileName = UUID.randomUUID() + "_" + logo.getOriginalFilename();
             Path logoPath = Paths.get("uploads").resolve(logoFileName);
@@ -381,7 +350,7 @@ public class BusinessService {
             business.setBusinessLogoUrl("/uploads/" + logoFileName);
         }
 
-        // 📤 Upload banner if provided
+        // Upload banner
         if (banner != null && !banner.isEmpty()) {
             String bannerFileName = UUID.randomUUID() + "_" + banner.getOriginalFilename();
             Path bannerPath = Paths.get("uploads").resolve(bannerFileName);
@@ -390,12 +359,12 @@ public class BusinessService {
             business.setBusinessBannerUrl("/uploads/" + bannerFileName);
         }
 
-        // 🕓 Update timestamp
-        business.setUpdatedAt(LocalDateTime.now());
+        Businesses saved = businessRepository.save(business);
+        pendingBusinessRepository.delete(pending);
 
-        // 💾 Save and return
-        return businessRepository.save(business);
+        return saved;
     }
+
 
     public Businesses updateBusinessWithImages(
             Long id,
@@ -726,5 +695,15 @@ public class BusinessService {
 
         return true;
     }
+    
+    public Optional<Businesses> findByIdOptional(Long id) {
+        return businessRepository.findById(id);
+    }
+
+    public BusinessStatus getStatusByName(String name) {
+        return businessStatusRepository.findByName(name.toUpperCase())
+                .orElseThrow(() -> new RuntimeException("Status '" + name + "' not found"));
+    }
+
 
 }

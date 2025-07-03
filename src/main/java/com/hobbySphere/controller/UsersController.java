@@ -7,6 +7,10 @@ import com.hobbySphere.entities.UserStatus;
 
 import com.hobbySphere.services.AdminUserService;
 import com.hobbySphere.services.UserService;
+
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +54,15 @@ public class UsersController {
         this.userService = userService;
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/all")
     public ResponseEntity<?> getAllUsers(@RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
         try {
@@ -83,6 +96,15 @@ public class UsersController {
         }
     }
     
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteUser(
             @PathVariable Long id,
@@ -135,7 +157,15 @@ public class UsersController {
         }
     }
 
-
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PostMapping("/reset-password")
     public ResponseEntity<Map<String, String>> sendResetCode(@RequestBody Map<String, String> body) {
         try {
@@ -157,6 +187,15 @@ public class UsersController {
         }
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PostMapping("/verify-reset-code")
     public ResponseEntity<Map<String, String>> verifyCode(@RequestBody Map<String, String> request) {
         try {
@@ -174,6 +213,15 @@ public class UsersController {
         }
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PostMapping("/update-password")
     public ResponseEntity<Map<String, String>> updatePassword(@RequestBody Map<String, String> request) {
         try {
@@ -196,7 +244,15 @@ public class UsersController {
         }
     }
     
-    
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PostMapping("/{userId}/interests")
     public ResponseEntity<?> addUserInterests(
             @PathVariable Long userId,
@@ -206,6 +262,15 @@ public class UsersController {
         return ResponseEntity.ok(Map.of("message", "User interests added successfully"));
     }
     
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @DeleteMapping("/delete-profile-image/{id}")
     public ResponseEntity<?> deleteProfileImage(@PathVariable Long id) {
         boolean success = userService.deleteUserProfileImage(id);
@@ -216,6 +281,15 @@ public class UsersController {
         }
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PutMapping("/profile-visibility")
     public ResponseEntity<String> updateProfileVisibility(@RequestParam boolean isPublic,
                                                           @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
@@ -244,13 +318,31 @@ public class UsersController {
         }
     }
 
-    
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/{id}")
     public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
         Optional<Users> userOpt = usersRepository.findById(id);
         return userOpt.map(user -> ResponseEntity.ok(new UserDto(user)))
                       .orElse(ResponseEntity.status(404).build());
     }
+    
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PutMapping("/{id}/status")
     public ResponseEntity<String> updateStatus(
             @PathVariable Long id,
@@ -271,36 +363,58 @@ public class UsersController {
             return ResponseEntity.status(403).body("Access denied");
         }
 
-        String password = requestBody.get("password");
         String statusStr = requestBody.get("status");
+        String password = requestBody.get("password");
 
-        if (password == null || password.isBlank()) {
-            return ResponseEntity.badRequest().body("Password is required");
-        }
         if (statusStr == null || statusStr.isBlank()) {
             return ResponseEntity.badRequest().body("Status is required");
         }
 
-        // ✅ Fetch status from UserStatusRepository instead of enum
+        // Only require password if status is set to INACTIVE
+        if ("INACTIVE".equalsIgnoreCase(statusStr)) {
+            if (password == null || password.isBlank()) {
+                return ResponseEntity.badRequest().body("Password is required to deactivate account.");
+            }
+
+            boolean isPasswordValid = userService.checkPassword(user, password);
+            if (!isPasswordValid) {
+                return ResponseEntity.status(401).body("Incorrect password. Status not changed.");
+            }
+        }
+
         Optional<UserStatus> newStatusOpt = userStatusRepository.findByNameIgnoreCase(statusStr);
         if (newStatusOpt.isEmpty()) {
             return ResponseEntity.badRequest().body("Invalid status value");
         }
-        UserStatus newStatus = newStatusOpt.get();
 
-        if (!userService.checkPassword(user, password)) {
-            return ResponseEntity.status(401).body("Incorrect password");
-        }
-
-        user.setStatus(newStatus);
+        user.setStatus(newStatusOpt.get());
         user.setUpdatedAt(LocalDateTime.now());
         usersRepository.save(user);
 
-        return ResponseEntity.ok("User status updated to " + newStatus.getName());
+        return ResponseEntity.ok("User status updated to " + newStatusOpt.get().getName());
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/{userId}/suggestions")
-    public ResponseEntity<?> getFriendSuggestions(@PathVariable Long userId) {
+    public ResponseEntity<?> getFriendSuggestions(
+            @PathVariable Long userId,
+            @RequestHeader(value = "Authorization", required = false) String token) {
+
+        // === User token check (simple validation) ===
+        if (token == null || !token.equals("user-valid-token")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unauthorized – Missing or invalid user token");
+        }
+
+        // === Main code untouched ===
         try {
             List<Users> suggestions = userService.suggestFriendsByInterest(userId);
             List<UserDto> result = suggestions.stream().map(UserDto::new).toList();
@@ -309,7 +423,16 @@ public class UsersController {
             return ResponseEntity.status(500).body("Error fetching suggestions: " + e.getMessage());
         }
     }
-    
+
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PutMapping("/{id}/visibility-status")
     public ResponseEntity<String> updateVisibilityAndStatus(
             @PathVariable Long id,
@@ -322,5 +445,57 @@ public class UsersController {
             return ResponseEntity.status(404).body("User not found.");
         }
     }
+    
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
+    @PutMapping("/users/{id}/status")
+    public ResponseEntity<?> updateUserStatus(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> requestBody) {
+
+        // 🛡️ Optional: Verify the token matches the user's ID, like isAuthorized(token, id)
+        String newStatus = requestBody.get("status");
+        String password = requestBody.get("password");
+
+        if (newStatus == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Missing status"));
+        }
+
+        try {
+            Users user = userService.getUserById(id); // throws if not found
+
+            // ✅ Require password check if status is INACTIVE
+            if ("INACTIVE".equalsIgnoreCase(newStatus)) {
+                if (password == null || password.isBlank()) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Password is required to deactivate account."));
+                }
+
+                boolean isValid = userService.checkPassword(user, password);
+                if (!isValid) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                            .body(Map.of("error", "Incorrect password. Status not changed."));
+                }
+            }
+
+            UserStatus statusEntity = userService.getStatus(newStatus);
+            user.setStatus(statusEntity);
+            user.setUpdatedAt(LocalDateTime.now());
+
+            userService.save(user);
+
+            return ResponseEntity.ok(Map.of("message", "User status updated successfully", "newStatus", newStatus));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     
 }

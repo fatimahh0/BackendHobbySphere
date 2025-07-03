@@ -57,19 +57,38 @@ public class BusinessController {
     }
 
     @Operation(summary = "Get a business by ID")
-    @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Business retrieved successfully"),
-        @ApiResponse(responseCode = "404", description = "Business not found")
-    })
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/{id}")
     public ResponseEntity<?> getBusinessById(@PathVariable Long id, @RequestHeader("Authorization") String authHeader) {
-        if (!isAuthorized(authHeader, id)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied");
-        Businesses business = businessService.findById(id);
-        return business != null ? ResponseEntity.ok(business) : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    	 String token = authHeader.replace("Bearer ", "").trim();
+    	    if (!(jwtUtil.isBusinessToken(token) || jwtUtil.isAdminToken(token) || jwtUtil.isUserToken(token))) {
+    	        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied: Business, Admin or User token required");
+    	    }
+
+    	    if (!isAuthorized(authHeader, id)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied");
+    	    Businesses business = businessService.findById(id);
+    	    return business != null ? ResponseEntity.ok(business) : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+     
     }
 
     @Operation(summary = "Get all businesses")
-    @ApiResponse(responseCode = "200", description = "List of all businesses")
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping
     public ResponseEntity<?> getAllBusinesses(@RequestHeader("Authorization") String authHeader) {
         String role = jwtUtil.extractRole(authHeader.replace("Bearer ", ""));
@@ -78,6 +97,15 @@ public class BusinessController {
     }
 
     @Operation(summary = "Update a business")
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PutMapping("/{id}")
     public ResponseEntity<?> updateBusiness(@PathVariable Long id, @RequestBody Businesses business, @RequestHeader("Authorization") String authHeader) {
         if (!isAuthorized(authHeader, id)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
@@ -85,12 +113,16 @@ public class BusinessController {
         return ResponseEntity.ok(businessService.save(business));
     }
 
-    @Operation(summary = "Delete a business with password")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteBusinessWithPassword(
             @PathVariable Long id,
             @RequestHeader("Authorization") String authHeader,
             @RequestBody Map<String, String> request) {
+
+        String token = authHeader.replace("Bearer ", "").trim();
+        if (!jwtUtil.isBusinessToken(token)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied: Business token required");
+        }
 
         if (!isAuthorized(authHeader, id)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
@@ -109,8 +141,16 @@ public class BusinessController {
         }
     }
 
-
     @Operation(summary = "Update business with images")
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PutMapping("/update-with-images/{id}")
     public ResponseEntity<?> updateBusinessWithImages(
             @PathVariable Long id,
@@ -135,6 +175,15 @@ public class BusinessController {
     }
 
     @Operation(summary = "Update logo and banner")
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PutMapping("/update-logo-banner/{id}")
     public ResponseEntity<?> updateBusinessLogoAndBanner(
             @PathVariable Long id,
@@ -150,6 +199,15 @@ public class BusinessController {
     }
 
     @Operation(summary = "Request password reset")
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PostMapping("/reset-password")
     public ResponseEntity<Map<String, String>> sendBusinessResetCode(
             @RequestBody Map<String, String> request) {
@@ -163,6 +221,15 @@ public class BusinessController {
 
 
     @Operation(summary = "Verify reset code")
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PostMapping("/verify-reset-code")
     public ResponseEntity<Map<String, String>> verifyBusinessResetCode(
             @RequestBody Map<String, String> request) {
@@ -176,6 +243,15 @@ public class BusinessController {
 
 
     @Operation(summary = "Update business password")
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PostMapping("/update-password")
     public ResponseEntity<Map<String, String>> updateBusinessPassword(
             @RequestBody Map<String, String> request) {
@@ -193,8 +269,25 @@ public class BusinessController {
                 : ResponseEntity.badRequest().body(Map.of("message", "Business not found"));
     }
     
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @DeleteMapping("/delete-logo/{id}")
-    public ResponseEntity<?> deleteLogo(@PathVariable Long id) {
+    public ResponseEntity<?> deleteLogo(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+
+        String token = authHeader.replace("Bearer ", "").trim();
+        if (!jwtUtil.isBusinessToken(token)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied: Business token required");
+        }
+
         boolean deleted = businessService.deleteBusinessLogo(id);
         if (deleted) {
             return ResponseEntity.ok("Logo deleted successfully.");
@@ -203,8 +296,25 @@ public class BusinessController {
         }
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @DeleteMapping("/delete-banner/{id}")
-    public ResponseEntity<?> deleteBanner(@PathVariable Long id) {
+    public ResponseEntity<?> deleteBanner(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+
+        String token = authHeader.replace("Bearer ", "").trim();
+        if (!jwtUtil.isBusinessToken(token)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied: Business token required");
+        }
+
         boolean deleted = businessService.deleteBusinessBanner(id);
         if (deleted) {
             return ResponseEntity.ok("Banner deleted successfully.");
@@ -213,15 +323,39 @@ public class BusinessController {
         }
     }
 
-    @Operation(summary = "Get all public and active businesses")
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/public")
-    public ResponseEntity<List<Businesses>> getPublicActiveBusinesses() {
+    public ResponseEntity<List<Businesses>> getPublicActiveBusinesses(
+            @RequestHeader("Authorization") String authHeader) {
+
+        String token = authHeader.replace("Bearer ", "").trim();
+
+        if (!(jwtUtil.isUserToken(token) || jwtUtil.isAdminToken(token))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         List<Businesses> businesses = businessService.getAllPublicActiveBusinesses();
         return ResponseEntity.ok(businesses);
     }
 
   
-
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateBusinessStatus(
             @PathVariable Long id,
@@ -264,6 +398,15 @@ public class BusinessController {
 
 
     @Operation(summary = "Toggle public profile visibility")
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PutMapping("/{id}/visibility")
     public ResponseEntity<?> updateBusinessVisibility(
             @PathVariable Long id,
@@ -286,6 +429,15 @@ public class BusinessController {
 
     
     @Operation(summary = "Send Manager Invitation Email")
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PostMapping("/{id}/send-manager-invite")
     public ResponseEntity<?> sendManagerInvite(
             @PathVariable Long id,
@@ -316,6 +468,15 @@ public class BusinessController {
     }
 
     @Operation(summary = "Register new manager from invite")
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PostMapping("/register-manager")
     public ResponseEntity<?> registerManagerFromInvite(@RequestBody Map<String, String> request) {
         try {

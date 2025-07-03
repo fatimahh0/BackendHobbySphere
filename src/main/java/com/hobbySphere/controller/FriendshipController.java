@@ -4,6 +4,10 @@ import com.hobbySphere.entities.Friendship;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.services.FriendshipService;
 import com.hobbySphere.services.UserService;
+
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 
@@ -24,6 +28,15 @@ public class FriendshipController {
         this.userService = userService;
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PostMapping("/add/{friendId}")
     public ResponseEntity<?> sendFriendRequest(@PathVariable Long friendId, Principal principal) {
         try {
@@ -36,6 +49,15 @@ public class FriendshipController {
         }
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PostMapping("/accept/{requestId}")
     public ResponseEntity<?> acceptRequest(@PathVariable Long requestId, Principal principal) {
         try {
@@ -47,6 +69,15 @@ public class FriendshipController {
         }
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/pending")
     public ResponseEntity<?> getPendingRequests(Principal principal) {
         try {
@@ -57,6 +88,15 @@ public class FriendshipController {
         }
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/pending/count")
     public ResponseEntity<?> getPendingRequestCount(Principal principal) {
         try {
@@ -67,6 +107,15 @@ public class FriendshipController {
         }
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/my")
     public ResponseEntity<?> getMyFriends(Principal principal) {
         try {
@@ -77,7 +126,15 @@ public class FriendshipController {
         }
     }
     
-  
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/sent")
     public ResponseEntity<?> getSentRequests(Principal principal) {
         try {
@@ -89,7 +146,15 @@ public class FriendshipController {
     }
 
 
-
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PostMapping("/reject/{requestId}")
     public ResponseEntity<?> rejectFriendRequest(@PathVariable Long requestId, Principal principal) {
         try {
@@ -101,6 +166,15 @@ public class FriendshipController {
         }
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @DeleteMapping("/cancel/{friendId}")
     public ResponseEntity<?> cancelFriendRequest(@PathVariable Long friendId, Principal principal) {
         try {
@@ -113,6 +187,15 @@ public class FriendshipController {
         }
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @PostMapping("/block/{userId}")
     public ResponseEntity<?> blockUser(@PathVariable Long userId, Principal principal) {
         try {
@@ -125,6 +208,15 @@ public class FriendshipController {
         }
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @DeleteMapping("/unblock/{userId}")
     public ResponseEntity<?> unblockUser(@PathVariable Long userId, Principal principal) {
         try {
@@ -136,7 +228,16 @@ public class FriendshipController {
             return ResponseEntity.badRequest().body(Collections.singletonMap("message", ex.getMessage()));
         }
     }
-
+    
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @DeleteMapping("/unfriend/{userId}")
     public ResponseEntity<?> unfriend(@PathVariable Long userId, Principal principal) {
         try {
@@ -149,6 +250,15 @@ public class FriendshipController {
         }
     }
     
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/status/{userId}")
     public ResponseEntity<?> getFriendshipStatus(@PathVariable Long userId, Principal principal) {
         try {

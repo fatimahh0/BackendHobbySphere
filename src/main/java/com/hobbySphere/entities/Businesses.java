@@ -20,7 +20,7 @@ public class Businesses {
     @Column(nullable = true, unique = true)
     private String email;
 
-    @Column(name = "phone_number")
+    @Column(name = "phone_number",nullable = true)
     private String phoneNumber;
 
     @Column(name = "password_hash", nullable = false)

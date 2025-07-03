@@ -64,6 +64,13 @@ public class AuthController {
     @Autowired
     private UserStatusRepository userStatusRepository;
 
+    @Autowired
+    private BusinessesRepository businessRepository;
+
+   
+
+    @Autowired
+    private BusinessStatusRepository businessStatusRepository;
 
     @PostMapping(value = "/send-verification")
     public ResponseEntity<?> sendVerification(
@@ -172,15 +179,15 @@ public class AuthController {
     public ResponseEntity<?> sendBusinessVerification(
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String phoneNumber,
-            @RequestParam String password,
-            @RequestParam(defaultValue = "true") boolean isPublicProfile) {
+            @RequestParam String password)
+             {
         try {
             Map<String, String> businessData = new HashMap<>();
 
             if (email != null) businessData.put("email", email);
             if (phoneNumber != null) businessData.put("phoneNumber", phoneNumber);
             businessData.put("password", password);
-            businessData.put("isPublicProfile", String.valueOf(isPublicProfile));
+       
             businessData.put("status", "ACTIVE"); // Optional: always start as active
 
             Long pendingId = businessService.sendBusinessVerificationCode(businessData);
@@ -202,37 +209,43 @@ public class AuthController {
             String email = request.get("email");
             String code = request.get("code");
 
-            // Step 2: Verify and create minimal business account
-            Long businessId = businessService.verifyBusinessEmailCode(email, code);
+            Long pendingId = businessService.verifyBusinessEmailCode(email, code);
 
-            return ResponseEntity.ok(Map.of(
-                    "message", "Email verification successful. Continue with profile setup.",
-                    "businessId", businessId
-            ));
+            // ✅ Wrap in a JSON structure with "business.id"
+            Map<String, Object> response = new HashMap<>();
+            Map<String, Object> business = new HashMap<>();
+            business.put("id", pendingId);
+            response.put("business", business);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
 
 
     @PostMapping("/business/verify-phone-code")
     public ResponseEntity<?> verifyBusinessPhoneCode(@RequestBody Map<String, String> request) {
         try {
-            String phone = request.get("phoneNumber");
+            String phoneNumber = request.get("phoneNumber");
             String code = request.get("code");
 
-            // Step 2: Verify and create minimal business account
-            Long businessId = businessService.verifyBusinessPhoneCode(phone, code);
+            Long pendingId = businessService.verifyBusinessPhoneCode(phoneNumber, code);
 
-            return ResponseEntity.ok(Map.of(
-                    "message", "Phone verification successful. Continue with profile setup.",
-                    "businessId", businessId
-            ));
+            // ✅ Return pendingId in "business.id" format
+            Map<String, Object> response = new HashMap<>();
+            Map<String, Object> business = new HashMap<>();
+            business.put("id", pendingId);
+            response.put("business", business);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
         }
     }
-    
+
     
     @PostMapping(value = "/business/complete-profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> completeBusinessProfile(
@@ -403,6 +416,50 @@ public class AuthController {
         ));
     }
 
+
+    @PostMapping("/business/reactivate")
+    public ResponseEntity<?> reactivateBusiness(@RequestBody Map<String, Long> request) {
+        Long id = request.get("id");
+
+        Optional<Businesses> optional = businessRepository.findById(id);
+        if (optional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Business not found"));
+        }
+
+        Businesses business = optional.get();
+        if (!"INACTIVE".equalsIgnoreCase(business.getStatus().getName())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Account is not inactive"));
+        }
+
+        BusinessStatus activeStatus = businessStatusRepository.findByName("ACTIVE")
+            .orElseThrow(() -> new RuntimeException("ACTIVE status not found"));
+
+        business.setStatus(activeStatus);
+        businessRepository.save(business);
+        
+        jwtUtil.generateToken(business);
+
+       // String token = jwtUtil.generateToken(business.getEmail(), "BUSINESS");
+        String token = jwtUtil.generateToken(business);
+
+        Map<String, Object> businessData = new HashMap<>();
+        businessData.put("id", business.getId());
+        businessData.put("businessName", business.getBusinessName());
+        businessData.put("email", business.getEmail());
+        businessData.put("phoneNumber", business.getPhoneNumber());
+        businessData.put("websiteUrl", business.getWebsiteUrl());
+        businessData.put("description", business.getDescription());
+        businessData.put("businessLogo", business.getBusinessLogoUrl());
+        businessData.put("businessBanner", business.getBusinessBannerUrl());
+
+       
+
+        return ResponseEntity.ok(Map.of(
+        	 "message", "Business login successful",
+            "token", token,
+            "business", businessData
+        ));
+    }
 
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -836,7 +893,6 @@ public class AuthController {
 
         adminUserService.deleteManagerById(adminId);
 
-        return ResponseEntity.ok(Map.of("message", "Manager removed successfully"));
-    }
+        return ResponseEntity.ok(Map.of("message", "Manager removed successfully"));}
 
 }

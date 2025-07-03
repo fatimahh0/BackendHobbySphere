@@ -45,10 +45,14 @@ public class ReviewController {
         description = "Retrieve a list of all customer reviews, sorted by date."
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "List of all reviews retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized access"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping
     public ResponseEntity<?> getAllReviews(@RequestHeader("Authorization") String token) {
         if (!isAuthorized(token)) {
@@ -64,11 +68,14 @@ public class ReviewController {
         description = "Retrieve a list of reviews for a specific activity, sorted by date."
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "List of reviews for the activity retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized access"),
-        @ApiResponse(responseCode = "404", description = "Activity not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/activity/{activityId}")
     public ResponseEntity<?> getReviewsByActivity(
             @RequestHeader("Authorization") String token,
@@ -95,12 +102,14 @@ public class ReviewController {
     	    summary = "Add a review",
     	    description = "Allows a customer to submit a review for an activity"
     	)
-    	@ApiResponses(value = {
-    	    @ApiResponse(responseCode = "201", description = "Review submitted successfully"),
-    	    @ApiResponse(responseCode = "400", description = "Invalid input data"),
-    	    @ApiResponse(responseCode = "401", description = "Unauthorized access"),
-    	    @ApiResponse(responseCode = "404", description = "Activity or user not found"),
-    	    @ApiResponse(responseCode = "500", description = "Internal server error")
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     	})
     	@PostMapping("addreviews")
     	public ResponseEntity<?> addReview(
@@ -129,10 +138,14 @@ public class ReviewController {
     	    summary = "Get all reviews for a business",
     	    description = "Retrieve all reviews for activities belonging to a specific business."
     	)
-    	@ApiResponses(value = {
-    	    @ApiResponse(responseCode = "200", description = "Reviews retrieved successfully"),
-    	    @ApiResponse(responseCode = "401", description = "Unauthorized access"),
-    	    @ApiResponse(responseCode = "404", description = "No reviews found for the business")
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     	})
     	@GetMapping("/business/{businessId}")
     	public ResponseEntity<?> getReviewsByBusiness(
@@ -151,7 +164,15 @@ public class ReviewController {
     	    return ResponseEntity.ok(reviews);
     	}
 
-    
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/check-completed/{activityId}")
     public ResponseEntity<?> hasCompletedActivity(
             @RequestHeader("Authorization") String token,
@@ -165,6 +186,15 @@ public class ReviewController {
         }
     }
     
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/completed-activities")
     public ResponseEntity<?> getCompletedActivitiesForUser(@RequestHeader("Authorization") String token) {
         try {
@@ -175,6 +205,15 @@ public class ReviewController {
         }
     }
 
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/should-show-modal/{activityId}")
     public ResponseEntity<?> shouldShowReviewModal(
             @RequestHeader("Authorization") String token,
@@ -187,11 +226,30 @@ public class ReviewController {
         }
     }
     
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/suggest")
     public ResponseEntity<Long> suggestReviewActivity(@RequestHeader("Authorization") String token) {
         Long activityId = reviewService.getFirstCompletedUnreviewedActivity(token);
         return ResponseEntity.ok(activityId);
         }
+    
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
     @GetMapping("/business/{businessId}/check-rating")
     public ResponseEntity<?> checkRatingAndNotifyAdmins(
             @PathVariable Long businessId,

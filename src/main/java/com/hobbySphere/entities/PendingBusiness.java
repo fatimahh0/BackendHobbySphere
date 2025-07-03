@@ -16,21 +16,22 @@ public class PendingBusiness {
 
     private String passwordHash;
 
-    @Column(name = "business_name")
+    @Column(name = "business_name", nullable = true) // ✅ allow step 2 to complete later
     private String businessName;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", nullable = true) // ✅ allow filling later
     private String description;
 
+    @Column(name = "phone_number", nullable = false)
     private String phoneNumber;
 
-    @Column(name = "website_url")
+    @Column(name = "website_url", nullable = true) // ✅ optional at first
     private String websiteUrl;
 
-    @Column(name = "business_logo_url")
+    @Column(name = "business_logo_url", nullable = true) // ✅ will be set in step 2
     private String businessLogoUrl;
 
-    @Column(name = "business_banner_url")
+    @Column(name = "business_banner_url", nullable = true) // ✅ will be set in step 2
     private String businessBannerUrl;
 
     @Column(name = "verification_code")
@@ -38,7 +39,7 @@ public class PendingBusiness {
 
     @Column(name = "is_public_profile")
     private Boolean isPublicProfile = true;
-    
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "status", referencedColumnName = "id")
     private BusinessStatus status;
@@ -46,7 +47,7 @@ public class PendingBusiness {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    // Getters and Setters...
+    // --- Getters and Setters ---
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

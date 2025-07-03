@@ -74,7 +74,7 @@ public class UserService {
         this.emailService = emailService;
     }
     
-    private UserStatus getStatus(String name) {
+    public UserStatus getStatus(String name) {
         return userStatusRepository.findByName(name.toUpperCase())
             .orElseThrow(() -> new RuntimeException("UserStatus " + name + " not found"));
     }
@@ -667,6 +667,9 @@ public class UserService {
 
     public boolean checkPassword(Users user, String rawPassword) {
         return passwordEncoder.matches(rawPassword, user.getPasswordHash());
-        }
+    }
+    
+    
+
 
 }

@@ -7,6 +7,10 @@ import com.hobbySphere.entities.PostVisibility;
 import com.hobbySphere.services.PostService;
 import com.hobbySphere.services.UserService;
 import com.hobbySphere.repositories.PostVisibilityRepository;
+import com.hobbySphere.security.JwtUtil;
+
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,26 +27,38 @@ public class PostsController {
     private final PostService postsService;
     private final UserService usersService;
     private final PostVisibilityRepository postVisibilityRepository;
+    private final JwtUtil jwtUtil;  // Your JWT validation utility
 
-    public PostsController(PostService postsService, UserService usersService, PostVisibilityRepository postVisibilityRepository) {
+    public PostsController(PostService postsService, UserService usersService, PostVisibilityRepository postVisibilityRepository, JwtUtil jwtUtil) {
         this.postsService = postsService;
         this.usersService = usersService;
         this.postVisibilityRepository = postVisibilityRepository;
+        this.jwtUtil = jwtUtil;
     }
 
-    /**
-     * Create a new post with optional image, hashtags, and visibility (public or friends_only).
-     */
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successful"),
+        @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+        @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+        @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+        @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+        @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    })
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<?> createPost(@RequestParam String content,
                                         @RequestParam(required = false) MultipartFile image,
                                         @RequestParam(required = false) String hashtags,
                                         @RequestParam(required = false, defaultValue = "PUBLIC") String visibility,
-                                        Principal principal) {
+                                        Principal principal,
+                                        @RequestHeader("Authorization") String authHeader) {
+
+        // Token validation
+        ResponseEntity<String> tokenCheck = validateUserToken(authHeader);
+        if (tokenCheck != null) return tokenCheck;
 
         Users user = usersService.getUserByEmaill(principal.getName());
 
-        // ✅ Convert visibility string to PostVisibility entity
         PostVisibility postVisibility = postVisibilityRepository.findByName(visibility.toUpperCase())
                 .orElseGet(() -> postVisibilityRepository.findByName("PUBLIC").orElse(null));
 
@@ -55,11 +71,23 @@ public class PostsController {
         return ResponseEntity.ok(new PostDto(created, user.getId()));
     }
 
-    /**
-     * Get all visible posts for the authenticated user.
-     */
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successful"),
+        @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+        @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+        @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+        @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+        @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    })
     @GetMapping
-    public ResponseEntity<List<PostDto>> getAllPosts(Principal principal) {
+    public ResponseEntity<List<PostDto>> getAllPosts(Principal principal,
+                                                     @RequestHeader("Authorization") String authHeader) {
+
+        // Token validation
+        ResponseEntity<String> tokenCheck = validateUserToken(authHeader);
+        if (tokenCheck != null) return ResponseEntity.status(tokenCheck.getStatusCode()).build();
+
         if (principal == null) {
             return ResponseEntity.status(401).build();
         }
@@ -73,35 +101,89 @@ public class PostsController {
         }
     }
 
-    /**
-     * Delete a post by ID, only if it belongs to the authenticated user.
-     */
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successful"),
+        @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+        @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+        @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+        @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+        @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    })
     @DeleteMapping("/{postId}")
-    public ResponseEntity<String> deletePost(@PathVariable Long postId, Principal principal) {
+    public ResponseEntity<String> deletePost(@PathVariable Long postId,
+                                             Principal principal,
+                                             @RequestHeader("Authorization") String authHeader) {
+
+        // Token validation
+        ResponseEntity<String> tokenCheck = validateUserToken(authHeader);
+        if (tokenCheck != null) return tokenCheck;
+
         Users user = usersService.getUserByEmaill(principal.getName());
         postsService.deletePost(postId, user);
         return ResponseEntity.ok("Post deleted successfully");
     }
 
-    /**
-     * Get all posts by a specific user (no filtering).
-     */
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successful"),
+        @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+        @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+        @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+        @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+        @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    })
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<PostDto>> getPostsByUser(@PathVariable Long userId) {
+    public ResponseEntity<List<PostDto>> getPostsByUser(@PathVariable Long userId,
+                                                       @RequestHeader("Authorization") String authHeader) {
+
+        // Token validation
+        ResponseEntity<String> tokenCheck = validateUserToken(authHeader);
+        if (tokenCheck != null) return ResponseEntity.status(tokenCheck.getStatusCode()).build();
+
         List<PostDto> postDtos = postsService.getPostDtosByUser(userId);
         return ResponseEntity.ok(postDtos);
     }
 
-    /**
-     * Delete post if the userId matches the owner of the post.
-     */
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successful"),
+        @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+        @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+        @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+        @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+        @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    })
     @DeleteMapping("/{postId}/user/{userId}")
-    public ResponseEntity<?> deletePostByUser(@PathVariable Long postId, @PathVariable Long userId) {
+    public ResponseEntity<?> deletePostByUser(@PathVariable Long postId,
+                                              @PathVariable Long userId,
+                                              @RequestHeader("Authorization") String authHeader) {
+
+        // Token validation
+        ResponseEntity<String> tokenCheck = validateUserToken(authHeader);
+        if (tokenCheck != null) return tokenCheck;
+
         boolean deleted = postsService.deletePostByUser(postId, userId);
         if (deleted) {
             return ResponseEntity.ok("Post deleted successfully.");
         } else {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You are not allowed to delete this post.");
         }
+    }
+
+
+    // Helper method for token validation to avoid repeating code
+    private ResponseEntity<String> validateUserToken(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Missing or invalid Authorization header");
+        }
+
+        String token = authHeader.substring(7);
+
+        if (!jwtUtil.isUserToken(token)) {  // Your JWT validation method to check if token belongs to a user
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid user token");
+        }
+
+        return null; // token is valid
     }
 }

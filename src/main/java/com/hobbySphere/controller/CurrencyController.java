@@ -3,6 +3,10 @@ package com.hobbySphere.controller;
 import com.hobbySphere.dto.CurrencyRequest;
 
 import com.hobbySphere.services.CurrencyService;
+
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+
 import com.hobbySphere.entities.AppSettings;
 import com.hobbySphere.entities.Currency;
 import com.hobbySphere.repositories.AppSettingsRepository;
@@ -55,47 +59,69 @@ public class CurrencyController {
 
 
 //ADDED
-@GetMapping("/current")
-public ResponseEntity<?> getCurrentCurrency() {
-	currencyService.ensureDefaultCurrencies();
-    AppSettings settings = appSettingsRepository.findById(1L).orElse(null);
-    if (settings == null || settings.getCurrency() == null) {
-        return ResponseEntity.ok("CAD"); // or your default
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
+    @GetMapping("/current")
+    public ResponseEntity<?> getCurrentCurrency(@RequestHeader(value = "Authorization", required = false) String token) {
+        // Add token validation for user, business, or admin tokens
+        if (token == null || !isAuthorized(token)) {
+            // If no valid token, reject access
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied. Valid token required.");
+        }
+
+        // Existing code unchanged
+        currencyService.ensureDefaultCurrencies();
+        AppSettings settings = appSettingsRepository.findById(1L).orElse(null);
+        if (settings == null || settings.getCurrency() == null) {
+            return ResponseEntity.ok("CAD"); // or your default
+        }
+        return ResponseEntity.ok(settings.getCurrency().getCurrencyType());
     }
-    return ResponseEntity.ok(settings.getCurrency().getCurrencyType());
 
-}
+    @ApiResponses(value = {
+    	    @ApiResponse(responseCode = "200", description = "Successful"),
+    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	})
+    @PostMapping("/chooseCurrency")
+    public ResponseEntity<?> chooseCurrency(
+            @RequestHeader("Authorization") String token,
+            @RequestBody CurrencyRequest request) {
 
-@PostMapping("/chooseCurrency")
-public ResponseEntity<?> chooseCurrency(
-        @RequestHeader("Authorization") String token,
-        @RequestBody CurrencyRequest request) {
+        // Token check already present in main code, so no change needed here
+        if (!isAuthorized(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied.");
+        }
 
-    if (!isAuthorized(token)) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied.");
+        // Existing code unchanged
+        currencyService.ensureDefaultCurrencies();
+
+        String type = request.getCurrencyType() != null ? request.getCurrencyType().toUpperCase() : "CAD";
+
+        Optional<Currency> selectedCurrency = currencyRepository.findByCurrencyType(type);
+
+        if (selectedCurrency.isPresent()) {
+            AppSettings settings = appSettingsRepository.findById(1L)
+                    .orElse(new AppSettings());
+
+            settings.setCurrency(selectedCurrency.get());
+            appSettingsRepository.save(settings);
+
+            return ResponseEntity.ok(selectedCurrency.get());
+        } else {
+            return ResponseEntity.badRequest().body("Currency type not found in the database.");
+        }
     }
-
-    // Ensure default currencies exist (e.g., CAD, DOLLAR, EURO)
-    currencyService.ensureDefaultCurrencies();
-
-    // Get requested currency type or fallback to "CAD"
-    String type = request.getCurrencyType() != null ? request.getCurrencyType().toUpperCase() : "CAD";
-
-    // Look up currency by string type
-    Optional<Currency> selectedCurrency = currencyRepository.findByCurrencyType(type);
-
-    if (selectedCurrency.isPresent()) {
-        // Load or create AppSettings
-        AppSettings settings = appSettingsRepository.findById(1L)
-                .orElse(new AppSettings());
-
-        settings.setCurrency(selectedCurrency.get());
-        appSettingsRepository.save(settings);
-
-        return ResponseEntity.ok(selectedCurrency.get());
-    } else {
-        return ResponseEntity.badRequest().body("Currency type not found in the database.");
-    }
-}
 
 }
