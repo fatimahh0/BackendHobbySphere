@@ -78,19 +78,13 @@ public class JwtUtil {
 
     public boolean isBusinessToken(String token) {
         try {
-            token = token.trim();
-            String businessName = Jwts.parserBuilder()
-                    .setSigningKey(key)
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody()
-                    .get("businessName", String.class);
-
-            return businessName != null;
+            String role = extractRole(token);
+            return "BUSINESS".equalsIgnoreCase(role);
         } catch (Exception e) {
             return false;
         }
     }
+
 
     public String extractRole(String token) {
         try {
@@ -116,10 +110,8 @@ public class JwtUtil {
 
     public boolean isUserToken(String token) {
         try {
-            token = token.trim();
             String role = extractRole(token);
-            boolean isBusiness = isBusinessToken(token);
-            return role == null && !isBusiness;
+            return "USER".equalsIgnoreCase(role);
         } catch (Exception e) {
             return false;
         }

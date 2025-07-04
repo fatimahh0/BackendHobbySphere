@@ -148,35 +148,23 @@ public class ActivityController {
         return ResponseEntity.ok(allActivities);
     }
 
- // ✅ Get upcoming activities
     @GetMapping("/upcoming")
     @Operation(summary = "Get upcoming activities", description = "Retrieve all activities that are not yet expired")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successful"),
-            @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
-            @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
-            @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
-            @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
             @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     })
-    public ResponseEntity<?> getUpcomingActivities(@RequestHeader("Authorization") String tokenHeader) {
-        if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing token"));
+    public ResponseEntity<?> getUpcomingActivities() {
+        try {
+            List<Activities> upcoming = activityService.findAllActivities().stream()
+                    .filter(a -> a.getEndDatetime().isAfter(LocalDateTime.now()))
+                    .toList();
+
+            return ResponseEntity.ok(upcoming);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch upcoming activities"));
         }
-
-        String token = tokenHeader.substring(7).trim();
-        String role = jwtUtil.extractRole(token);
-
-        if (!List.of("USER", "BUSINESS", "MANAGER", "SUPER_ADMIN").contains(role)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Access denied"));
-        }
-
-        List<Activities> upcoming = activityService.findAllActivities().stream()
-                .filter(a -> a.getEndDatetime().isAfter(LocalDateTime.now()))
-                .toList();
-
-        return ResponseEntity.ok(upcoming);
     }
 
 
@@ -376,33 +364,17 @@ public class ActivityController {
     @Operation(summary = "Get a single activity by ID", description = "Retrieve full details of a specific activity including location info")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successful"),
-            @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
-            @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
-            @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
             @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
             @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     })
-    public ResponseEntity<?> getActivityById(
-            @RequestHeader("Authorization") String token,  // 👈 Add token input
-            @PathVariable Long id
-    ) {
+    public ResponseEntity<?> getActivityById(@PathVariable Long id) {
         try {
-            token = token.replace("Bearer ", "").trim();
-            String role = jwtUtil.extractRole(token);
-
-            // ✅ Check if the token belongs to any valid role
-            if (!(jwtUtil.isUserToken(token) || jwtUtil.isBusinessToken(token) || jwtUtil.isAdminToken(token))) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("message", "Access denied. Valid token required."));
-            }
-
             Activities activity = activityService.findById(id);
             if (activity == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Activity not found"));
             }
 
-            // 👇 Instead of returning raw entity, return a clean map with selected fields
+            // Return selected activity fields
             Map<String, Object> response = new HashMap<>();
             response.put("id", activity.getId());
             response.put("name", activity.getActivityName());
@@ -422,10 +394,8 @@ public class ActivityController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                    "message", "Invalid or missing token",
-                    "error", e.getMessage()
-            ));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Unexpected server error"));
         }
     }
 

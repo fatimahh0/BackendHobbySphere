@@ -36,6 +36,8 @@ public class StripeController {
     @PostMapping("/create-payment-intent")
     public ResponseEntity<?> createPaymentIntent(@RequestBody Map<String, Object> request,
                                                  @RequestHeader("Authorization") String authHeader) {
+    	System.out.println("Auth Header Received: " + authHeader);
+
         // Token validation
         ResponseEntity<String> tokenCheck = validateUserToken(authHeader);
         if (tokenCheck != null) return tokenCheck;
@@ -58,12 +60,14 @@ public class StripeController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Missing or invalid Authorization header");
         }
 
-        String token = authHeader.substring(7);
+        String token = authHeader.substring(7).trim();
 
-        if (!jwtUtil.isUserToken(token)) {  // Your JWT validation method
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid user token");
+        String role = jwtUtil.extractRole(token);
+        if (!"USER".equalsIgnoreCase(role) && !"BUSINESS".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized role");
         }
 
-        return null; // token is valid
+        return null; // ✅ Token valid
     }
+
 }
