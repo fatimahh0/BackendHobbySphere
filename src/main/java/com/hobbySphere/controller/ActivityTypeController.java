@@ -1,5 +1,6 @@
 package com.hobbySphere.controller;
 
+import com.hobbySphere.dto.ActivityTypeDTO;
 import com.hobbySphere.entities.ActivityType;
 import com.hobbySphere.repositories.ActivityTypeRepository;
 import com.hobbySphere.services.ActivityTypeService;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -53,6 +55,7 @@ public class ActivityTypeController {
     	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
     	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     	})
+    
     @GetMapping
     public List<ActivityType> getAll() {
         return activityTypeRepository.findAllByOrderByNameAsc();
@@ -90,4 +93,30 @@ public class ActivityTypeController {
         activityTypeService.ensureActivityTypes();
         return "Default activity types and interests seeded successfully.";
     }
+    
+    @GetMapping("/guest")
+    public List<ActivityTypeDTO> getAllActivityTypes() {
+        return activityTypeRepository.findAllByOrderByNameAsc()
+            .stream()
+            .map(type -> {
+                String rawName = type.getName();
+                String displayName = Arrays.stream(com.hobbySphere.enums.ActivityTypeEnum.values())
+                        .filter(e -> e.name().equals(rawName))
+                        .findFirst()
+                        .map(com.hobbySphere.enums.ActivityTypeEnum::getDisplayName)
+                        .orElse(rawName); // fallback
+
+                return new ActivityTypeDTO(
+                    type.getId(),
+                    rawName,
+                    displayName, // ✅ Pass display name here
+                    type.getIcon() != null ? type.getIcon().name() : null,
+                    type.getIconLib() != null ? type.getIconLib().name() : null
+                );
+            })
+            .toList();
+    }
+
+ 
+
 }

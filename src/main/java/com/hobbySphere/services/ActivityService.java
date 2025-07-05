@@ -247,4 +247,11 @@ public class ActivityService {
     public List<Activities> getAllVisibleActivitiesForUsers() {
         return activityRepository.findAllPublicActiveBusinessActivities();
     }
+
+    public List<Activities> findByActivityTypeId(Long typeId) {
+        return activityRepository.findByActivityType_Id(typeId);
+    }
+
+	
+
 }

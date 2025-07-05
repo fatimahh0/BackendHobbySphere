@@ -1,5 +1,8 @@
 package com.hobbySphere.enums;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 public enum ActivityTypeEnum {
     FOOTBALL(InterestEnum.SPORTS),
     YOGA(InterestEnum.SPORTS),
@@ -71,5 +74,12 @@ public enum ActivityTypeEnum {
 
     public InterestEnum getInterest() {
         return interest;
+    }
+
+    // ✅ Human-readable name: e.g., "MARTIAL_ARTS" -> "Martial Arts"
+    public String getDisplayName() {
+        return Arrays.stream(this.name().split("_"))
+                .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase())
+                .collect(Collectors.joining(" "));
     }
 }

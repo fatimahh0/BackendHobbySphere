@@ -3,6 +3,7 @@ package com.hobbySphere.controller;
 import com.hobbySphere.entities.Activities;
 import com.hobbySphere.entities.ActivityBookings;
 import com.hobbySphere.entities.Users;
+import com.hobbySphere.enums.ActivityTypeEnum;
 import com.hobbySphere.repositories.CurrencyRepository;
 import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.ActivityService;
@@ -57,7 +58,12 @@ public class ActivityController {
 
     // ✅ Get all activities for a business (with auto status update)
     
-    @Operation(summary = "Get activities by business ID", description = "Retrieve a list of activities associated with a specific business and auto-update expired ones. Accessible to the business owner or admin users.")
+ // ✅ FIXED: Added @GetMapping("/{businessId}")
+    @GetMapping("/business/{businessId}")
+    @Operation(
+        summary = "Get activities by business ID",
+        description = "Retrieve a list of activities associated with a specific business and auto-update expired ones. Accessible to the business owner or admin users."
+    )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successful"),
         @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
@@ -67,7 +73,8 @@ public class ActivityController {
         @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     })
     public ResponseEntity<?> getActivitiesByBusiness(
-            @Parameter(description = "ID of the business to fetch activities for") @PathVariable Long businessId,
+            @Parameter(description = "ID of the business to fetch activities for")
+            @PathVariable Long businessId,
             @RequestHeader("Authorization") String tokenHeader) {
 
         try {
@@ -107,7 +114,8 @@ public class ActivityController {
             // Auto-update status if expired
             LocalDateTime now = LocalDateTime.now();
             for (Activities activity : activities) {
-                if (activity.getEndDatetime().isBefore(now) && !"Terminated".equalsIgnoreCase(activity.getStatus())) {
+                if (activity.getEndDatetime().isBefore(now)
+                        && !"Terminated".equalsIgnoreCase(activity.getStatus())) {
                     activity.setStatus("Terminated");
                     activityService.save(activity);
                 }
@@ -379,7 +387,7 @@ public class ActivityController {
             response.put("id", activity.getId());
             response.put("name", activity.getActivityName());
             response.put("description", activity.getDescription());
-            response.put("activityType", activity.getActivityType().getName());
+            
             response.put("location", activity.getLocation());
             response.put("latitude", activity.getLatitude());
             response.put("longitude", activity.getLongitude());
@@ -390,6 +398,16 @@ public class ActivityController {
             response.put("imageUrl", activity.getImageUrl());
             response.put("maxParticipants", activity.getMaxParticipants());
             response.put("businessName", activity.getBusiness().getBusinessName());
+            String rawType = activity.getActivityType().getName();
+
+            String displayType = Arrays.stream(ActivityTypeEnum.values())
+                .filter(e -> e.name().equals(rawType))
+                .findFirst()
+                .map(ActivityTypeEnum::getDisplayName)
+                .orElse(rawType); // fallback in case not matched
+
+            response.put("activityType", displayType);
+
 
             return ResponseEntity.ok(response);
 
@@ -522,6 +540,66 @@ public class ActivityController {
             ));
         }
     }
+    
+    @GetMapping("/by-type/{typeId}")
+    @Operation(summary = "Get activities by activity type", description = "Returns upcoming activities linked to a specific activity type")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successful"),
+        @ApiResponse(responseCode = "404", description = "No activities found for this type"),
+        @ApiResponse(responseCode = "500", description = "Internal Server Error")
+    })
+    public ResponseEntity<?> getActivitiesByType(@PathVariable Long typeId) {
+        try {
+            List<Activities> activities = activityService.findByActivityTypeId(typeId);
+
+            // Filter upcoming only
+            List<Activities> upcoming = activities.stream()
+                .filter(a -> a.getEndDatetime().isAfter(LocalDateTime.now()))
+                .filter(a -> !"Terminated".equalsIgnoreCase(a.getStatus()))
+                .toList();
+
+            if (upcoming.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "No upcoming activities found for this type"));
+            }
+
+            return ResponseEntity.ok(upcoming);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "message", "Failed to fetch activities by type",
+                "error", e.getMessage()
+            ));
+        }
+    }
+    
+    @GetMapping("/guest/upcoming")
+    @Operation(summary = "Get upcoming public activities for guests", description = "Returns upcoming activities optionally filtered by typeId for unauthenticated users")
+    public ResponseEntity<?> getGuestUpcomingActivities(@RequestParam(required = false) Long typeId) {
+        try {
+            List<Activities> allActivities;
+
+            if (typeId != null) {
+                allActivities = activityService.findByActivityTypeId(typeId);
+            } else {
+                allActivities = activityService.findAllActivities();
+            }
+
+            List<Activities> upcoming = allActivities.stream()
+                    .filter(a -> a.getEndDatetime().isAfter(LocalDateTime.now()))
+                    .filter(a -> !"Terminated".equalsIgnoreCase(a.getStatus()))
+                    .filter(a -> a.getBusiness().getIsPublicProfile() != null && a.getBusiness().getIsPublicProfile()) // only public
+                    .toList();
+
+            return ResponseEntity.ok(upcoming);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "message", "Failed to fetch guest upcoming activities",
+                    "error", e.getMessage()
+            ));
+        }
+    }
+
+
 
 
 }

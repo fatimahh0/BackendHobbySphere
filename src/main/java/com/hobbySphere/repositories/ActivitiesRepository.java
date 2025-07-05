@@ -63,4 +63,8 @@ public interface ActivitiesRepository extends JpaRepository<Activities, Long> {
 
 
     Activities findByActivityName(String activity);
+
+	List<Activities> findByStartDatetimeAfterAndActivityTypeIdOrderByStartDatetimeAsc(LocalDateTime now, Long typeId);
+
+	List<Activities> findByActivityType_Id(Long typeId);
 } 
