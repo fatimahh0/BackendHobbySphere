@@ -5,6 +5,8 @@ import com.hobbySphere.entities.Users;
 import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.NotificationsService;
 import com.hobbySphere.services.UserService;
+import java.util.Map;
+import java.util.Collections;
 
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -226,31 +228,31 @@ public class NotificationsController {
     	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
     	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     	})
-    	@GetMapping("/business")
-    	public ResponseEntity<List<Notifications>> getBusinessNotifications(
-    	        @RequestHeader("Authorization") String authHeader,
-    	        Principal principal) {
+    @GetMapping("/business")
+    public ResponseEntity<?> getBusinessNotifications(
+            @RequestHeader("Authorization") String authHeader,
+            Principal principal) {
 
-    	    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    	    }
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
-    	    String token = authHeader.substring(7);
+        String token = authHeader.substring(7);
 
-    	    // Check if token is a valid business token
-    	    if (!jwtUtil.isBusinessToken(token)) {
-    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    	    }
+        if (!jwtUtil.isBusinessToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
-    	    // Original logic unchanged
-    	    Businesses business = businessService.findByEmail(principal.getName())
-    	        .orElseThrow(() -> new RuntimeException("Business not found"));
+        Businesses business = businessService.findByEmail(principal.getName());
+        if (business == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Business not found"));
+        }
 
-    	    List<Notifications> notifications = notificationsService.getAllByBusiness(business);
+        List<Notifications> notifications = notificationsService.getAllByBusiness(business);
 
-    	    return ResponseEntity.ok(notifications);
-    	}
-
+        return ResponseEntity.ok(notifications);
+    }
 
 
     // ✅ BUSINESS: Count all
@@ -264,7 +266,7 @@ public class NotificationsController {
     	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     	})
     	@GetMapping("/business/count")
-    	public ResponseEntity<Long> getBusinessNotificationCount(
+    	public ResponseEntity<?> getBusinessNotificationCount(
     	        @RequestHeader("Authorization") String authHeader,
     	        Principal principal) {
 
@@ -280,12 +282,12 @@ public class NotificationsController {
     	    }
 
     	    // Original logic unchanged
-    	    Optional<Businesses> optionalBusiness = businessService.findByEmail(principal.getName());
-    	    if (optionalBusiness.isEmpty()) {
-    	        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No business account found for this user");
-    	    }
-    	    Businesses business = optionalBusiness.get();
-
+    	    Businesses business = businessService.findByEmail(principal.getName());
+            if (business == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "Business not found"));
+            }
+            
     	    long count = notificationsService.getAllByBusiness(business).size();
     	    return ResponseEntity.ok(count);
     	}
@@ -301,32 +303,37 @@ public class NotificationsController {
     	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
     	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     	})
-    	@GetMapping("/business/unread-count")
-    	public ResponseEntity<Integer> getBusinessUnreadNotificationCount(
-    	        @RequestHeader("Authorization") String authHeader,
-    	        Principal principal) {
+    @GetMapping("/business/unread-count")
+    public ResponseEntity<Integer> getBusinessUnreadNotificationCount(
+            @RequestHeader("Authorization") String authHeader) {  
 
-    	    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    	    }
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
-    	    String token = authHeader.substring(7);
+        String token = authHeader.substring(7);
 
-    	    // Validate business token
-    	    if (!jwtUtil.isBusinessToken(token)) {
-    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    	    }
+        if (!jwtUtil.isBusinessToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
-    	    // Original logic unchanged
-    	    Optional<Businesses> optionalBusiness = businessService.findByEmail(principal.getName());
-    	    if (optionalBusiness.isEmpty()) {
-    	        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No business account found for this user");
-    	    }
-    	    Businesses business = optionalBusiness.get();
+        String email = jwtUtil.extractUsername(token);
 
-    	    int unreadCount = notificationsService.getUnreadByBusiness(business).size();
-    	    return ResponseEntity.ok(unreadCount);
-    	}
+        Businesses business = businessService.findByEmail(email);
+        if (business == null) {
+            return ResponseEntity.ok(0);
+        }
+
+        List<Notifications> unreadNotifications = notificationsService.getUnreadByBusiness(business);
+        if (unreadNotifications == null) {
+            unreadNotifications = Collections.emptyList();
+        }
+        int unreadCount = unreadNotifications.size();
+
+        return ResponseEntity.ok(unreadCount);
+    }
+
+
 
 
 
@@ -341,7 +348,7 @@ public class NotificationsController {
     	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     	})
     	@PutMapping("/business/{id}/read")
-    	public ResponseEntity<Void> markBusinessNotificationAsRead(
+    	public ResponseEntity<?> markBusinessNotificationAsRead(
     	        @PathVariable Long id,
     	        Principal principal,
     	        @RequestHeader("Authorization") String authHeader) {
@@ -357,11 +364,12 @@ public class NotificationsController {
     	    }
 
     	    // Original code unchanged
-    	    Optional<Businesses> optionalBusiness = businessService.findByEmail(principal.getName());
-    	    if (optionalBusiness.isEmpty()) {
-    	        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No business account found for this user");
-    	    }
-    	    Businesses business = optionalBusiness.get();
+    	    Businesses business = businessService.findByEmail(principal.getName());
+            if (business == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "Business not found"));
+            }
+            
 
     	    notificationsService.markAsReadForBusiness(id, business);
 
@@ -381,7 +389,7 @@ public class NotificationsController {
     	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     	})
     	@DeleteMapping("/business/{id}")
-    	public ResponseEntity<Void> deleteBusinessNotification(
+    	public ResponseEntity<?> deleteBusinessNotification(
     	        @PathVariable Long id,
     	        Principal principal,
     	        @RequestHeader("Authorization") String authHeader) {
@@ -397,12 +405,12 @@ public class NotificationsController {
     	    }
 
     	    // Original code unchanged
-    	    Optional<Businesses> optionalBusiness = businessService.findByEmail(principal.getName());
-    	    if (optionalBusiness.isEmpty()) {
-    	        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No business account found for this user");
-    	    }
-    	    Businesses business = optionalBusiness.get();
-
+    	    Businesses business = businessService.findByEmail(principal.getName());
+            if (business == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "Business not found"));
+            }
+            
     	    Notifications notification = notificationsService.getById(id);
 
     	    if (!notification.getBusiness().getId().equals(business.getId())) {

@@ -81,58 +81,63 @@ public class ReviewController {
             @RequestHeader("Authorization") String token,
             @Parameter(description = "ID of the activity to fetch reviews for") @PathVariable Long activityId) {
 
-    	String jwt = token.substring(7);
-	    String role = jwtUtil.extractRole(jwt);
-        
-        
-        if (!isAuthorized(token) && (!"USER".equals(role))) {
+        String jwt = token.substring(7);
+        String role = jwtUtil.extractRole(jwt);
+
+        if (!isAuthorized(token) && !"USER".equals(role)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied.");
         }
-        
 
-        List<Review> reviews = reviewService.getReviewsByActivity(activityId);
-        if (reviews.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        try {
+            List<Review> reviews = reviewService.getReviewsByActivity(activityId);
+            // ✅ Always return 200, even if the list is empty
+            return ResponseEntity.ok(reviews);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Something went wrong.");
         }
-        return new ResponseEntity<>(reviews, HttpStatus.OK);
     }
-    
+
     
     @Operation(
     	    summary = "Add a review",
-    	    description = "Allows a customer to submit a review for an activity"
+    	    description = "Allows a customer to submit a review for an activity. The review must include at least a rating or feedback."
     	)
-    @ApiResponses(value = {
-    	    @ApiResponse(responseCode = "200", description = "Successful"),
-    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
-    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
-    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
-    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
-    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
-    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    	@ApiResponses(value = {
+    	    @ApiResponse(responseCode = "201", description = "Review submitted successfully"),
+    	    @ApiResponse(responseCode = "400", description = "Invalid request – rating and feedback cannot both be empty"),
+    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Only users can submit reviews"),
+    	    @ApiResponse(responseCode = "404", description = "Not Found – Activity or user not found"),
+    	    @ApiResponse(responseCode = "500", description = "Internal server error")
     	})
-    	@PostMapping("addreviews")
+    	@PostMapping("/addreviews")
     	public ResponseEntity<?> addReview(
     	        @RequestHeader("Authorization") String token,
     	        @RequestBody ReviewDTO dto) {
-    	    
+
     	    if (token == null || !token.startsWith("Bearer ")) {
     	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Missing or invalid token.");
     	    }
 
     	    String jwt = token.substring(7);
     	    String role = jwtUtil.extractRole(jwt);
+
     	    if (!"USER".equals(role)) {
-    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Only User can submit reviews.");
+    	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Only users can submit reviews.");
     	    }
 
     	    try {
     	        Review review = reviewService.createReviewFromDTO(dto, token);
     	        return new ResponseEntity<>(review, HttpStatus.CREATED);
     	    } catch (RuntimeException e) {
+    	        // Handle known validation (like empty rating & feedback)
+    	        String msg = e.getMessage();
+    	        if (msg != null && msg.toLowerCase().contains("at least")) {
+    	            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(msg);
+    	        }
     	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
     	    }
     	}
+
     
     @Operation(
     	    summary = "Get all reviews for a business",

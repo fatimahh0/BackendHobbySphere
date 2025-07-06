@@ -12,5 +12,7 @@ public interface InterestsRepository extends JpaRepository<Interests, Long> {
 
 	Optional<Interests> findByName(String name);
 
+	boolean existsByNameIgnoreCase(String name);
+
    
 }

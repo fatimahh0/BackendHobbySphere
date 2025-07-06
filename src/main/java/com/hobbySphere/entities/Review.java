@@ -20,31 +20,32 @@ public class Review {
     private Activities activity;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false) // 👈 must match DB column name exactly
+    @JoinColumn(name = "user_id", nullable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Users customer;
 
+    // ✅ Make rating optional by using Integer (nullable wrapper)
+    private Integer rating;
 
-    @Column(nullable = false)
-    private int rating;
-
+    // ✅ Already optional (nullable by default)
     @Column(length = 500)
     private String feedback;
 
-    @Column(nullable = false)
+    // ✅ Optional — or auto-set like createdAt
     private LocalDateTime date;
 
-    // ✅ Already existing created_at
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    // ✅ Add updated_at as last column
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = this.updatedAt = LocalDateTime.now();
+        if (this.date == null) {
+            this.date = LocalDateTime.now(); // optional: auto-fill if not provided
+        }
     }
 
     @PreUpdate
@@ -52,23 +53,7 @@ public class Review {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    // Getters and Setters
+    // Getters and Setters...
 
     public Long getId() {
         return id;
@@ -94,11 +79,11 @@ public class Review {
         this.customer = customer;
     }
 
-    public int getRating() {
+    public Integer getRating() {
         return rating;
     }
 
-    public void setRating(int rating) {
+    public void setRating(Integer rating) {
         this.rating = rating;
     }
 
@@ -116,5 +101,21 @@ public class Review {
 
     public void setDate(LocalDateTime date) {
         this.date = date;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

@@ -403,26 +403,22 @@ public class UsersController {
     	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
     	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     	})
-    @GetMapping("/{userId}/suggestions")
-    public ResponseEntity<?> getFriendSuggestions(
-            @PathVariable Long userId,
-            @RequestHeader(value = "Authorization", required = false) String token) {
+    	@GetMapping("/{userId}/suggestions")
+    	public ResponseEntity<?> getFriendSuggestions(
+    	        @PathVariable Long userId,
+    	        @RequestHeader("Authorization") String token) {
 
-        // === User token check (simple validation) ===
-        if (token == null || !token.equals("user-valid-token")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Unauthorized – Missing or invalid user token");
-        }
+    	    try {
+    	        // Optional (if you validate the token manually):
+    	        // String userIdFromToken = jwtUtil.extractUserId(token);
 
-        // === Main code untouched ===
-        try {
-            List<Users> suggestions = userService.suggestFriendsByInterest(userId);
-            List<UserDto> result = suggestions.stream().map(UserDto::new).toList();
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Error fetching suggestions: " + e.getMessage());
-        }
-    }
+    	        List<Users> suggestions = userService.suggestFriendsByInterest(userId);
+    	        List<UserDto> result = suggestions.stream().map(UserDto::new).toList();
+    	        return ResponseEntity.ok(result);
+    	    } catch (Exception e) {
+    	        return ResponseEntity.status(500).body("Error fetching suggestions: " + e.getMessage());
+    	    }
+    	}
 
     @ApiResponses(value = {
     	    @ApiResponse(responseCode = "200", description = "Successful"),
@@ -496,6 +492,7 @@ public class UsersController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }
     }
-
+    
+ 
     
 }

@@ -4,7 +4,7 @@ public class ActivityTypeDTO {
 
     private Long id;
     private String name;
-    private String displayName; // ✅ Add this
+    private String displayName; 
     private String icon;
     private String iconLib;
 

@@ -78,20 +78,23 @@ public class AuthController {
             @RequestParam(required = false) String phoneNumber,
             @RequestParam("password") String password) {
         try {
-            // Prepare basic data (email/phone + password only)
             Map<String, String> data = new HashMap<>();
             if (email != null) data.put("email", email);
             if (phoneNumber != null) data.put("phoneNumber", phoneNumber);
             data.put("password", password);
 
-            // Send verification
-            userService.sendVerificationCodeForRegistration(data); // No profile image here
+            userService.sendVerificationCodeForRegistration(data);
 
             return ResponseEntity.ok(Map.of("message", "Verification code sent"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("message",  e.getMessage()));
         }
     }
+
+
 
     @PostMapping("/verify-email-code")
     public ResponseEntity<?> verifyEmailCode(@RequestBody Map<String, String> request) {
@@ -138,15 +141,23 @@ public class AuthController {
             @RequestParam String username,
             @RequestParam String firstName,
             @RequestParam String lastName,
-            @RequestParam Boolean isPublicProfile, // ✅ Add this
-            @RequestPart(required = false) MultipartFile profileImage) {
+            @RequestParam Boolean isPublicProfile,
+            @RequestPart(required = false)MultipartFile profileImage) {
+
         try {
+            if (pendingId == null || username == null || firstName == null || lastName == null || isPublicProfile == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Missing required fields"));
+            }
+
             boolean updated = userService.completeUserProfile(
-                pendingId, username, firstName, lastName, profileImage, isPublicProfile // ✅ Include isPublicProfile
+                    pendingId, username, firstName, lastName, profileImage, isPublicProfile
             );
 
             if (updated) {
                 Users user = userService.findByUsername(username);
+                if (user == null) {
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found"));
+                }
 
                 Map<String, Object> userData = new HashMap<>();
                 userData.put("id", user.getId());
@@ -169,10 +180,12 @@ public class AuthController {
                     .body(Map.of("error", "Profile update failed"));
 
         } catch (Exception e) {
+            e.printStackTrace(); // 🔍 See terminal log
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", "Server error: " + e.getMessage()));
         }
     }
+
 
 
     @PostMapping("/business/send-verification")
@@ -197,8 +210,11 @@ public class AuthController {
                     "message", phoneNumber != null
                             ? "Static code 123456 set for phone verification"
                             : "Verification code sent to email"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("message",  e.getMessage()));
         }
     }
 
@@ -251,7 +267,7 @@ public class AuthController {
     public ResponseEntity<?> completeBusinessProfile(
             @RequestParam Long businessId,
             @RequestParam String businessName,
-            @RequestParam String description,
+            @RequestParam(required = false) String description,
             @RequestParam(required = false) String websiteUrl,
             @RequestPart(required = false) MultipartFile logo,
             @RequestPart(required = false) MultipartFile banner
@@ -582,14 +598,14 @@ public class AuthController {
 
     @PostMapping("/business/login")
     public ResponseEntity<?> businessLogin(@RequestBody @Valid Users user) {
-        Optional<Businesses> optionalBusiness = businessService.findByEmail(user.getEmail());
+    	Businesses business = businessService.findByEmail(user.getEmail());
 
-        if (optionalBusiness.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Business not found"));
-        }
+    	if (business == null) {
+    	    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+    	        .body(Map.of("message", "Business not found"));
+    	}
 
-        Businesses business = optionalBusiness.get();
+    
 
         if (!passwordEncoder.matches(user.getPasswordHash(), business.getPasswordHash())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -659,12 +675,16 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("message", "Phone number and password are required"));
         }
 
-        Businesses business = businessService.findByPhoneNumber(phone);
-        if (business == null) {
+        Optional<Businesses> optionalBusiness = businessService.findByPhoneNumber(phone);
+
+        if (optionalBusiness.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "Business not found with this phone number"));
         }
 
+        Businesses business = optionalBusiness.get();
+
+       
         if (!passwordEncoder.matches(rawPassword, business.getPasswordHash())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "Incorrect password"));

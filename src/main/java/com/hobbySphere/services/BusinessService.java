@@ -85,9 +85,29 @@ public class BusinessService {
 
     private final Map<String, String> resetCodes = new ConcurrentHashMap<>();
 
-    public Optional<Businesses> findByEmail(String email) {
-        return businessRepository.findByEmail(email);
+    
+    public Businesses findByEmail(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            throw new IllegalArgumentException("Identifier cannot be null or empty");
+        }
+
+        Businesses business = null;
+
+        if (identifier.contains("@")) {
+            business = businessRepository.findByEmail(identifier).orElse(null);
+        } else {
+            business = businessRepository.findByPhoneNumber(identifier).orElse(null);
+        }
+
+        if (business == null) {
+            throw new RuntimeException("Business not found with: " + identifier);
+        }
+
+        return business;
     }
+
+
+    
     
     
 
@@ -492,10 +512,12 @@ public class BusinessService {
         return true;
     }
 
-    public Businesses findByPhoneNumber(String phoneNumber) {
-        return businessRepository.findByPhoneNumber(phoneNumber)
-                .orElse(null);
+
+    public Optional<Businesses> findByPhoneNumber(String phone) {
+        return businessRepository.findByPhoneNumber(phone);
     }
+
+
 
     public boolean deleteBusinessLogo(Long businessId) {
         Businesses business = businessRepository.findById(businessId)
@@ -588,6 +610,9 @@ public class BusinessService {
         return businessRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Business not found with email: " + email));
     }
+
+ 
+
 
     public List<LowRatedBusinessDTO> getLowRatedBusinesses() {
         List<Businesses> businesses = businessRepository.findAll();

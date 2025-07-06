@@ -45,15 +45,18 @@ public class BusinessController {
         String email = jwtUtil.extractUsername(jwt);
         String role = jwtUtil.extractRole(jwt);
         if ("SUPER_ADMIN".equals(role)) return true;
-        Businesses business = businessService.findByEmail(email).orElse(null);
+
+        Businesses business = businessService.findByEmail(email); 
         return business != null && business.getId().equals(targetBusinessId);
     }
+
 
     private boolean isBusinessToken(String token) {
         if (token == null || !token.startsWith("Bearer ")) return false;
         String jwt = token.substring(7);
         String email = jwtUtil.extractUsername(jwt);
-        return businessService.findByEmail(email).isPresent();
+        Businesses business = businessService.findByEmail(email);
+        return business != null;
     }
 
     @Operation(summary = "Get a business by ID")

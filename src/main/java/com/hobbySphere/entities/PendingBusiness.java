@@ -11,7 +11,7 @@ public class PendingBusiness {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
+    @Column(unique = true,nullable=true)
     private String email;
 
     private String passwordHash;
@@ -22,7 +22,7 @@ public class PendingBusiness {
     @Column(columnDefinition = "TEXT", nullable = true) // ✅ allow filling later
     private String description;
 
-    @Column(name = "phone_number", nullable = false)
+    @Column(name = "phone_number", nullable = true,unique =true)
     private String phoneNumber;
 
     @Column(name = "website_url", nullable = true) // ✅ optional at first

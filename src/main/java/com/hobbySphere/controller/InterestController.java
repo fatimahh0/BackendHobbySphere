@@ -1,12 +1,13 @@
 package com.hobbySphere.controller;
 
 import com.hobbySphere.entities.Interests;
-import com.hobbySphere.repositories.InterestRepository;
+import com.hobbySphere.enums.IconLibraryEnum;
+import com.hobbySphere.enums.InterestIconEnum;
+import com.hobbySphere.repositories.InterestsRepository;
 import com.hobbySphere.security.JwtUtil;
 
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,14 +25,14 @@ import java.util.stream.Collectors;
 })
 public class InterestController {
 
-    private final InterestRepository interestRepository;
+    private final InterestsRepository interestsRepository;
 
-    public InterestController(InterestRepository interestRepository) {
-        this.interestRepository = interestRepository;
-    }
-    
     @Autowired
     private JwtUtil jwtUtil;
+
+    public InterestController(InterestsRepository interestsRepository) {
+        this.interestsRepository = interestsRepository;
+    }
 
     private boolean isAuthorized(String token) {
         if (token == null || !token.startsWith("Bearer ")) return false;
@@ -42,28 +43,21 @@ public class InterestController {
     }
 
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Successful"),
-        @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
-        @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
-        @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
-        @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
-        @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
-    })
+            @ApiResponse(responseCode = "200", description = "Successful"),
+            @ApiResponse(responseCode = "500", description = "Internal Server Error")
+        })
     @GetMapping("/all")
-    public ResponseEntity<List<Map<String, Object>>> getAllInterests(
-            @RequestHeader("Authorization") String authHeader) {
-
-        if (!isAuthorized(authHeader)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        List<Map<String, Object>> interests = interestRepository.findAll()
+    public ResponseEntity<List<Map<String, Object>>> getAllInterests() {
+        List<Map<String, Object>> interests = interestsRepository.findAll()
             .stream()
             .map(i -> {
                 Map<String, Object> map = new HashMap<>();
                 map.put("id", i.getId());
                 map.put("name", i.getName());
+
+                // ✅ Use icon.getIconName() if available
+                map.put("icon", i.getIcon() != null ? i.getIcon().getIconName() : null);
+                map.put("iconLib", i.getIconLib() != null ? i.getIconLib().name() : null);
                 return map;
             })
             .collect(Collectors.toList());
@@ -71,25 +65,10 @@ public class InterestController {
         return ResponseEntity.ok(interests);
     }
 
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Successful"),
-        @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
-        @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
-        @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
-        @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
-        @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
-    })
+
     @GetMapping("/categorized")
-    public ResponseEntity<Map<String, List<String>>> getCategorizedInterests(
-            @RequestHeader("Authorization") String authHeader) {
-
-        if (!isAuthorized(authHeader)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
+    public ResponseEntity<Map<String, List<String>>> getCategorizedInterests() {
         Map<String, List<String>> categorizedTypes = new LinkedHashMap<>();
-
         categorizedTypes.put("Sports", List.of("Football", "Yoga", "Martial Arts", "Hiking", "Horseback Riding", "Fishing"));
         categorizedTypes.put("Music", List.of("Music", "Dance", "Music Production"));
         categorizedTypes.put("Art", List.of("Art", "Sculpting", "Knitting", "Calligraphy"));
@@ -108,16 +87,7 @@ public class InterestController {
 
         return ResponseEntity.ok(categorizedTypes);
     }
-
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Successful"),
-        @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
-        @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
-        @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
-        @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
-        @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
-    })
+    
     @PostMapping("/create")
     public ResponseEntity<String> createInterest(
             @RequestHeader("Authorization") String authHeader,
@@ -128,16 +98,30 @@ public class InterestController {
         }
 
         String name = body.get("name");
+        String iconStr = body.get("icon");
+        String iconLibStr = body.get("iconLib");
+
         if (name == null || name.isBlank()) {
             return ResponseEntity.badRequest().body("Interest name is required");
         }
 
-        if (interestRepository.existsByNameIgnoreCase(name)) {
+        if (interestsRepository.existsByNameIgnoreCase(name)) {
             return ResponseEntity.badRequest().body("Interest already exists");
         }
 
-        Interests interest = new Interests(name);
-        interestRepository.save(interest);
+        InterestIconEnum icon = null;
+        IconLibraryEnum iconLib = null;
+
+        try {
+            if (iconStr != null) icon = InterestIconEnum.valueOf(iconStr);
+        } catch (IllegalArgumentException ignored) {}
+
+        try {
+            if (iconLibStr != null) iconLib = IconLibraryEnum.valueOf(iconLibStr);
+        } catch (IllegalArgumentException ignored) {}
+
+        Interests interest = new Interests(name, icon, iconLib);
+        interestsRepository.save(interest);
 
         return ResponseEntity.ok("Interest created successfully");
     }

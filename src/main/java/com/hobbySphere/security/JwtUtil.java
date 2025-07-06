@@ -42,8 +42,16 @@ public class JwtUtil {
     }
 
     public String generateToken(Businesses business) {
+        String subject = business.getEmail() != null && !business.getEmail().isEmpty()
+                         ? business.getEmail()
+                         : business.getPhoneNumber();
+
+        if (subject == null || subject.isEmpty()) {
+            throw new IllegalArgumentException("Business must have either email or phone number to generate token");
+        }
+
         return Jwts.builder()
-                .setSubject(business.getEmail())
+                .setSubject(subject)
                 .claim("id", business.getId())
                 .claim("businessName", business.getBusinessName())
                 .claim("logoUrl", business.getBusinessLogoUrl())
@@ -54,6 +62,7 @@ public class JwtUtil {
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
+
 
     public String generateToken(AdminUsers adminUser) {
         return Jwts.builder()

@@ -51,22 +51,41 @@ public class ReviewService {
             .orElseThrow(() -> new RuntimeException("Activity not found"));
 
         boolean hasCompletedBooking = activityBookingsRepository
-            .existsByUserIdAndActivityIdAndBookingStatus(user.getId(), activity.getId(), "Completed");
+        	    .existsByUserIdAndActivityIdAndBookingStatus(user.getId(), activity.getId(), "Completed");
+
+        	boolean alreadyReviewed = reviewRepository
+        	    .existsByActivityIdAndCustomerId(activity.getId(), user.getId());
+
+        	if (!hasCompletedBooking) throw new RuntimeException("");
+        	if (alreadyReviewed) throw new RuntimeException("You already reviewed this activity.");
+
 
         if (!hasCompletedBooking) {
             throw new RuntimeException("You can only review this activity after completing a booking.");
         }
 
+        // ✅ Validation: at least one of rating or feedback is required
+        if (dto.getRating() == null && (dto.getFeedback() == null || dto.getFeedback().trim().isEmpty())) {
+            throw new RuntimeException("Review must contain at least a rating or feedback.");
+        }
+
         Review review = new Review();
         review.setCustomer(user);
         review.setActivity(activity);
-        review.setRating(dto.getRating());
-        review.setFeedback(dto.getFeedback());
+
+        if (dto.getRating() != null) {
+            review.setRating(dto.getRating());
+        }
+
+        if (dto.getFeedback() != null && !dto.getFeedback().trim().isEmpty()) {
+            review.setFeedback(dto.getFeedback().trim());
+        }
+
         review.setDate(LocalDateTime.now());
 
         Review savedReview = reviewRepository.save(review);
 
-        // ✅ Send notification using NotificationTypeEntity
+        // ✅ Notify business
         String message = user.getFirstName() + " reviewed your activity: " + activity.getActivityName();
         notificationsService.notifyBusiness(activity.getBusiness(), message, "NEW_REVIEW");
 

@@ -14,7 +14,7 @@ public class PendingUser {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
+    @Column(unique = true,nullable=true)
     private String email;
 
     @Column(unique = true,nullable = true)

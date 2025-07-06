@@ -1,5 +1,7 @@
 package com.hobbySphere.entities;
 
+import com.hobbySphere.enums.IconLibraryEnum;
+import com.hobbySphere.enums.InterestIconEnum;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -16,10 +18,17 @@ public class Interests {
     @Column(nullable = false, unique = true)
     private String name;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "icon_name")
+    private InterestIconEnum icon;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "icon_library")
+    private IconLibraryEnum iconLib;
+
     @OneToMany(mappedBy = "id.interest", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserInterests> userInterests;
 
-    // ✅ Add created_at and updated_at as the last two columns
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -36,14 +45,20 @@ public class Interests {
         this.updatedAt = LocalDateTime.now();
     }
 
-    // Constructors
+    // --- Constructors ---
     public Interests() {}
 
     public Interests(String name) {
         this.name = name;
     }
 
-    // Getters and Setters
+    public Interests(String name, InterestIconEnum icon, IconLibraryEnum iconLib) {
+        this.name = name;
+        this.icon = icon;
+        this.iconLib = iconLib;
+    }
+
+    // --- Getters and Setters ---
     public Long getId() {
         return id;
     }
@@ -54,6 +69,22 @@ public class Interests {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public InterestIconEnum getIcon() {
+        return icon;
+    }
+
+    public void setIcon(InterestIconEnum icon) {
+        this.icon = icon;
+    }
+
+    public IconLibraryEnum getIconLib() {
+        return iconLib;
+    }
+
+    public void setIconLib(IconLibraryEnum iconLib) {
+        this.iconLib = iconLib;
     }
 
     public Set<UserInterests> getUserInterests() {

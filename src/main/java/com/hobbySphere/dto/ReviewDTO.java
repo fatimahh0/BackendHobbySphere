@@ -4,14 +4,17 @@ import java.time.LocalDateTime;
 
 public class ReviewDTO {
     private Long id;
-    private Long activityId;  
-    private int rating;
+    private Long activityId;
+
+    // ✅ Make rating nullable
+    private Integer rating;
+
     private String feedback;
     private LocalDateTime date;
 
     public ReviewDTO() {}
 
-    public ReviewDTO(Long id, Long activityId, int rating, String feedback, LocalDateTime date) {
+    public ReviewDTO(Long id, Long activityId, Integer rating, String feedback, LocalDateTime date) {
         this.id = id;
         this.activityId = activityId;
         this.rating = rating;
@@ -36,11 +39,11 @@ public class ReviewDTO {
         this.activityId = activityId;
     }
 
-    public int getRating() {
+    public Integer getRating() {
         return rating;
     }
 
-    public void setRating(int rating) {
+    public void setRating(Integer rating) {
         this.rating = rating;
     }
 
