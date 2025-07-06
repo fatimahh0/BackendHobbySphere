@@ -613,6 +613,11 @@ public class AuthController {
         }
 
         String statusName = business.getStatus() != null ? business.getStatus().getName() : "";
+        
+        if ("INACTIVEBYADMIN".equalsIgnoreCase(statusName)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Your account has been deactivated by the administrator due to low rating. Please contact support for further assistance"));
+        }
 
         if ("DELETED".equalsIgnoreCase(statusName)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -691,6 +696,11 @@ public class AuthController {
         }
 
         String statusName = business.getStatus() != null ? business.getStatus().getName() : "";
+        
+        if ("INACTIVEBYADMIN".equalsIgnoreCase(statusName)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Your account has been deactivated by the administrator due to low rating. Please contact support for further assistance"));
+        }
 
         if ("DELETED".equalsIgnoreCase(statusName)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)

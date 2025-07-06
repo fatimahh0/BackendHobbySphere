@@ -16,7 +16,7 @@ public class BusinessStatusSeeder {
         return args -> {
             System.out.println("✅ BusinessStatus Seeder running...");
 
-            List<String> statuses = List.of("ACTIVE", "INACTIVE", "DELETED","INACTIVEBYBUSINESS");
+            List<String> statuses = List.of("ACTIVE", "INACTIVE", "DELETED","INACTIVEBYADMIN");
 
             for (String name : statuses) {
                 boolean exists = businessStatusRepository.findByName(name).isPresent();
