@@ -2,6 +2,7 @@ package com.hobbySphere.controller;
 
 import com.hobbySphere.entities.Activities;
 import com.hobbySphere.entities.ActivityBookings;
+import com.hobbySphere.entities.Businesses;
 import com.hobbySphere.entities.Users;
 import com.hobbySphere.enums.ActivityTypeEnum;
 import com.hobbySphere.repositories.CurrencyRepository;
@@ -369,45 +370,46 @@ public class ActivityController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get a single activity by ID", description = "Retrieve full details of a specific activity including location info")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successful"),
-            @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
-            @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
-    })
     public ResponseEntity<?> getActivityById(@PathVariable Long id) {
         try {
             Activities activity = activityService.findById(id);
             if (activity == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Activity not found"));
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", "Activity not found"));
             }
 
-            // Return selected activity fields
+            Businesses business = activity.getBusiness();
+
+            Map<String, Object> businessInfo = new HashMap<>();
+            businessInfo.put("id", business.getId());
+            businessInfo.put("businessName", business.getBusinessName());
+            businessInfo.put("email", business.getEmail());
+            businessInfo.put("phoneNumber", business.getPhoneNumber());
+            businessInfo.put("businessLogoUrl", business.getBusinessLogoUrl());
+            businessInfo.put("businessBannerUrl", business.getBusinessBannerUrl());
+            businessInfo.put("description", business.getDescription());
+            businessInfo.put("websiteUrl", business.getWebsiteUrl());
+            businessInfo.put("status", business.getStatus() != null ? business.getStatus().getName() : null);
+            businessInfo.put("isPublicProfile", business.getIsPublicProfile());
+            businessInfo.put("createdAt", business.getCreatedAt());
+            businessInfo.put("updatedAt", business.getUpdatedAt());
+
             Map<String, Object> response = new HashMap<>();
             response.put("id", activity.getId());
-            response.put("name", activity.getActivityName());
+            response.put("activityName", activity.getActivityName());
             response.put("description", activity.getDescription());
-            
+            response.put("activityTypeId", activity.getActivityType().getId());
+            response.put("activityTypeName", activity.getActivityType().getName());
             response.put("location", activity.getLocation());
             response.put("latitude", activity.getLatitude());
             response.put("longitude", activity.getLongitude());
             response.put("startDatetime", activity.getStartDatetime());
             response.put("endDatetime", activity.getEndDatetime());
             response.put("price", activity.getPrice());
+            response.put("maxParticipants", activity.getMaxParticipants());
             response.put("status", activity.getStatus());
             response.put("imageUrl", activity.getImageUrl());
-            response.put("maxParticipants", activity.getMaxParticipants());
-            response.put("businessName", activity.getBusiness().getBusinessName());
-            String rawType = activity.getActivityType().getName();
-
-            String displayType = Arrays.stream(ActivityTypeEnum.values())
-                .filter(e -> e.name().equals(rawType))
-                .findFirst()
-                .map(ActivityTypeEnum::getDisplayName)
-                .orElse(rawType); // fallback in case not matched
-
-            response.put("activityType", displayType);
-
+            response.put("business", businessInfo);
 
             return ResponseEntity.ok(response);
 
@@ -416,6 +418,7 @@ public class ActivityController {
                     .body(Map.of("error", "Unexpected server error"));
         }
     }
+
 
     // ✅ Book an activity
     @PostMapping("/{activityId}/book")
