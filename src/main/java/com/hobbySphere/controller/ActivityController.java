@@ -8,6 +8,7 @@ import com.hobbySphere.enums.ActivityTypeEnum;
 import com.hobbySphere.repositories.CurrencyRepository;
 import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.ActivityService;
+import com.hobbySphere.services.StripeService;
 import com.hobbySphere.services.ActivityBookingService;
 import com.hobbySphere.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -56,6 +57,12 @@ public class ActivityController {
 
     @Autowired
     private UserService userService;
+    
+    @Autowired
+    private StripeService stripeService;
+
+   
+
 
     // ✅ Get all activities for a business (with auto status update)
     
@@ -419,74 +426,92 @@ public class ActivityController {
         }
     }
 
-
-    // ✅ Book an activity
+//book activity
     @PostMapping("/{activityId}/book")
     @Operation(summary = "Book an activity", description = "Book an activity for a user with a specified number of participants")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successful"),
-            @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
-            @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
-            @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
-            @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
-            @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+        @ApiResponse(responseCode = "200", description = "Successful"),
+        @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+        @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
+        @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+        @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+        @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     })
     public ResponseEntity<?> bookActivity(
-            @RequestHeader("Authorization") String token, // 👈 Accept user token from header
+            @RequestHeader("Authorization") String token,
             @PathVariable long activityId,
             @RequestBody BookingRequest request
     ) {
         Map<String, Object> response = new HashMap<>();
         try {
-            // 👇 Strip "Bearer " and validate token
+            // ✅ Validate token
             token = token.replace("Bearer ", "").trim();
             if (!jwtUtil.isUserToken(token)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Access denied. User token required."));
             }
 
-            String userEmail = jwtUtil.extractUsername(token); // 👈 Get email from token
-            Users user = userService.getUserByEmaill(userEmail); // 👈 Lookup user by email
-
+            String userEmail = jwtUtil.extractUsername(token);
+            Users user = userService.getUserByEmaill(userEmail);
             Activities activity = activityService.findById(activityId);
+
             if (activity == null) {
-                response.put("message", "Activity not found");
-                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Activity not found"));
             }
 
             if (activity.getEndDatetime().isBefore(LocalDateTime.now())) {
-                response.put("message", "This activity has already ended. Booking is not allowed.");
-                return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "This activity has already ended. Booking is not allowed."));
             }
 
             activityService.updateStatusIfCanceled(activity);
 
             if (bookingService.hasUserAlreadyBooked(activity.getId(), user.getId())) {
-                response.put("message", "You already booked this activity");
-                return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "You already booked this activity"));
             }
 
             int currentBooked = bookingService.countParticipantsByActivityId(activity.getId());
             if (currentBooked + request.getParticipants() > activity.getMaxParticipants()) {
-                response.put("message", "Booking exceeds maximum allowed participants");
-                return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Booking exceeds maximum allowed participants"));
             }
 
+            // ✅ Total Price
             BigDecimal totalPrice = activity.getPrice().multiply(BigDecimal.valueOf(request.getParticipants()));
+            String currencyCode = activity.getCurrency() != null
+                    ? activity.getCurrency().getCode().toLowerCase()
+                    : "usd";
+
+            // ✅ Create Stripe PaymentIntent (returning both clientSecret and intentId)
+            Map<String, String> stripeData = stripeService.createPaymentIntentWithTracking(
+                    totalPrice.multiply(BigDecimal.valueOf(100)).intValue(), currencyCode
+            );
+
+            String clientSecret = stripeData.get("clientSecret");
+            String paymentIntentId = stripeData.get("paymentIntentId");
+
+            // ✅ Save booking
             ActivityBookings booking = new ActivityBookings(activity, user, request.getParticipants(), totalPrice, request.getPaymentMethod());
+            booking.setStripePaymentId(paymentIntentId); // ❗️Not the clientSecret!
+            booking.setWasPaid(true);
+            booking.setCurrency(activity.getCurrency());
+
             bookingService.saveBooking(booking);
 
+            // ✅ Return both IDs to frontend
             response.put("message", "Booking successful");
             response.put("bookingId", booking.getId());
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            response.put("clientSecret", clientSecret); // frontend will use this
+            response.put("paymentIntentId", paymentIntentId); // you use this for refund
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                    "message", "Invalid or missing token",
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "message", "Booking failed",
                     "error", e.getMessage()
             ));
         }
     }
+
     
     @GetMapping("/interest-based/{userId}")
     @Operation(summary = "Get pending activities by user's interests", description = "Returns only upcoming (not ended or terminated) activities based on user's interests")

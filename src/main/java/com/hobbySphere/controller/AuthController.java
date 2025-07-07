@@ -752,86 +752,89 @@ public class AuthController {
 
    
 
-    @PostMapping("/admin/promote-to-manager/{userId}/{businessId}")
-    public ResponseEntity<?> promoteToManager(@PathVariable Long userId, @PathVariable Long businessId) {
-        Users user = userService.getUserById(userId);
-        Businesses business = businessService.findById(businessId); // No Optional
 
-        AdminUsers manager = adminUserService.promoteUserToManager(user, business);
 
-        return ResponseEntity.ok(Map.of(
-                "message", "User promoted to Manager successfully",
-                "manager", Map.of(
-                        "id", manager.getAdminId(),
-                        "email", manager.getEmail(),
-                        "role", manager.getRole().getName(),
-                        "businessId", manager.getBusiness().getId())));
+   @Operation(summary = "Login as a Manager", description = "Authenticates a Manager from the AdminUsers table based on email/username and password", responses = {
+        @ApiResponse(responseCode = "200", description = "Login successful, JWT token returned"),
+        @ApiResponse(responseCode = "401", description = "Invalid credentials or not a manager")
+})
+@PostMapping("/manager/login")
+public ResponseEntity<?> managerLogin(@RequestBody AdminLoginRequest request) {
+    // 1. Find manager by username or email
+    Optional<AdminUsers> optionalAdmin = adminUserService.findByUsernameOrEmail(request.getUsernameOrEmail());
+
+    // 2. If not found, error
+    if (optionalAdmin.isEmpty()) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("message", "Invalid credentials"));
     }
 
-    @Operation(summary = "Login as a Manager", description = "Authenticates a Manager from the AdminUsers table based on email/username and password", responses = {
-            @ApiResponse(responseCode = "200", description = "Login successful, JWT token returned"),
-            @ApiResponse(responseCode = "401", description = "Invalid credentials or not a manager")
-    })
-    @PostMapping("/manager/login")
-    public ResponseEntity<?> managerLogin(@RequestBody AdminLoginRequest request) {
-        // 1. Find manager by username or email
-        Optional<AdminUsers> optionalAdmin = adminUserService.findByUsernameOrEmail(request.getUsernameOrEmail());
+    AdminUsers admin = optionalAdmin.get();
 
-        // 2. If not found, error
-        if (optionalAdmin.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Invalid credentials"));
-        }
-
-        AdminUsers admin = optionalAdmin.get();
-
-        // 3. Password check
-        if (!passwordEncoder.matches(request.getPassword(), admin.getPasswordHash())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Invalid credentials"));
-        }
-
-        // 4. Role check
-        if (!"MANAGER".equalsIgnoreCase(admin.getRole().getName())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Access denied: Not a Manager"));
-        }
-
-        // 5. JWT
-        String token = jwtUtil.generateToken(admin);
-
-        // 6. Manager data
-        Map<String, Object> managerData = new HashMap<>();
-        managerData.put("id", admin.getAdminId());
-        managerData.put("username", admin.getUsername());
-        managerData.put("firstName", admin.getFirstName());
-        managerData.put("lastName", admin.getLastName());
-        managerData.put("email", admin.getEmail());
-        managerData.put("role", admin.getRole().getName());
-
-        // 7. Business data (the business that promoted this manager)
-        Map<String, Object> businessData = null;
-        if (admin.getBusiness() != null) {
-            Businesses business = admin.getBusiness();
-            businessData = new HashMap<>();
-            businessData.put("id", business.getId());
-            businessData.put("businessName", business.getBusinessName());
-            businessData.put("email", business.getEmail());
-            businessData.put("phoneNumber", business.getPhoneNumber());
-            businessData.put("businessLogoUrl", business.getBusinessLogoUrl());
-            businessData.put("businessBannerUrl", business.getBusinessBannerUrl());
-            businessData.put("description", business.getDescription());
-            businessData.put("websiteUrl", business.getWebsiteUrl());
-            // Add other fields as needed
-        }
-
-        // 8. Return token, manager, and business info
-        return ResponseEntity.ok(Map.of(
-                "message", "Manager login successful",
-                "token", token,
-                "manager", managerData,
-                "business", businessData));
+    // 3. Password check
+    if (!passwordEncoder.matches(request.getPassword(), admin.getPasswordHash())) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("message", "Invalid credentials"));
     }
+
+    // 4. Role check (original logic, do not remove)
+    if (!"MANAGER".equalsIgnoreCase(admin.getRole().getName())) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("message", "Access denied: Not a Manager"));
+    }
+
+    // 5. Business status check (added)
+    if (admin.getBusiness() != null) {
+        Businesses business = admin.getBusiness();
+        String status = (business.getStatus() != null) ? business.getStatus().getName().toUpperCase() : "";
+
+        // Block if disabled, inactive, or deleted by any means
+        if ("INACTIVE".equals(status) ||
+            "INACTIVEBYADMIN".equals(status) ||
+            "INACTIVEBYBUSINESS".equals(status) ||
+            "DELETED".equals(status)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Cannot log in: This business account is disabled or deleted. Please contact support."));
+        }
+    }
+
+    // 6. JWT
+    String token = jwtUtil.generateToken(admin);
+
+    // 7. Manager data
+    Map<String, Object> managerData = new HashMap<>();
+    managerData.put("id", admin.getAdminId());
+    managerData.put("username", admin.getUsername());
+    managerData.put("firstName", admin.getFirstName());
+    managerData.put("lastName", admin.getLastName());
+    managerData.put("email", admin.getEmail());
+    managerData.put("role", admin.getRole().getName());
+
+    // 8. Business data (the business that promoted this manager)
+    Map<String, Object> businessData = null;
+    if (admin.getBusiness() != null) {
+        Businesses business = admin.getBusiness();
+        businessData = new HashMap<>();
+        businessData.put("id", business.getId());
+        businessData.put("businessName", business.getBusinessName());
+        businessData.put("email", business.getEmail());
+        businessData.put("phoneNumber", business.getPhoneNumber());
+        businessData.put("businessLogoUrl", business.getBusinessLogoUrl());
+        businessData.put("businessBannerUrl", business.getBusinessBannerUrl());
+        businessData.put("description", business.getDescription());
+        businessData.put("websiteUrl", business.getWebsiteUrl());
+        // Add other fields as needed
+    }
+
+    // 9. Return token, manager, and business info
+    return ResponseEntity.ok(Map.of(
+            "message", "Manager login successful",
+            "token", token,
+            "manager", managerData,
+            "business", businessData
+    ));
+}
+
 
     @Operation(summary = "Login as Super Admin", description = "Authenticates a Super Admin using email and password", responses = {
             @ApiResponse(responseCode = "200", description = "Login successful, JWT returned"),

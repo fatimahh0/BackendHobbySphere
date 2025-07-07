@@ -441,7 +441,7 @@ public class AdminController {
             Businesses business = businessService.findById(businessId);
 
           
-            BusinessStatus inactiveStatus = businessStatusRepository.findByNameIgnoreCase("INACTIVEBYBUSINESS")
+            BusinessStatus inactiveStatus = businessStatusRepository.findByNameIgnoreCase("INACTIVEBYADMIN")
                 .orElseThrow(() -> new RuntimeException("INACTIVE status not found in DB"));
 
             business.setStatus(inactiveStatus); 
@@ -452,6 +452,41 @@ public class AdminController {
             return ResponseEntity.status(404).body("Business not found or status issue.");
         }
     }
+
+    @Operation(summary = "Reactivate a Business", description = "Only SUPER_ADMIN can reactivate a disabled business")
+@ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Business reactivated successfully"),
+    @ApiResponse(responseCode = "400", description = "Invalid parameters or business not found"),
+    @ApiResponse(responseCode = "401", description = "Unauthorized – Only SUPER_ADMIN allowed"),
+    @ApiResponse(responseCode = "500", description = "Server error")
+})
+@PutMapping("/businesses/{businessId}/activate")
+public ResponseEntity<?> activateBusiness(
+        @PathVariable Long businessId,
+        @RequestHeader("Authorization") String token) {
+    // Check SUPER_ADMIN auth
+    if (!isSuperAdmin(token)) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+    }
+    try {
+        Businesses business = businessService.findById(businessId);
+        if (business == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Business not found");
+        }
+
+        BusinessStatus activeStatus = businessStatusRepository.findByNameIgnoreCase("ACTIVE")
+            .orElseThrow(() -> new RuntimeException("ACTIVE status not found"));
+
+        business.setStatus(activeStatus);
+        businessService.save(business);
+
+        return ResponseEntity.ok(Map.of("message", "Business reactivated successfully", "businessId", business.getId()));
+    } catch (Exception e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to reactivate business: " + e.getMessage()));
+    }
+}
+
 
 
 }

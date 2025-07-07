@@ -38,6 +38,10 @@ public class ActivityBookingService {
     
     @Autowired
     private NotificationsService notificationsService;
+    
+    @Autowired
+    private StripeService stripeService;
+
 
 
     // Method to get bookings by user email
@@ -129,7 +133,7 @@ public class ActivityBookingService {
 
     }
 
-    public boolean deleteCanceledBookingByIdAndUserId(Long bookingId, Long userId) {
+    public boolean deleteBookingByIdAndUserId(Long bookingId, Long userId) {
         ActivityBookings booking = activityBookingsRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
 
@@ -137,13 +141,25 @@ public class ActivityBookingService {
             throw new RuntimeException("Unauthorized: booking does not belong to user");
         }
 
-        if (!"Canceled".equalsIgnoreCase(booking.getBookingStatus())) {
-            return false;
+        String status = booking.getBookingStatus();
+        if (!"Canceled".equalsIgnoreCase(status) && !"Rejected".equalsIgnoreCase(status)) {
+            throw new RuntimeException("Only CANCELED or REJECTED bookings can be deleted.");
+        }
+
+        // ✅ REFUND if the booking was paid and has a Stripe Payment ID
+        if (booking.isWasPaid() && booking.getStripePaymentId() != null) {
+            try {
+                stripeService.refundPayment(booking.getStripePaymentId());
+            } catch (Exception e) {
+                throw new RuntimeException("Refund failed: " + e.getMessage());
+            }
         }
 
         activityBookingsRepository.delete(booking);
         return true;
     }
+
+
 
     // Method to save a new booking
     public ActivityBookings saveBooking(ActivityBookings booking) {
@@ -289,6 +305,35 @@ public class ActivityBookingService {
 	    userRepository.save(user);
 	    return true;
 	}
+
+
+	@Transactional
+	public void deleteBookingById(Long bookingId) {
+	    ActivityBookings booking = activityBookingsRepository.findById(bookingId)
+	            .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + bookingId));
+
+	    boolean wasPaid = booking.isWasPaid();
+
+	    
+	    if (wasPaid) {
+	        System.out.println("Pretend refund processed for booking ID: " + bookingId);
+	    }
+
+	    activityBookingsRepository.delete(booking);
+	}
+
+
+
+
+	public ActivityBookings getBookingById(Long bookingId) {
+	    return activityBookingsRepository.findById(bookingId)
+	            .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + bookingId));
+	}
+
+
+
+
+	
 
 
 }

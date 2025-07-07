@@ -14,26 +14,38 @@ public class CurrencyService {
     private CurrencyRepository currencyRepository;
 
     public void ensureDefaultCurrencies() {
-      
-        Map<String, String> defaultCurrencies = Map.of(
-                "DOLLAR", "$",
-                "EURO", "€",
-                "CAD", "C$"
+       
+        Map<String, String[]> defaultCurrencies = Map.of(
+            "DOLLAR", new String[]{"USD", "$"},
+            "EURO",   new String[]{"EUR", "€"},
+            "CAD",    new String[]{"CAD", "C$"}
         );
 
-        for (Map.Entry<String, String> entry : defaultCurrencies.entrySet()) {
+        for (Map.Entry<String, String[]> entry : defaultCurrencies.entrySet()) {
             String type = entry.getKey();
-            String symbol = entry.getValue();
+            String code = entry.getValue()[0];
+            String symbol = entry.getValue()[1];
 
             currencyRepository.findByCurrencyType(type).ifPresentOrElse(
                 existing -> {
+                    boolean updated = false;
+
                     if (!existing.getSymbol().equals(symbol)) {
                         existing.setSymbol(symbol);
+                        updated = true;
+                    }
+
+                    if (existing.getCode() == null || !existing.getCode().equals(code)) {
+                        existing.setCode(code);
+                        updated = true;
+                    }
+
+                    if (updated) {
                         currencyRepository.save(existing);
                     }
                 },
                 () -> {
-                    Currency currency = new Currency(type, symbol);
+                    Currency currency = new Currency(type, symbol, code); 
                     currencyRepository.save(currency);
                 }
             );

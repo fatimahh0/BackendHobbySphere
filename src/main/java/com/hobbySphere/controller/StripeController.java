@@ -2,10 +2,10 @@ package com.hobbySphere.controller;
 
 import com.hobbySphere.security.JwtUtil;
 import com.hobbySphere.services.StripeService;
+import com.stripe.model.PaymentIntent;
 
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +22,7 @@ public class StripeController {
     private StripeService stripeService;
 
     @Autowired
-    private JwtUtil jwtUtil;  // Your JWT validation utility
+    private JwtUtil jwtUtil;
 
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successful"),
@@ -36,9 +36,7 @@ public class StripeController {
     @PostMapping("/create-payment-intent")
     public ResponseEntity<?> createPaymentIntent(@RequestBody Map<String, Object> request,
                                                  @RequestHeader("Authorization") String authHeader) {
-    	System.out.println("Auth Header Received: " + authHeader);
-
-        // Token validation
+        // ✅ Validate token
         ResponseEntity<String> tokenCheck = validateUserToken(authHeader);
         if (tokenCheck != null) return tokenCheck;
 
@@ -46,11 +44,51 @@ public class StripeController {
             int amount = (int) request.get("amount");
             String currency = (String) request.get("currency");
 
-            String clientSecret = stripeService.createPaymentIntent(amount, currency);
-            return ResponseEntity.ok(Map.of("clientSecret", clientSecret));
+            if (amount <= 0 || currency == null || currency.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid amount or currency"));
+            }
+
+            // ✅ Get the full PaymentIntent object
+            Map<String, String> intentData = stripeService.createPaymentIntentWithTracking(amount, currency);
+
+            return ResponseEntity.ok(Map.of(
+            	    "clientSecret", intentData.get("clientSecret"),
+            	    "paymentIntentId", intentData.get("paymentIntentId"),
+            	    "customerId", intentData.get("customerId"),            // ✅ Needed for PaymentSheet
+            	    "ephemeralKey", intentData.get("ephemeralKey")         // ✅ Needed for PaymentSheet
+            	));
+
+
+          
 
         } catch (Exception e) {
-            e.printStackTrace(); 
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+
+    // ✅ Refund Endpoint
+    @PostMapping("/refund")
+    public ResponseEntity<?> refundPayment(@RequestBody Map<String, Object> request,
+                                           @RequestHeader("Authorization") String authHeader) {
+        ResponseEntity<String> tokenCheck = validateUserToken(authHeader);
+        if (tokenCheck != null) return tokenCheck;
+
+        try {
+            String paymentIntentId = (String) request.get("paymentIntentId");
+
+            if (paymentIntentId == null || paymentIntentId.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "paymentIntentId is required"));
+            }
+
+            String refundId = stripeService.refundPayment(paymentIntentId);
+            return ResponseEntity.ok(Map.of(
+                "refundId", refundId,
+                "message", "Refund successful"
+            ));
+        } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
@@ -61,13 +99,12 @@ public class StripeController {
         }
 
         String token = authHeader.substring(7).trim();
-
         String role = jwtUtil.extractRole(token);
+
         if (!"USER".equalsIgnoreCase(role) && !"BUSINESS".equalsIgnoreCase(role)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized role");
         }
 
-        return null; // ✅ Token valid
+        return null;
     }
-
 }

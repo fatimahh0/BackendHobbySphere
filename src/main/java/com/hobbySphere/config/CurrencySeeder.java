@@ -16,14 +16,31 @@ public class CurrencySeeder {
 
     @PostConstruct
     public void seedCurrencies() {
-        seed("DOLLAR", "$");
-        seed("EURO", "€");
-        seed("CAD", "C$");
+        seed("DOLLAR", "$", "USD");
+        seed("EURO", "€", "EUR");
+        seed("CAD", "C$", "CAD");
     }
 
-    private void seed(String currencyType, String symbol) {
+    private void seed(String currencyType, String symbol, String code) {
         currencyRepository.findByCurrencyType(currencyType)
-            .orElseGet(() -> currencyRepository.save(new Currency(currencyType, symbol)));
-    }
+            .ifPresentOrElse(existing -> {
+                boolean updated = false;
 
+                if (!symbol.equals(existing.getSymbol())) {
+                    existing.setSymbol(symbol);
+                    updated = true;
+                }
+
+                if (existing.getCode() == null || !code.equals(existing.getCode())) {
+                    existing.setCode(code);
+                    updated = true;
+                }
+
+                if (updated) {
+                    currencyRepository.save(existing);
+                }
+            }, () -> {
+                currencyRepository.save(new Currency(currencyType, symbol, code));
+            });
+    }
 }

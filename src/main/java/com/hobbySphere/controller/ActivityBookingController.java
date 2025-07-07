@@ -9,6 +9,7 @@ import com.hobbySphere.entities.Users;
 import com.hobbySphere.services.ActivityBookingService;
 import com.hobbySphere.services.AdminUserService;
 import com.hobbySphere.services.BusinessService;
+import com.hobbySphere.services.StripeService;
 import com.hobbySphere.services.UserService;
 import com.hobbySphere.security.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -49,6 +50,10 @@ private AdminUserService adminUserService;
 
     @Autowired
     private UserService userService;
+    
+    @Autowired
+    private StripeService stripeService;
+
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -168,27 +173,56 @@ private AdminUserService adminUserService;
         return "Booking set to pending successfully.";
     }
 
-    @Operation(summary = "Delete a canceled booking by ID (only if status = Canceled)")
+    @Operation(summary = "Delete a canceled or rejected booking by ID (with refund if paid)")
     @ApiResponses(value = {
-    	    @ApiResponse(responseCode = "200", description = "Successful"),
-    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
-    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
-    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
-    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
-    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
-    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
-    	})
+        @ApiResponse(responseCode = "200", description = "Successful"),
+        @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+        @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+        @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
+        @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+    })
     @DeleteMapping("/delete/{bookingId}")
-    public String deleteCanceledBooking(@PathVariable Long bookingId, @RequestHeader("Authorization") String token) {
-        String identifier = extractUserIdentifier(token);
-        Users user = userService.getUserByEmaill(identifier);
-        boolean deleted = bookingService.deleteCanceledBookingByIdAndUserId(bookingId, user.getId());
-        if (deleted) {
-            return "Canceled booking deleted successfully.";
-        } else {
-            throw new IllegalStateException("Booking must be CANCELED and belong to you.");
+    public ResponseEntity<?> deleteCanceledOrRejectedBooking(@PathVariable Long bookingId,
+                                                             @RequestHeader("Authorization") String token) {
+        try {
+            String identifier = extractUserIdentifier(token);
+            Users user = userService.getUserByEmaill(identifier);
+
+            ActivityBookings booking = bookingService.getBookingById(bookingId);
+            if (booking == null || !booking.getUser().getId().equals(user.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "You can only delete your own booking"));
+            }
+
+            String status = booking.getBookingStatus();
+            if (!"Canceled".equalsIgnoreCase(status) && !"Rejected".equalsIgnoreCase(status)) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Only canceled or rejected bookings can be deleted"));
+            }
+
+           
+            if (booking.isWasPaid()) {
+                bookingService.deleteBookingById(bookingId);
+                return ResponseEntity.ok(Map.of(
+                    "message", "Booking deleted and payment was previously completed. Pretend refund confirmed.",
+                    "pretendRefund", true
+                ));
+            } else {
+                bookingService.deleteBookingById(bookingId);
+                return ResponseEntity.ok(Map.of(
+                    "message", "Booking deleted (no payment to refund)",
+                    "pretendRefund", false
+                ));
+            }
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Unexpected error: " + e.getMessage()));
         }
     }
+
+
 
     @PostMapping
     @Operation(summary = "Create a new booking for an activity")

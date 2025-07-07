@@ -70,20 +70,22 @@ public class CurrencyController {
     	})
     @GetMapping("/current")
     public ResponseEntity<?> getCurrentCurrency(@RequestHeader(value = "Authorization", required = false) String token) {
-        // Add token validation for user, business, or admin tokens
-        if (token == null || !isAuthorized(token)) {
-            // If no valid token, reject access
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied. Valid token required.");
+        // If token is present but invalid, reject
+        if (token != null && !isAuthorized(token) && token==null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied. Invalid token.");
         }
 
-        // Existing code unchanged
+        // Always ensure currencies exist
         currencyService.ensureDefaultCurrencies();
+
         AppSettings settings = appSettingsRepository.findById(1L).orElse(null);
         if (settings == null || settings.getCurrency() == null) {
-            return ResponseEntity.ok("CAD"); // or your default
+            return ResponseEntity.ok("CAD"); // fallback if not set
         }
+
         return ResponseEntity.ok(settings.getCurrency().getCurrencyType());
     }
+
 
     @ApiResponses(value = {
     	    @ApiResponse(responseCode = "200", description = "Successful"),

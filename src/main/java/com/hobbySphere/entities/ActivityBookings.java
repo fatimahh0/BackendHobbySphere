@@ -59,6 +59,13 @@ public class ActivityBookings {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+    
+    @Column(name = "stripe_payment_id")
+    private String stripePaymentId;
+
+    @Column(name = "was_paid")
+    private boolean wasPaid;
+
 
 
     // Default constructor
@@ -168,4 +175,24 @@ public class ActivityBookings {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public String getStripePaymentId() {
+        return stripePaymentId;
+    }
+
+    public void setStripePaymentId(String stripePaymentId) {
+        this.stripePaymentId = stripePaymentId;
+    }
+
+    public boolean isWasPaid() {
+        return wasPaid;
+    }
+
+    public void setWasPaid(boolean wasPaid) {
+        this.wasPaid = wasPaid;
+    }
+
+
+
+	
 }
