@@ -338,43 +338,69 @@ public class ActivityController {
 
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete an activity by ID", description = "Delete an activity by providing its ID")
+    @Operation(summary = "Delete an activity by ID", description = "Allows a Super Admin to delete any activity, or a Business to delete their own activity by its ID.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successful"),
-            @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
-            @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
-            @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
-            @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
-            @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
+        @ApiResponse(responseCode = "204", description = "Activity deleted successfully"),
+        @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
+        @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
+        @ApiResponse(responseCode = "404", description = "Not Found – The requested activity could not be found"),
+        @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     })
     public ResponseEntity<?> deleteActivity(
-            @RequestHeader("Authorization") String token,  // 👈 Added
+            @RequestHeader("Authorization") String tokenHeader,
             @PathVariable Long id
     ) {
         try {
-            // ✅ Token validation for BUSINESS role
-            token = token.replace("Bearer ", "").trim();
-            String role = jwtUtil.extractRole(token);
-            if (!"BUSINESS".equals(role)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Access denied. Only Business users can delete activities."));
+            // Validate token format
+            if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "Missing or invalid Authorization header"));
             }
 
+            // Extract token and role
+            String token = tokenHeader.replace("Bearer ", "").trim();
+            String role = jwtUtil.extractRole(token);
+
+            // Find activity
             Activities activity = activityService.findById(id);
             if (activity == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Activity not found"));
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", "Activity not found"));
             }
 
-            bookingService.deleteByActivityId(id); // delete bookings
-            activityService.deleteActivity(id);    // then delete activity
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+            // Allow Super Admin to delete any activity
+            if ("SUPER_ADMIN".equals(role)) {
+                bookingService.deleteByActivityId(id); // clean up related bookings
+                activityService.deleteActivity(id);
+                return ResponseEntity.noContent().build();
+            }
+
+            // Allow Business to delete only their own activities
+            if ("BUSINESS".equals(role)) {
+                Long businessIdFromToken = jwtUtil.extractId(token);
+                Long businessIdOfActivity = activity.getBusiness().getId();
+
+                if (!businessIdFromToken.equals(businessIdOfActivity)) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("message", "Access denied. You can only delete your own activities."));
+                }
+
+                bookingService.deleteByActivityId(id);
+                activityService.deleteActivity(id);
+                return ResponseEntity.noContent().build();
+            }
+
+            // Other roles not allowed
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Access denied. Only Business or Super Admin can delete activities."));
+
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                    "message", "Failed to delete activity",
-                    "error", e.getMessage()
-            ));
-        }
-    }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Failed to delete activity", "error", e.getMessage()));
+}
+ }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getActivityById(@PathVariable Long id) {
