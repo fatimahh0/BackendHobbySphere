@@ -147,7 +147,7 @@ public class ActivityBookingService {
         }
 
         // ✅ REFUND if the booking was paid and has a Stripe Payment ID
-        if (booking.isWasPaid() && booking.getStripePaymentId() != null) {
+        if (booking.getWasPaid() && booking.getStripePaymentId() != null) {
             try {
                 stripeService.refundPayment(booking.getStripePaymentId());
             } catch (Exception e) {
@@ -312,7 +312,7 @@ public class ActivityBookingService {
 	    ActivityBookings booking = activityBookingsRepository.findById(bookingId)
 	            .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + bookingId));
 
-	    boolean wasPaid = booking.isWasPaid();
+	    boolean wasPaid = booking.getWasPaid();
 
 	    
 	    if (wasPaid) {

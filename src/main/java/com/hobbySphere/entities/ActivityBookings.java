@@ -64,7 +64,7 @@ public class ActivityBookings {
     private String stripePaymentId;
 
     @Column(name = "was_paid")
-    private boolean wasPaid;
+    private Boolean wasPaid;
 
 
 
@@ -184,9 +184,10 @@ public class ActivityBookings {
         this.stripePaymentId = stripePaymentId;
     }
 
-    public boolean isWasPaid() {
+    public Boolean getWasPaid() {
         return wasPaid;
     }
+
 
     public void setWasPaid(boolean wasPaid) {
         this.wasPaid = wasPaid;

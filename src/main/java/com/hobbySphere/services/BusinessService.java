@@ -5,7 +5,6 @@ import com.hobbySphere.dto.LowRatedBusinessDTO;
 import com.hobbySphere.entities.Activities;
 import com.hobbySphere.entities.AdminUsers;
 import com.hobbySphere.repositories.*;
-import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -32,11 +31,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.Map;
 
 @Service
 public class BusinessService {
@@ -85,7 +80,17 @@ public class BusinessService {
 
     private final Map<String, String> resetCodes = new ConcurrentHashMap<>();
 
-    
+    public Optional<Businesses> findByEmailOptional(String identifier) {
+    if (identifier == null || identifier.isBlank()) {
+        return Optional.empty();
+    }
+    if (identifier.contains("@")) {
+        return businessRepository.findByEmail(identifier);
+    } else {
+        return businessRepository.findByPhoneNumber(identifier);
+    }
+}
+
     public Businesses findByEmail(String identifier) {
         if (identifier == null || identifier.isBlank()) {
             throw new IllegalArgumentException("Identifier cannot be null or empty");
@@ -728,7 +733,7 @@ public class BusinessService {
     public BusinessStatus getStatusByName(String name) {
         return businessStatusRepository.findByName(name.toUpperCase())
                 .orElseThrow(() -> new RuntimeException("Status '" + name + "' not found"));
-    }
+}
 
 
 }

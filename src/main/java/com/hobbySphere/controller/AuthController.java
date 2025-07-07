@@ -67,8 +67,6 @@ public class AuthController {
     @Autowired
     private BusinessesRepository businessRepository;
 
-   
-
     @Autowired
     private BusinessStatusRepository businessStatusRepository;
 
@@ -94,8 +92,6 @@ public class AuthController {
         }
     }
 
-
-
     @PostMapping("/verify-email-code")
     public ResponseEntity<?> verifyEmailCode(@RequestBody Map<String, String> request) {
         try {
@@ -112,8 +108,6 @@ public class AuthController {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
         }
     }
-
-
 
     /// user register with number
     @PostMapping("/user/verify-phone-code")
@@ -186,8 +180,6 @@ public class AuthController {
         }
     }
 
-
-
     @PostMapping("/business/send-verification")
     public ResponseEntity<?> sendBusinessVerification(
             @RequestParam(required = false) String email,
@@ -238,8 +230,6 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
-
-
 
     @PostMapping("/business/verify-phone-code")
     public ResponseEntity<?> verifyBusinessPhoneCode(@RequestBody Map<String, String> request) {
@@ -391,7 +381,6 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    
     @PostMapping("/reactivate")
     public ResponseEntity<?> reactivateAccount(@RequestBody Map<String, Object> request) {
         Long userId = Long.valueOf(request.get("id").toString());
@@ -431,7 +420,6 @@ public class AuthController {
                 "user", userData
         ));
     }
-
 
     @PostMapping("/business/reactivate")
     public ResponseEntity<?> reactivateBusiness(@RequestBody Map<String, Long> request) {
@@ -667,9 +655,6 @@ public class AuthController {
         ));
     }
 
-
-
-
     // business login with number
     @PostMapping("/business/login-phone")
     public ResponseEntity<?> businessLoginWithPhone(@RequestBody @Valid Users user) {
@@ -749,10 +734,6 @@ public class AuthController {
                 "wasInactive", false
         ));
     }
-
-   
-
-
 
    @Operation(summary = "Login as a Manager", description = "Authenticates a Manager from the AdminUsers table based on email/username and password", responses = {
         @ApiResponse(responseCode = "200", description = "Login successful, JWT token returned"),

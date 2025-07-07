@@ -202,7 +202,7 @@ private AdminUserService adminUserService;
             }
 
            
-            if (booking.isWasPaid()) {
+            if (booking.getWasPaid()) {
                 bookingService.deleteBookingById(bookingId);
                 return ResponseEntity.ok(Map.of(
                     "message", "Booking deleted and payment was previously completed. Pretend refund confirmed.",
@@ -222,40 +222,6 @@ private AdminUserService adminUserService;
         }
     }
 
-
-
-    @PostMapping
-    @Operation(summary = "Create a new booking for an activity")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Successful"),
-        @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
-        @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
-        @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
-        @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
-        @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
-    })
-    public ResponseEntity<ActivityBookings> createBooking(
-            @RequestBody ActivityBookings booking,
-            @RequestHeader("Authorization") String token) {
-
-        // Extract the user identifier (email or phone) from the token
-        String identifier = extractUserIdentifier(token);
-
-        // Load user entity
-        Users user = userService.getUserByEmaill(identifier);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        // Associate the user with the booking
-        booking.setUser(user);
-
-        // Save booking
-        ActivityBookings savedBooking = bookingService.saveBooking(booking);
-        return ResponseEntity.ok(savedBooking);
-    }
-
     @Operation(summary = "Get all bookings for the logged-in business")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successful"),
@@ -267,42 +233,46 @@ private AdminUserService adminUserService;
     })
     @GetMapping("/mybusinessbookings")
     public ResponseEntity<List<ActivityBookings>> getBookingsByBusiness(@RequestHeader("Authorization") String authHeader) {
-        // Validate header format
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-
-        // Extract token string (after "Bearer ")
         String token = authHeader.substring(7);
 
-        // Extract identifier (email or phone) from token using JwtUtil
+        // ✅ Only allow BUSINESS or MANAGER tokens
+        if (!(jwtUtil.isBusinessToken(token) || jwtUtil.isAdminToken(token))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Collections.emptyList());
+        }
+
         String identifier;
         try {
             identifier = jwtUtil.extractUsername(token);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.emptyList());
         }
-
         if (identifier == null || identifier.isBlank()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.emptyList());
         }
 
-        Businesses business = businessService.findByEmail(identifier);
-        if (business == null) {
-            // Try as manager/admin user with business association
+        Businesses business = null;
+        // USE findByEmailOptional FIRST!
+        Optional<Businesses> businessOpt = businessService.findByEmailOptional(identifier);
+        if (businessOpt.isPresent()) {
+            business = businessOpt.get();
+        } else {
+            // Try manager
             Optional<AdminUsers> managerOpt = adminUserService.findByEmail(identifier);
             if (managerOpt.isPresent() && managerOpt.get().getBusiness() != null) {
                 business = managerOpt.get().getBusiness();
             } else {
+                // DO NOT THROW! Just return empty or error
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.emptyList());
             }
         }
 
-        // Fetch bookings for this business by email
         List<ActivityBookings> bookings = bookingService.getBookingsByBusinessEmail(business.getEmail());
-
         return ResponseEntity.ok(bookings);
     }
+
 
     @PutMapping("/booking/reject/{bookingId}")
     @Operation(

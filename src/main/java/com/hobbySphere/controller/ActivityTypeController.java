@@ -30,22 +30,6 @@ public class ActivityTypeController {
     @Autowired
     private ActivityTypeService activityTypeService;
 
-
-    @ApiResponses(value = {
-    	    @ApiResponse(responseCode = "200", description = "Successful"),
-    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
-    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
-    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
-    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
-    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
-    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
-    	})
-    @PostMapping
-    public ActivityType create(@RequestBody ActivityType type) {
-        return activityTypeRepository.save(type);
-    }
-
-
     @ApiResponses(value = {
     	    @ApiResponse(responseCode = "200", description = "Successful"),
     	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
