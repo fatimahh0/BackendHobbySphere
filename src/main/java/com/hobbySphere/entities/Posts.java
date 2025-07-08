@@ -24,8 +24,9 @@ public class Posts {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Users user;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(columnDefinition = "TEXT", nullable = true)
     private String content;
+
 
     @Column(name = "image_url")
     private String imageUrl;

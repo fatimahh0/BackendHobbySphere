@@ -46,7 +46,7 @@ public class PostsController {
         @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     })
     @PostMapping(consumes = {"multipart/form-data"})
-    public ResponseEntity<?> createPost(@RequestParam String content,
+    public ResponseEntity<?> createPost(@RequestParam(required = false) String content,
                                         @RequestParam(required = false) MultipartFile image,
                                         @RequestParam(required = false) String hashtags,
                                         @RequestParam(required = false, defaultValue = "PUBLIC") String visibility,
@@ -56,6 +56,11 @@ public class PostsController {
         // Token validation
         ResponseEntity<String> tokenCheck = validateUserToken(authHeader);
         if (tokenCheck != null) return tokenCheck;
+
+        // ✅ Allow image-only posts
+        if ((content == null || content.trim().isEmpty()) && (image == null || image.isEmpty())) {
+            return ResponseEntity.badRequest().body("Post must contain either content or an image.");
+        }
 
         Users user = usersService.getUserByEmaill(principal.getName());
 
@@ -70,6 +75,7 @@ public class PostsController {
 
         return ResponseEntity.ok(new PostDto(created, user.getId()));
     }
+
 
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successful"),

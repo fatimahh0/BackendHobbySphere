@@ -332,6 +332,17 @@ public class ActivityBookingService {
 
 
 
+	public int countUserParticipantsForActivity(Long activityId, Long userId) {
+	    List<ActivityBookings> userBookings = activityBookingsRepository.findByActivityIdAndUserId(activityId, userId);
+
+	    return userBookings.stream()
+	            .mapToInt(ActivityBookings::getNumberOfParticipants)
+	            .sum();
+	}
+
+
+
+
 
 	
 
