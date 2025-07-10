@@ -42,10 +42,11 @@ public class ReviewService {
 
     public Review createReviewFromDTO(ReviewDTO dto, String token) {
         String jwt = token.substring(7);
-        String email = jwtUtil.extractUsername(jwt);
-
-        Users user = userRepository.findByEmail(email);
-        if (user == null) throw new RuntimeException("User not found");
+        String identifier = jwtUtil.extractUsername(jwt); 
+        Users user = userRepository.findByEmail(identifier);
+        if (user == null) {
+            user = userRepository.findByPhoneNumber(identifier);
+        }
 
         Activities activity = activityRepository.findById(dto.getActivityId())
             .orElseThrow(() -> new RuntimeException("Activity not found"));
@@ -94,9 +95,11 @@ public class ReviewService {
 
     public boolean hasUserCompletedActivity(Long activityId, String token) {
         String jwt = token.substring(7);
-        String email = jwtUtil.extractUsername(jwt);
-        Users user = userRepository.findByEmail(email);
-        if (user == null) throw new RuntimeException("User not found");
+        String identifier = jwtUtil.extractUsername(jwt); 
+        Users user = userRepository.findByEmail(identifier);
+        if (user == null) {
+            user = userRepository.findByPhoneNumber(identifier);
+        }
 
         return activityBookingsRepository
             .existsByActivityIdAndUserIdAndBookingStatus(activityId, user.getId(), "Completed");
@@ -113,9 +116,11 @@ public class ReviewService {
 
     public boolean shouldShowReviewModal(Long activityId, String token) {
         String jwt = token.substring(7);
-        String email = jwtUtil.extractUsername(jwt);
-        Users user = userRepository.findByEmail(email);
-        if (user == null) throw new RuntimeException("User not found");
+        String identifier = jwtUtil.extractUsername(jwt); 
+        Users user = userRepository.findByEmail(identifier);
+        if (user == null) {
+            user = userRepository.findByPhoneNumber(identifier);
+        }
 
         boolean completed = activityBookingsRepository
             .existsByActivityIdAndUserIdAndBookingStatus(activityId, user.getId(), "Completed");
@@ -128,9 +133,16 @@ public class ReviewService {
 
     public Long getFirstCompletedUnreviewedActivity(String token) {
         String jwt = token.substring(7);
-        String email = jwtUtil.extractUsername(jwt);
-        Users user = userRepository.findByEmail(email);
+        
+       
+        String identifier = jwtUtil.extractUsername(jwt); 
+        Users user = userRepository.findByEmail(identifier);
+        if (user == null) {
+            user = userRepository.findByPhoneNumber(identifier);
+        }
         if (user == null) throw new RuntimeException("User not found");
+
+      
 
         List<Long> completedActivityIds = activityBookingsRepository.findCompletedActivityIdsByUser(user.getId());
 

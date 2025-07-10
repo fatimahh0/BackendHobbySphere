@@ -241,20 +241,24 @@ public class ReviewController {
     	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
     	})
     @GetMapping("/suggest")
-    public ResponseEntity<Long> suggestReviewActivity(@RequestHeader("Authorization") String token) {
-        Long activityId = reviewService.getFirstCompletedUnreviewedActivity(token);
-        return ResponseEntity.ok(activityId);
+    public ResponseEntity<?> suggestReviewActivity(@RequestHeader("Authorization") String token) {
+        try {
+            Long activityId = reviewService.getFirstCompletedUnreviewedActivity(token);
+
+            if (activityId == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No suggested activity to review.");
+            }
+
+            return ResponseEntity.ok(activityId);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error: " + e.getMessage());
         }
-    
-    @ApiResponses(value = {
-    	    @ApiResponse(responseCode = "200", description = "Successful"),
-    	    @ApiResponse(responseCode = "400", description = "Bad Request – Invalid or missing parameters or token"),
-    	    @ApiResponse(responseCode = "401", description = "Unauthorized – Authentication credentials are missing or invalid"),
-    	    @ApiResponse(responseCode = "402", description = "Payment Required – Payment is required to access this resource (reserved)"),
-    	    @ApiResponse(responseCode = "403", description = "Forbidden – You do not have permission to perform this action"),
-    	    @ApiResponse(responseCode = "404", description = "Not Found – The requested resource could not be found"),
-    	    @ApiResponse(responseCode = "500", description = "Internal Server Error – An unexpected error occurred on the server")
-    	})
+    }
+
+
     @GetMapping("/business/{businessId}/check-rating")
     public ResponseEntity<?> checkRatingAndNotifyAdmins(
             @PathVariable Long businessId,

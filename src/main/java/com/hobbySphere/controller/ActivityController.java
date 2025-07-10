@@ -470,6 +470,10 @@ public class ActivityController {
             }
 
             int currentBooked = bookingService.countParticipantsByActivityId(activity.getId());
+            System.out.println("📊 Participants already booked: " + currentBooked);
+            System.out.println("🧍 You are booking: " + request.getParticipants());
+            System.out.println("🎯 Max allowed: " + activity.getMaxParticipants());
+
             if (currentBooked + request.getParticipants() > activity.getMaxParticipants()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Booking exceeds maximum allowed participants"));
             }

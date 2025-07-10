@@ -53,14 +53,9 @@ public class PostsController {
                                         Principal principal,
                                         @RequestHeader("Authorization") String authHeader) {
 
-        // Token validation
+        // Token validations
         ResponseEntity<String> tokenCheck = validateUserToken(authHeader);
         if (tokenCheck != null) return tokenCheck;
-
-        // ✅ Allow image-only posts
-        if ((content == null || content.trim().isEmpty()) && (image == null || image.isEmpty())) {
-            return ResponseEntity.badRequest().body("Post must contain either content or an image.");
-        }
 
         Users user = usersService.getUserByEmaill(principal.getName());
 
@@ -75,7 +70,6 @@ public class PostsController {
 
         return ResponseEntity.ok(new PostDto(created, user.getId()));
     }
-
 
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successful"),

@@ -71,7 +71,7 @@ public class CurrencyController {
     @GetMapping("/current")
     public ResponseEntity<?> getCurrentCurrency(@RequestHeader(value = "Authorization", required = false) String token) {
         // If token is present but invalid, reject
-        if (token != null && !isAuthorized(token) && token==null) {
+        if (token != null && !isAuthorized(token) && token== null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied. Invalid token.");
         }
 
